@@ -1,0 +1,175 @@
+/* ═════════════ 🖍️ 그림 릴레이 (relay.js) ═════════════ */
+.rly{--paper:#fffdf6;--paper-edge:#e6dec8;--ink:#2b2b33;display:flex;flex-direction:column;gap:12px;max-width:1000px;margin:0 auto}
+.rly .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.rly .btn .ic{width:19px;height:19px}
+.rly .btn small{font-family:'Noto Sans KR',sans-serif;font-size:13px;opacity:.85}
+
+/* 참가자 · 시간 */
+.rly-track{display:flex;flex-wrap:wrap;gap:6px}
+.rly-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 3px;border-radius:99px;background:var(--panel);border:1px solid var(--line);font-size:13px;transition:background .25s,border-color .25s}
+.rly-chip .nm{max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rly-chip b{font-family:'Black Han Sans',sans-serif;font-weight:400;color:var(--warn);font-size:15px}
+.rly-chip em{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--good);color:#fff}
+.rly-chip em .ic{width:12px;height:12px;stroke-width:3}
+.rly-chip.done{border-color:color-mix(in srgb,var(--good) 55%,var(--line));background:color-mix(in srgb,var(--good) 12%,var(--panel))}
+.rly-chip.me{box-shadow:inset 0 0 0 2px var(--accent)}
+.rly-chip.left{opacity:.45} .rly-chip small{color:var(--muted);font-size:11px}
+.rly-av{width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;flex:none;background:var(--c,#7c6cff);color:#fff;font-style:normal;font-weight:900;font-size:12px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+.rly-av.lg{width:46px;height:46px;font-size:20px}
+.rly-timer{height:7px;border-radius:99px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
+.rly-timer i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--good),var(--info));border-radius:99px;transition:width .2s linear}
+.rly-timer i.low{background:linear-gradient(90deg,var(--bad),var(--warn));animation:rlyPulse .8s ease-in-out infinite alternate}
+.rly-stage{min-height:420px}
+
+/* 스케치북 (종이는 테마와 상관없이 늘 밝게) */
+.rly-book{position:relative;width:100%;max-width:660px;margin:12px auto 0;padding-top:15px;border-radius:9px 9px 12px 12px;background:var(--paper);
+  box-shadow:0 1px 0 var(--paper-edge),0 3px 0 #d8ceb4,0 5px 0 #efe8d6,0 18px 36px rgba(0,0,0,.38)}
+.rly-book::before{content:'';position:absolute;left:0;right:0;top:0;height:15px;border-radius:9px 9px 0 0;background:linear-gradient(#ef7350,#d4553a);box-shadow:inset 0 -2px 0 rgba(0,0,0,.15)}
+.rly-rings{position:absolute;top:-11px;left:24px;right:24px;height:26px;pointer-events:none;z-index:1;
+  background:radial-gradient(ellipse 3px 3.4px at 50% 80%,#4a3d2c 92%,transparent) 0 0/26px 26px repeat-x,
+             linear-gradient(90deg,transparent 10px,#9aa0ad 10px,#f2f3f7 12.5px,#b8bdc8 15px,transparent 16px) 0 0/26px 21px repeat-x}
+.rly-sheet{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:var(--paper);border-radius:0 0 12px 12px}
+.rly-cv{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-user-select:none}
+.rly-cv.draw{cursor:crosshair}
+.rly-cv.locked{cursor:default}
+.rly-pad.locked .rly-tools{opacity:.45;pointer-events:none}
+.rly-blank{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);margin:0;text-align:center;color:#a49c88;font-size:15px;pointer-events:none}
+
+/* 그리기 · 맞히기 */
+.rly-task{display:flex;flex-direction:column;gap:12px;max-width:660px;margin:0 auto}
+.rly-task .rly-book,.rly-task .rly-tools{max-width:min(660px,max(330px,calc((100vh - 420px) * 4 / 3)));margin-left:auto;margin-right:auto}
+.rly-task .rly-book{margin-top:12px}
+.rly-prompt{position:relative;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:10px 16px 11px;box-shadow:var(--shadow)}
+.rly-prompt .rly-meta{position:absolute;top:8px;right:12px;font-size:12px;max-width:40%}
+.rly-prompt .rly-meta .ic{width:14px;height:14px}
+.rly-prompt small{display:block;color:var(--muted);font-size:13px}
+.rly-prompt b{display:block;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:clamp(27px,6vw,42px);letter-spacing:1px;line-height:1.25;margin:2px 0;word-break:keep-all}
+.rly-prompt.draw b{color:var(--warn)}
+.rly-prompt.guess b{color:var(--info)}
+.rly-hint{font-size:12px;color:var(--muted)}
+.rly-tools{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:center;align-items:center;margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:9px 12px}
+.rly-colors,.rly-sizes{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
+.rly-sw{width:30px;height:30px;padding:0;border-radius:50%;cursor:pointer;background:var(--c);border:3px solid var(--panel);box-shadow:0 0 0 1px var(--line);transition:transform .12s,box-shadow .12s}
+.rly-sw.on{box-shadow:0 0 0 3px var(--accent-2);transform:scale(1.12)}
+.rly-tool,.rly-size{width:38px;height:38px;padding:0;border-radius:11px;cursor:pointer;display:grid;place-items:center;border:1px solid var(--line);background:var(--panel2);color:var(--text);transition:background .12s,border-color .12s}
+.rly-tool .ic{width:20px;height:20px}
+.rly-tool.on,.rly-size.on{border-color:var(--accent-2);background:color-mix(in srgb,var(--accent) 24%,var(--panel2))}
+.rly-size i{width:var(--z);height:var(--z);border-radius:50%;background:currentColor}
+.rly-sep{width:1px;height:26px;background:var(--line);margin:0 2px}
+.rly-tools .rly-send{margin-left:auto;padding:9px 18px;font-size:17px}
+.rly-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rly-foot .btn{margin-left:auto}
+.rly-meta{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rly-meta .ic{width:16px;height:16px}
+.rly-answer-row{display:flex;gap:8px}
+.rly-answer-row input{flex:1 1 0;width:0;min-width:0;font-size:19px;font-weight:700}   /* width:0 → 휴대폰에서 칸이 화면을 밀어내지 않게 */
+
+/* 기다리기 */
+.rly-wait{max-width:540px;margin:18px auto;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:26px 20px 22px;box-shadow:var(--shadow)}
+.rly-wait>b{display:block;margin-top:8px;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:28px}
+.rly-wait>p{color:var(--muted);margin:6px 0 0}
+.rly-cnt{display:inline-block;min-width:44px;padding:1px 8px;border-radius:99px;background:var(--panel2);color:var(--text);font-weight:900}
+.rly-hg{width:66px;height:66px;margin:0 auto;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent-2)}
+.rly-hg .ic{width:34px;height:34px;animation:rlyTurn 2.6s ease-in-out infinite}
+.rly-wait.over .rly-hg{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+.rly-wait.over .rly-hg .ic{animation:none}
+.rly-mine{margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.rly-mine .rly-book{max-width:300px}
+.rly-mine q{font-family:'Black Han Sans',sans-serif;font-size:28px;color:var(--warn);quotes:'“' '”'}
+.rly-mine small{color:var(--muted);font-size:12px}
+.rly-final{list-style:none;margin:16px auto 0;padding:0;max-width:340px;display:grid;gap:6px;text-align:left}
+.rly-final li{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:12px;padding:7px 12px}
+.rly-final li b{margin-left:auto;font-family:'Black Han Sans',sans-serif;font-weight:400;color:var(--warn)}
+.rly-final li:first-child{background:color-mix(in srgb,var(--warn) 20%,var(--panel2))}
+
+/* 단어 카드 + 주사위 */
+.rly-intro{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:center;max-width:840px;margin:8px auto}
+.rly-wordcard{background:linear-gradient(160deg,#fff9e9,#ffeec4);color:#3b2a10;border:2px solid #f0d58e;border-radius:18px;padding:15px 18px 12px;box-shadow:0 16px 32px rgba(0,0,0,.35);transform:rotate(-2deg)}
+.rly-wc-h{display:flex;align-items:center;gap:8px;padding-bottom:9px;margin-bottom:9px;border-bottom:2px dashed #e2c472}
+.rly-wc-h .ic{width:22px;height:22px}
+.rly-wc-h b{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:19px}
+.rly-wc-h small{margin-left:auto;font-weight:700;color:#8a6a2a}
+.rly-wordcard ol{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.rly-wordcard li{display:flex;align-items:center;gap:11px;padding:6px 9px;border-radius:11px;font-size:18px;font-weight:700;transition:background .35s,color .35s,transform .35s,box-shadow .35s}
+.rly-wordcard li i{width:27px;height:27px;flex:none;border-radius:8px;display:grid;place-items:center;background:#3b2a10;color:#ffe7ae;font-style:normal;font-family:'Black Han Sans',sans-serif;font-size:15px}
+.rly-wordcard li.pick{background:#3b2a10;color:#fff;transform:scale(1.05);box-shadow:0 8px 18px rgba(0,0,0,.28)}
+.rly-wordcard li.pick i{background:#ffc53d;color:#3b2a10}
+.rly-wc-foot{margin:9px 0 0;font-size:12px;color:#8a6a2a;text-align:center}
+.rly-roll{display:flex;flex-direction:column;align-items:center;gap:11px;text-align:center}
+.rly-die .die{width:88px;height:88px;padding:14px;border-radius:19px;gap:4px}
+.rly-die.land .die{animation:rlyLand .5s cubic-bezier(.2,.9,.3,1.4)}
+.rly-pick{margin:0;font-size:16px;color:var(--muted);min-height:66px}
+.rly-pick small{display:block;font-size:13px}
+.rly-pick b{display:block;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:38px;color:var(--warn);animation:rlyLand .45s ease-out}
+.rly-tip{margin:0;color:var(--muted);font-size:14px;line-height:1.55}
+.rly-tip b{color:var(--text)}
+
+/* 펼쳐 보기 */
+.rly-reveal{display:flex;flex-direction:column;gap:10px}
+.rly-rv-head{display:flex;align-items:center;gap:12px;position:sticky;top:72px;z-index:3;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:10px 12px;box-shadow:var(--shadow)}
+.rly-rv-t small{display:block;color:var(--muted);font-size:12px}
+.rly-rv-t b{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:21px}
+.rly-rv-head .btn{margin-left:auto}
+.rly-rv-tip{margin:0;color:var(--muted);font-size:13px;text-align:center}
+.rly-rv-tip b{color:#ff7a8a}
+.rly-pages{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px 14px;align-items:start;padding:6px 4px 4px}
+.rly-page{position:relative;color:var(--ink);background:var(--paper);border-radius:14px;padding:12px;box-shadow:0 2px 0 var(--paper-edge),0 12px 26px rgba(0,0,0,.3);animation:rlyIn .55s cubic-bezier(.2,.9,.3,1.25) both;animation-delay:var(--d,0s)}
+.rly-no{position:absolute;top:-9px;left:-8px;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff;font-family:'Black Han Sans',sans-serif;font-size:14px;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+.rly-by{display:flex;align-items:center;gap:7px;font-weight:700;font-size:14px;margin:0 0 9px 12px}
+.rly-by span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rly-by small{margin-left:auto;font-weight:500;font-size:12px;color:#8a8473}
+.rly-page .rly-book{margin:0;padding:0;max-width:none;border-radius:9px;box-shadow:none;border:1px solid #ebe3cd}
+.rly-page .rly-book::before{display:none}
+.rly-page .rly-sheet{border-radius:9px}
+.rly-ans{font-family:'Black Han Sans',sans-serif;font-size:29px;line-height:1.3;text-align:center;padding:28px 8px;border:2px dashed #e4dbc4;border-radius:11px;word-break:keep-all;overflow-wrap:anywhere}
+.rly-ans.empty{color:#b0a893;font-size:19px}
+.rly-page.origin{background:linear-gradient(160deg,#fff9e9,#ffeec4);text-align:center;padding-top:16px}
+.rly-page.origin small{display:block;color:#8a6a2a;font-weight:700}
+.rly-big{display:block;padding:18px 0 14px;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:36px;color:#3b2a10;word-break:keep-all}
+.rly-page.exact{box-shadow:0 0 0 3px var(--good),0 12px 26px rgba(0,0,0,.3)}
+.rly-page.exact .rly-ans{border-color:#9ed9bd;color:#1e7a50}
+.rly-pg-foot{display:flex;align-items:center;gap:6px;margin-top:9px;flex-wrap:wrap;min-height:30px}
+.rly-badge{font-size:11px;font-weight:900;padding:3px 8px;border-radius:99px;background:#2fa36b;color:#fff}
+.rly-badge.blue{background:#1e7cf2}
+.rly-like{margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;cursor:pointer;border:1px solid #ead9d5;background:#fff;color:#d23c55;font-weight:900;font-size:14px;transition:transform .12s,background .15s}
+.rly-like .ic{width:17px;height:17px}
+.rly-like:not(:disabled):hover{transform:scale(1.06)}
+.rly-like.on{background:#e5484d;border-color:#e5484d;color:#fff}
+.rly-like.on .ic{fill:currentColor}
+.rly-like:disabled{cursor:default;opacity:.65}
+.rly-page.ending{grid-column:1/-1;display:grid;place-items:center;min-height:76px;text-align:center;font-size:15px;color:var(--text);background:var(--panel);border:1px dashed var(--line);box-shadow:none}
+.rly-page.ending b{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:20px;margin:0 3px}
+.rly-page.ending i{font-style:normal;color:var(--muted);margin:0 6px}
+.rly-page.ending b.ok{color:var(--good);font-size:24px}
+
+/* 라이트 테마: 노란 글씨는 흰 바탕에서 잘 안 보여서 진하게 */
+[data-theme="light"] .rly-prompt.draw b,[data-theme="light"] .rly-pick b,[data-theme="light"] .rly-mine q{color:#d97706}
+[data-theme="light"] .rly-chip b,[data-theme="light"] .rly-final li b{color:#b7791f}
+[data-theme="light"] .rly-prompt.guess b{color:#1d6fd6}
+
+@keyframes rlyIn{from{opacity:0;transform:translateY(16px) scale(.95)}to{opacity:1;transform:none}}
+@keyframes rlyLand{0%{transform:scale(1.4) rotate(-16deg)}100%{transform:none}}
+@keyframes rlyTurn{0%,42%{transform:rotate(0)}50%,92%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
+@keyframes rlyPulse{from{opacity:1}to{opacity:.55}}
+
+@media (max-width:720px){
+  .rly-intro{grid-template-columns:1fr;gap:14px}
+  .rly-wordcard{transform:none;padding:12px 14px 10px}
+  .rly-wordcard li{font-size:16px;padding:4px 8px}
+  .rly-pick{min-height:0}
+}
+@media (max-width:520px){
+  .rly-stage{min-height:0}
+  .rly-chip .nm{max-width:64px}
+  .rly-sw{width:27px;height:27px;border-width:2px}
+  .rly-tool,.rly-size{width:34px;height:34px}
+  .rly-tools{gap:7px 10px;padding:8px}
+  .rly-rings{left:12px;right:12px}
+  .rly-rv-head{flex-wrap:wrap}
+  .rly-rv-head .btn{width:100%;margin-left:0}
+  .rly-foot .btn{width:100%;margin-left:0}
+  .rly-tools .rly-send{width:100%;margin-left:0}
+  .rly-prompt{padding-top:26px}
+  .rly-prompt .rly-meta{left:12px;right:auto;max-width:none}
+  .rly-prompt b{font-size:30px}
+}

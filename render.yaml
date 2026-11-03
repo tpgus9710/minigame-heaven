@@ -1,0 +1,11 @@
+# Render(render.com) 무료 서버 설정 — DEPLOY.md 의 '방법 2'를 보세요.
+services:
+  - type: web
+    name: minigame-heaven
+    runtime: node
+    plan: free
+    region: singapore          # 한국에서 가장 가까운 지역
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    autoDeployTrigger: commit  # GitHub에 파일을 올리면 자동으로 다시 배포

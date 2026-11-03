@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>미니게임 천국</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%237c6cff%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 5h3.5a5 5 0 0 1 0 10h-5.5l-4.015 4.227a2.3 2.3 0 0 1 -3.923 -2.035l1.634 -8.173a5 5 0 0 1 4.904 -4.019h3.4z%22/%3E%3Cpath d=%22M14 15l4.07 4.284a2.3 2.3 0 0 0 3.925 -2.023l-1.6 -8.232%22/%3E%3Cpath d=%22M8 9v2%22/%3E%3Cpath d=%22M7 10h2%22/%3E%3Cpath d=%22M14 10h2%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Noto+Serif+KR:wght@900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/fonts/black-han-sans/font.css">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/css/board.css">
+<link rel="stylesheet" href="/css/kart.css">
+<link rel="stylesheet" href="/css/relay.css">
+<link rel="stylesheet" href="/css/dalmuti.css">
+<link rel="stylesheet" href="/css/coup.css">
+<link rel="stylesheet" href="/css/bang.css">
+<link rel="stylesheet" href="/css/rummi.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand" data-act="home"><i class="brand-ic" data-icon="device-gamepad-2"></i><span>미니게임 천국</span></div>
+  <div class="top-right">
+    <div class="conn" id="conn"><i></i><span>연결 중…</span></div>
+    <button class="btn ghost sm" data-act="theme" id="theme-btn">☀️ 라이트 모드</button>
+  </div>
+</header>
+
+<div class="shell">
+<main id="main">
+
+  <!-- ─────────── 홈 ─────────── -->
+  <section class="screen active" id="scr-home">
+    <div class="hero">
+      <div class="hero-badge">친구들과 함께하는 멀티플레이 미니게임</div>
+      <h1>미니게임 천국</h1>
+      <p class="muted">닉네임을 정하고 혼자서, 또는 친구들과 함께 플레이하세요.</p>
+      <div class="invite-banner hidden" id="invite-banner"></div>
+      <div class="nick-row"><input type="text" id="nick" maxlength="12" placeholder="닉네임 (최대 12자)"></div>
+      <div class="mode-grid">
+        <button class="mode-card" data-act="goSingle"><span class="mi" data-icon="robot"></span><b>싱글 플레이</b><small>AI 대전 · 기록 도전 5종</small></button>
+        <button class="mode-card accent" data-act="goMulti"><span class="mi" data-icon="users-group"></span><b>멀티 플레이</b><small>방 만들고 친구 초대 · 9종</small></button>
+      </div>
+      <div class="home-new"><div class="home-new-t"><i data-icon="sparkles"></i>새로 나온 게임</div><div class="home-new-row" id="home-new"></div></div>
+    </div>
+  </section>
+
+  <!-- ─────────── 싱글 메뉴 ─────────── -->
+  <section class="screen" id="scr-single">
+    <div class="page-head"><button class="btn ghost" data-act="home">← 처음으로</button><h2><i class="h-ic" data-icon="robot"></i>싱글 플레이</h2></div>
+    <div class="game-grid" id="single-grid"></div>
+  </section>
+
+  <!-- ─────────── 멀티 메뉴 ─────────── -->
+  <section class="screen" id="scr-multi">
+    <div class="page-head"><button class="btn ghost" data-act="home">← 처음으로</button><h2><i class="h-ic" data-icon="users-group"></i>멀티 플레이</h2></div>
+    <div class="multi-layout">
+      <div class="panel"><h3>방 만들기</h3><div class="game-grid" id="create-grid"></div></div>
+      <div class="panel join-panel">
+        <h3>코드로 입장</h3>
+        <input type="text" id="join-code" maxlength="4" placeholder="ABCD" autocomplete="off">
+        <button class="btn good" data-act="join">입장하기</button>
+        <div class="invite" id="invite-multi"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── 대기실 ─────────── -->
+  <section class="screen" id="scr-lobby">
+    <div class="page-head">
+      <button class="btn ghost" data-act="leave">← 방 나가기</button>
+      <h2 id="lobby-title">대기실</h2>
+      <div class="code-badge" data-act="copyCode" title="클릭하면 복사됩니다">방 코드 <b id="lobby-code">----</b>📋</div>
+    </div>
+    <div class="lobby-layout">
+      <div class="panel">
+        <div id="lobby-roles"></div>
+        <h3>참가자 <span class="muted" id="lobby-count"></span></h3>
+        <div class="player-list" id="lobby-players"></div>
+      </div>
+      <div class="panel">
+        <div id="lobby-options"></div>
+        <div class="rules" id="lobby-rules"></div>
+        <div class="invite" id="invite-lobby"></div>
+        <div class="lobby-actions" id="lobby-actions"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── 사과 게임 ─────────── -->
+  <section class="screen" id="scr-apple">
+    <div class="game-head">
+      <div class="gh-title"><h2>🍎 사과 게임</h2><div class="status" id="apple-mode">드래그해서 합이 10이 되는 사과를 모으세요!</div></div>
+      <div class="stats"><div class="stat"><small>점수</small><b id="apple-score">0</b></div><div class="stat"><small>남은 시간</small><b id="apple-time">120</b></div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="scorebar" data-scores></div>
+    <div class="center" style="overflow:auto"><div id="apple-board"></div></div>
+  </section>
+
+  <!-- ─────────── 1 to 50 ─────────── -->
+  <section class="screen" id="scr-race">
+    <div class="game-head">
+      <div class="gh-title"><h2>⏱️ 1 to 50</h2><div class="status">1부터 50까지 순서대로 빠르게 누르세요!</div></div>
+      <div class="stats"><div class="stat"><small>다음 숫자</small><b id="race-next">1</b></div><div class="stat"><small>시간</small><b id="race-time">0.0</b></div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="scorebar" data-scores></div>
+    <div class="center"><div id="race-grid"></div></div>
+  </section>
+
+  <!-- ─────────── 오목 ─────────── -->
+  <section class="screen" id="scr-omok">
+    <div class="game-head">
+      <div class="gh-title"><h2>⚫ 오목</h2><div class="status" id="omok-status">흑돌부터 시작합니다.</div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="omok-wrap">
+      <canvas id="omok-cv" width="560" height="560"></canvas>
+      <div class="omok-side">
+        <div class="oplayer" id="omok-pb"><span class="stone-ic b"></span><div><b id="omok-nb">흑</b><div class="small muted">흑돌 · 선공</div></div></div>
+        <div class="oplayer" id="omok-pw"><span class="stone-ic w"></span><div><b id="omok-nw">백</b><div class="small muted">백돌</div></div></div>
+        <div class="small muted" style="line-height:1.6">가로·세로·대각선으로 같은 색 돌 5개를 먼저 이으면 승리!</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── 캐치마인드 ─────────── -->
+  <section class="screen" id="scr-catch">
+    <div class="game-head">
+      <div class="gh-title"><h2>🎨 캐치마인드</h2><div class="status" id="catch-status">준비 중…</div></div>
+      <div class="stats"><div class="stat"><small>차례</small><b id="catch-turn">-</b></div><div class="stat"><small>남은 시간</small><b id="catch-time">-</b></div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="scorebar" data-scores></div>
+    <div class="banner big" id="catch-word">…</div>
+    <div class="canvas-box">
+      <canvas class="sketch" id="catch-cv" width="900" height="520"></canvas>
+      <div class="tools hidden" id="catch-tools" data-sketch="catch"></div>
+    </div>
+  </section>
+
+  <!-- ─────────── 라이어 ─────────── -->
+  <section class="screen" id="scr-liar">
+    <div class="game-head">
+      <div class="gh-title"><h2>🤫 라이어 게임</h2><div class="status" id="liar-status">역할을 나누는 중…</div></div>
+      <div class="stats"><div class="stat"><small>차례</small><b id="liar-turn">-</b></div><div class="stat"><small>남은 시간</small><b id="liar-time">-</b></div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="draw-wrap">
+      <div class="canvas-box">
+        <canvas class="sketch" id="liar-cv" width="760" height="500"></canvas>
+        <div class="tools hidden" id="liar-tools" data-sketch="liar"></div>
+      </div>
+      <div class="side-col">
+        <div class="role-card" id="liar-role"></div>
+        <div class="panel hidden" id="liar-vote"><h3>🗳️ 라이어는 누구?</h3><div class="vote-list" id="liar-vote-list"></div></div>
+        <div class="panel hidden" id="liar-guess"><h3>🎯 제시어를 맞혀라!</h3>
+          <input type="text" id="liar-guess-input" maxlength="20" placeholder="제시어 입력" style="width:100%;margin-bottom:8px">
+          <button class="btn warn" data-act="liarGuess" style="width:100%">정답 외치기!</button></div>
+        <div class="small muted" style="line-height:1.6">한 사람씩 돌아가며 한 붓씩 그림을 그려요. 라이어는 제시어를 모르니 눈치껏! 토론은 오른쪽 채팅으로.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── 테트리스 ─────────── -->
+  <section class="screen" id="scr-tetris">
+    <div class="game-head">
+      <div class="gh-title"><h2 id="tetris-title">🧱 테트리스</h2><div class="status" id="tetris-status">2줄 이상 지우면 상대에게 공격!</div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="scorebar" data-scores></div>
+    <div class="tetris-wrap">
+      <canvas id="tetris-cv" width="300" height="600"></canvas>
+      <div class="t-side">
+        <div class="t-box hidden" id="boss-box"><small>👿 보스 체력</small><b id="boss-hp-text">20</b><div class="boss-hp"><i id="boss-hp-bar" style="width:100%"></i></div></div>
+        <div class="t-box"><small>다음 블록</small><canvas id="tetris-next" width="110" height="80"></canvas></div>
+        <div class="t-box"><small>점수</small><b id="t-score">0</b></div>
+        <div class="t-box"><small>줄 / 레벨</small><b id="t-lines">0 / 1</b></div>
+        <div class="t-box keys"><kbd>←</kbd><kbd>→</kbd> 이동 · <kbd>↑</kbd> 회전<br><kbd>↓</kbd> 빠르게 · <kbd>Space</kbd> 바로 내리기</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── 핑퐁 ─────────── -->
+  <section class="screen" id="scr-pong">
+    <div class="game-head">
+      <div class="gh-title"><h2 id="pong-title">🏓 핑퐁</h2><div class="status" id="pong-status">마우스를 판 위에서 움직여 패들을 조종하세요.</div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="pong-wrap">
+      <canvas id="pong-cv" width="600" height="600"></canvas>
+      <div class="p-side" id="pong-side"></div>
+    </div>
+  </section>
+
+  <!-- ─────────── 카드 (섯다 · 포커) ─────────── -->
+  <section class="screen" id="scr-card">
+    <div class="game-head">
+      <div class="gh-title"><h2 id="card-title">🃏 카드</h2><div class="status" id="card-sub">-</div></div>
+      <button class="btn ghost hidden" data-act="stopGame" id="card-stop">그만하고 대기실로</button>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="table" id="card-table">
+      <div class="seats" id="card-opps"></div>
+      <div class="pot-box"><small>총 판돈</small><div class="pot" id="card-pot">0원</div><small id="card-bet">-</small></div>
+      <div class="card-log" id="card-log"></div>
+      <div class="seats" id="card-me"></div>
+      <div class="result-bar hidden" id="card-result"></div>
+    </div>
+    <div class="actions hidden" id="card-actions"></div>
+    <div class="waiting" id="card-waiting"></div>
+  </section>
+
+  <!-- ─────────── 💣 지뢰찾기 ─────────── -->
+  <section class="screen" id="scr-mine">
+    <div class="game-head">
+      <div class="gh-title"><h2>💣 지뢰찾기</h2><div class="status" id="mine-status"></div></div>
+      <div class="stats"><div class="stat" ><small >남은 지뢰</small><b id="mine-left">-</b></div><div class="stat" ><small id="mine-time-label">시간</small><b id="mine-time">-</b></div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="scorebar" data-scores></div>
+    <div class="mine-tools">
+      <div class="mine-levels" id="mine-levels"><button class="seg-btn" data-act="mineLevel" data-level="easy">초급 9×9</button><button class="seg-btn" data-act="mineLevel" data-level="normal">중급 16×16</button><button class="seg-btn" data-act="mineLevel" data-level="hard">고급 30×16</button></div>
+      <button class="btn sm ghost" id="mine-flag" data-act="mineFlag">⛏️ 열기 모드</button>
+      <span class="small muted">오른쪽 클릭 = 깃발 · 숫자 칸 클릭 = 주변 한꺼번에 열기</span>
+    </div>
+    <div class="center" style="overflow:auto"><div id="mine-grid"></div></div>
+  </section>
+
+  <!-- ─────────── 🔢 2048 ─────────── -->
+  <section class="screen" id="scr-g2048">
+    <div class="game-head">
+      <div class="gh-title"><h2>🔢 2048</h2><div class="status" id="g2048-status"></div></div>
+      <div class="stats"><div class="stat" ><small >점수</small><b id="g2048-score">-</b></div><div class="stat" ><small id="g2048-tlabel">최고 점수</small><b id="g2048-time">-</b></div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="scorebar" data-scores></div>
+    <div class="center"><div id="b2048"></div></div>
+    <p class="center small muted" style="margin-top:12px">방향키 · WASD · 판을 밀어서(스와이프) 움직여요</p>
+  </section>
+
+  <!-- ─────────── 🐍 스네이크 ─────────── -->
+  <section class="screen" id="scr-snake">
+    <div class="game-head">
+      <div class="gh-title"><h2>🐍 스네이크</h2><div class="status" id="snake-status"></div></div>
+      <div class="stats"><div class="stat" ><small >길이</small><b id="snake-len">-</b></div><div class="stat" ><small id="snake-tlabel">최고 기록</small><b id="snake-time">-</b></div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="scorebar" data-scores></div>
+    <div class="center" style="overflow:auto"><canvas id="snake-cv" width="624" height="480"></canvas></div>
+  </section>
+
+
+  <!-- ─────────── ☔ 산성비 ─────────── -->
+  <section class="screen" id="scr-rain">
+    <div class="game-head">
+      <div class="gh-title"><h2>☔ 산성비 타자</h2><div class="status" id="rain-status"></div></div>
+      <div class="stats"><div class="stat" ><small >점수</small><b id="rain-score">-</b></div><div class="stat" ><small >단계</small><b id="rain-level">-</b></div><div class="stat" id="rain-time-box"><small >남은 시간</small><b id="rain-time">-</b></div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="scorebar" data-scores></div>
+    <div class="rain-wrap">
+      <div id="rain-field"><div class="rain-ground"></div></div>
+      <div class="rain-bottom">
+        <div class="acid" id="rain-acid-box"><small>산성도</small><div class="acid-track"><div id="rain-acid-bar"></div></div><b id="rain-acid">0%</b></div>
+        <input type="text" id="rain-input" maxlength="20" autocomplete="off" placeholder="단어를 입력하고 Enter!">
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── 🎱 빙고 ─────────── -->
+  <section class="screen" id="scr-bingo">
+    <div class="game-head">
+      <div class="gh-title"><h2>🎱 빙고</h2><div class="status" id="bingo-status"></div></div>
+      <div class="stats"><div class="stat" ><small >완성한 줄</small><b id="bingo-lines">-</b></div><div class="stat" ><small >남은 시간</small><b id="bingo-time">-</b></div></div>
+      <button class="btn ghost" data-act="leaveGame">나가기</button>
+    </div>
+    <div class="scorebar" data-scores></div>
+    <div class="bingo-wrap">
+      <div>
+        <div id="bingo-board"></div>
+        <button class="btn ghost" id="bingo-shuffle" data-act="bingoShuffle" style="width:100%;margin-top:12px">🔀 내 판 섞기</button>
+      </div>
+      <div class="panel bingo-side"><h3>📣 부른 숫자</h3><div id="bingo-called"></div></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ─────────── 채팅 ─────────── -->
+<aside class="chat" id="chat">
+  <div class="chat-head"><b>💬 채팅</b><span class="small muted" id="chat-room"></span></div>
+  <div class="chat-log" id="chat-log"></div>
+  <div class="emoji-row" id="emoji-row"></div>
+  <div class="chat-form" id="chat-form">
+    <input type="text" id="chat-input" maxlength="120" placeholder="메시지 입력…">
+    <button type="button" class="btn sm" data-act="sendChat">전송</button>
+  </div>
+</aside>
+</div>
+
+<div class="overlay" id="game-picker"><div class="modal wide">
+  <h2>다른 게임으로 바꾸기</h2><p>방을 나가지 않고 바로 바꿀 수 있어요. 바꾸면 모두 다시 준비 완료를 눌러야 해요.</p>
+  <div class="game-grid" id="picker-grid"></div>
+  <div class="ov-actions"><button class="btn ghost" data-act="closePicker">닫기</button></div>
+</div></div>
+<div class="overlay" id="overlay"><div class="modal">
+  <h2 id="ov-title"></h2><p id="ov-sub"></p><div id="ov-lines"></div>
+  <ol class="rank" id="ov-rank"></ol>
+  <div class="ov-actions" id="ov-actions"></div>
+</div></div>
+<div id="toasts"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/icons.js"></script>
+<script src="/js/core.js"></script>
+<script src="/js/apple.js"></script>
+<script src="/js/race.js"></script>
+<script src="/js/omok.js"></script>
+<script src="/js/draw.js"></script>
+<script src="/js/tetris.js"></script>
+<script src="/js/pong.js"></script>
+<script src="/js/cards.js"></script>
+<script src="/js/mine.js"></script>
+<script src="/js/g2048.js"></script>
+<script src="/js/snake.js"></script>
+<script src="/js/rain.js"></script>
+<script src="/js/bingo.js"></script>
+<script src="/js/shared/table.js"></script>
+<script src="/js/shared/volley-core.js"></script>
+<script src="/js/shared/bomb-core.js"></script>
+<script src="/js/shared/tank-core.js"></script>
+<script src="/js/breakout.js"></script>
+<script src="/js/dodge.js"></script>
+<script src="/js/plat.js"></script>
+<script src="/js/zombie.js"></script>
+<script src="/js/volley.js"></script>
+<script src="/js/bomb.js"></script>
+<script src="/js/tank.js"></script>
+<script src="/js/shooter.js"></script>
+<script src="/js/gem.js"></script>
+<script src="/js/fruit.js"></script>
+<script src="/js/stack.js"></script>
+<script src="/js/mole.js"></script>
+<script src="/js/onecard.js"></script>
+<script src="/js/halli.js"></script>
+<script src="/js/ox.js"></script>
+<script src="/js/word.js"></script>
+<script src="/js/table.js"></script>
+<script src="/js/shared/marble-core.js"></script>
+<script src="/js/marble.js"></script>
+<script src="/js/shared/life-core.js"></script>
+<script src="/js/life.js"></script>
+<script src="/js/shared/mafia-core.js"></script>
+<script src="/js/mafia.js"></script>
+<script src="/js/shared/thief-core.js"></script>
+<script src="/js/thief.js"></script>
+<script src="/js/shared/yut-core.js"></script>
+<script src="/js/yut.js"></script>
+<script src="/js/shared/yacht-core.js"></script>
+<script src="/js/yacht.js"></script>
+<script src="/js/shared/blackjack-core.js"></script>
+<script src="/js/blackjack.js"></script>
+<script src="/js/shared/liardice-core.js"></script>
+<script src="/js/liardice.js"></script>
+<script src="/js/shared/davinci-core.js"></script>
+<script src="/js/davinci.js"></script>
+<script src="/js/shared/reversi-core.js"></script>
+<script src="/js/reversi.js"></script>
+<script src="/js/shisen.js"></script>
+<script src="/js/shared/rummi-core.js"></script>
+<script src="/js/rummi.js"></script>
+<script src="/js/shared/bang-core.js"></script>
+<script src="/js/bang.js"></script>
+<script src="/js/shared/coup-core.js"></script>
+<script src="/js/coup.js"></script>
+<script src="/js/shared/dalmuti-core.js"></script>
+<script src="/js/dalmuti.js"></script>
+<script src="/js/shared/relay-core.js"></script>
+<script src="/js/relay.js"></script>
+<script src="/js/kart.js"></script>
+</body>
+</html>
