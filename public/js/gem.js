@@ -182,7 +182,7 @@ const Gem = {
     this.over = true;
     if (this.multi) { socket.emit('sr:score', this.score); socket.emit('sr:over'); setStatus('gem', `⏰ 끝! ${this.score.toLocaleString()}점 — 결과를 기다리는 중…`); return; }
     const best = Math.max(+store.get('best-gem', 0), this.score); store.set('best-gem', best);
-    showResult({ title: '💎 시간 종료!', subtitle: `점수 ${this.score.toLocaleString()} · 최고 점수 ${best.toLocaleString()}`, solo: 'gem' });
+    showResult({ title: '💎 시간 종료!', subtitle: `점수 ${this.score.toLocaleString()} · 최고 점수 ${best.toLocaleString()}`, solo: 'gem', rec: { v: this.score } });
   },
 };
 (() => {

@@ -4,6 +4,7 @@ const { WORDS } = require('../data/words');
 
 module.exports = H => {
   const { emit, sys, later, cancel, getPlayer, participants, finishGame } = H;
+  const citizens = room => participants(room).filter(p => p.id !== room.game.liarId).map(p => p.id);   // 시민 승리 → 라이어 말고 모두
 
   function next(room) {
     const g = room.game;
@@ -38,7 +39,7 @@ module.exports = H => {
 
     if (max === 0 || top.length !== 1 || top[0] !== g.liarId) {
       return finishGame(room, {
-        title: '🤫 라이어 승리!',
+        title: '🤫 라이어 승리!', winners: [g.liarId],
         subtitle: `라이어는 ${liar ? liar.name : '?'} 님이었습니다. 제시어: [${g.word}] (${g.category})`,
         lines: [`투표 결과: ${summary}`],
       });
@@ -48,7 +49,7 @@ module.exports = H => {
     emit(room, 'liar:caught', { liarId: g.liarId, liarName: liar.name, seconds: 30 });
     sys(room, `🚨 라이어 ${liar.name} 님 검거! 30초 안에 제시어를 맞히면 라이어 역전승! (투표: ${summary})`);
     g.timer = later(room, 30000, () => {
-      if (g.token === token) finishGame(room, { title: '🧑‍🤝‍🧑 시민 승리!', subtitle: `라이어 ${liar.name} 님이 시간 안에 답하지 못했습니다. 제시어: [${g.word}]` });
+      if (g.token === token) finishGame(room, { winners: citizens(room), title: '🧑‍🤝‍🧑 시민 승리!', subtitle: `라이어 ${liar.name} 님이 시간 안에 답하지 못했습니다. 제시어: [${g.word}]` });
     });
   }
 
@@ -77,13 +78,13 @@ module.exports = H => {
         const g = room.game;
         if (g.phase !== 'guess' || me.id !== g.liarId) return;
         const guess = String(w ?? '').trim().slice(0, 20);
-        if (H.normWord(guess) === H.normWord(g.word)) finishGame(room, { title: '🤫 라이어 역전승!', subtitle: `${me.name} 님이 제시어 [${g.word}]를 맞혔습니다!` });
-        else finishGame(room, { title: '🧑‍🤝‍🧑 시민 승리!', subtitle: `라이어 ${me.name} 님의 답 [${guess}] — 정답은 [${g.word}]` });
+        if (H.normWord(guess) === H.normWord(g.word)) finishGame(room, { winners: [g.liarId], title: '🤫 라이어 역전승!', subtitle: `${me.name} 님이 제시어 [${g.word}]를 맞혔습니다!` });
+        else finishGame(room, { winners: citizens(room), title: '🧑‍🤝‍🧑 시민 승리!', subtitle: `라이어 ${me.name} 님의 답 [${guess}] — 정답은 [${g.word}]` });
       },
     },
     leave(room, p) {
       const g = room.game;
-      if (g.liarId === p.id) return finishGame(room, { title: '🧑‍🤝‍🧑 시민 승리!', subtitle: `라이어 ${p.name} 님이 도망쳤습니다. 제시어는 [${g.word}]` });
+      if (g.liarId === p.id) return finishGame(room, { winners: citizens(room), title: '🧑‍🤝‍🧑 시민 승리!', subtitle: `라이어 ${p.name} 님이 도망쳤습니다. 제시어는 [${g.word}]` });
       if (g.drawerId === p.id) next(room);
       if (g.phase === 'vote') { g.votes.delete(p.id); if (g.votes.size >= participants(room).length) tally(room); }
     },

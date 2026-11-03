@@ -14,7 +14,7 @@ module.exports = H => {
     H.finishGame(room, {
       title: `🎯 ${ranked[0] ? ranked[0].name : ''} 우승!`,
       subtitle: g.alive.size > 1 ? `⏰ 시간 종료 · ${g.alive.size}명 생존` : '최후의 생존자!',
-      ranking: ranked.map(p => ({ name: p.name, value: `${p.score}초${g.alive.has(p.id) ? ' 생존' : ''}` })),
+      ranking: ranked.map(p => ({ id: p.id, name: p.name, value: `${p.score}초${g.alive.has(p.id) ? ' 생존' : ''}` })),
     });
   }
   function checkEnd(room) {

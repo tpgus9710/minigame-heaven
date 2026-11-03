@@ -11,7 +11,7 @@ module.exports = H => {
     const names = [g.names[0], g.names[1]];
     H.finishGame(room, {
       title: `🏐 ${names[winSide]} 승리!`, subtitle: why || `${g.s.score[0]} : ${g.s.score[1]}`,
-      ranking: [winSide, 1 - winSide].map(i => ({ name: names[i], value: `${g.s.score[i]}점` })),
+      ranking: [winSide, 1 - winSide].map(i => ({ id: g.ids[i], name: names[i], value: `${g.s.score[i]}점` })), winners: [g.ids[winSide]],
     });
   }
 

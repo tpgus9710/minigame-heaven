@@ -1,0 +1,11 @@
+얼굴 인식 모델 (InsightFace "buffalo_s" 모델 묶음에서 두 개)
+
+  det_500m.f16.onnx   SCRFD-500M 얼굴 검출 (얼굴 상자 + 눈·코·입꼬리 5점)
+  w600k_mbf.f16.onnx  ArcFace MobileFaceNet (WebFace600K 학습) 얼굴 특징값 512개
+
+출처: https://github.com/deepinsight/insightface (model_zoo, buffalo_s)
+파일 크기를 줄이려고 가중치만 float16 으로 저장했어요. 불러올 때 float32 로 되돌려서 계산하므로
+원래 모델과 결과가 사실상 같아요 (특징값 코사인 유사도 0.9998 이상).
+
+라이선스: InsightFace 가 공개한 학습된 모델은 "비상업적 연구 목적"으로만 쓸 수 있어요.
+이 게임을 돈을 받는 서비스에 쓰려면 InsightFace 측과 따로 라이선스를 확인해야 해요.

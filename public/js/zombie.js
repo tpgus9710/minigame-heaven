@@ -157,7 +157,7 @@ const Zombie = {
     this.over = true;
     const best = Math.max(+store.get('best-zombie', 0), this.stage);
     store.set('best-zombie', best);
-    after(700, () => showResult({ title: '🧟 부대가 전멸했어요!', subtitle: `스테이지 ${this.stage} · 처치 ${this.kills}마리 · 최고 스테이지 ${best}`, solo: 'zombie' }));
+    after(700, () => showResult({ title: '🧟 부대가 전멸했어요!', subtitle: `스테이지 ${this.stage} · 처치 ${this.kills}마리 · 최고 스테이지 ${best}`, solo: 'zombie', rec: { v: this.stage } }));
   },
 
   draw() {

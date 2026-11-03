@@ -46,7 +46,7 @@ const Snake = {
     const len = this.me.body.length;
     const best = Math.max(+store.get('best-snake', 0), len); store.set('best-snake', best);
     this.drawSolo(true);
-    after(700, () => showResult({ title: '🐍 쾅! 부딪혔어요', subtitle: `길이 ${len} · 최고 기록 ${best}`, solo: 'snake' }));
+    after(700, () => showResult({ title: '🐍 쾅! 부딪혔어요', subtitle: `길이 ${len} · 최고 기록 ${best}`, solo: 'snake', rec: { v: len } }));
   },
   drawSolo(dead) {
     this.draw([{ id: 'me', b: this.me.body, c: '#3fcf9b', a: !dead, n: '' }], this.food, 'me');

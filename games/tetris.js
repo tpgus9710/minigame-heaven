@@ -5,7 +5,7 @@ module.exports = H => {
     const g = room.game;
     if (g.alive.size > 1) return;
     const w = H.getPlayer(room, [...g.alive][0]);
-    H.finishGame(room, { title: w ? `🏆 ${w.name} 최후의 생존자!` : '무승부', ranking: H.rankScores(room, '점') });
+    H.finishGame(room, { title: w ? `🏆 ${w.name} 최후의 생존자!` : '무승부', ranking: H.rankScores(room, '점'), winners: w ? [w.id] : [] });   // 점수가 아니라 마지막 생존자가 승리
   }
   return {
     games: { tetris: { name: '테트리스 배틀', min: 2, max: 8 } },

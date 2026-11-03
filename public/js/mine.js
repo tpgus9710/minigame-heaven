@@ -126,7 +126,7 @@ const Mine = {
     if (!this.solo) return socket.emit('mine:clear');
     const key = 'best-mine-' + this.level, prev = +store.get(key, 0);
     const best = prev ? Math.min(prev, this.finalSec) : this.finalSec; store.set(key, best);
-    after(600, () => showResult({ title: '🎉 지뢰 제거 성공!', subtitle: `${MINE_LEVELS[this.level].label} · ${this.finalSec}초 (최고 기록 ${best}초)${!prev || this.finalSec < prev ? ' 🏅 신기록!' : ''}`, solo: 'mine' }));
+    after(600, () => showResult({ title: '🎉 지뢰 제거 성공!', subtitle: `${MINE_LEVELS[this.level].label} · ${this.finalSec}초 (최고 기록 ${best}초)${!prev || this.finalSec < prev ? ' 🏅 신기록!' : ''}`, solo: 'mine', win: true, rec: { k: this.level, v: this.finalSec } }));
   },
 };
 $('#mine-grid').addEventListener('click', e => { const c = e.target.closest('.mc'); if (c) Mine.act(+c.dataset.i, false); });

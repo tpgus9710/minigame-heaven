@@ -20,8 +20,9 @@ module.exports = H => {
     const g = room.game;
     const ranking = Object.entries(g.snakes)
       .sort(([, a], [, b]) => b.alive - a.alive || b.body.length - a.body.length)
-      .map(([, s]) => ({ name: s.name, value: `${s.alive ? '🐍' : '💀'} 길이 ${s.body.length}` }));
-    H.finishGame(room, { title, ranking });
+      .map(([id, s]) => ({ id, name: s.name, value: `${s.alive ? '🐍' : '💀'} 길이 ${s.body.length}`, alive: s.alive }));
+    // 이긴 사람: 살아남은 뱀 중 1등 (모두 탈락이면 없음)
+    H.finishGame(room, { title, ranking, winners: ranking[0] && ranking[0].alive ? [ranking[0].id] : [] });
   }
   function checkEnd(room) {
     const g = room.game;

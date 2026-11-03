@@ -9,7 +9,7 @@ module.exports = H => {
     const g = room.game;
     const ranking = participants(room).slice()
       .sort((a, b) => (g.state[b.id] === 'clear') - (g.state[a.id] === 'clear') || b.score - a.score)
-      .map(p => ({ name: p.name, value: g.state[p.id] === 'clear' ? '✅ 완료' : g.state[p.id] === 'boom' ? `💥 ${p.score}%` : `${p.score}%` }));
+      .map(p => ({ id: p.id, name: p.name, value: g.state[p.id] === 'clear' ? '✅ 완료' : g.state[p.id] === 'boom' ? `💥 ${p.score}%` : `${p.score}%` }));
     finishGame(room, { title, subtitle, ranking });
   }
   function checkEnd(room) {

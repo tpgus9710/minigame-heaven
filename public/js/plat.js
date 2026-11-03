@@ -229,7 +229,7 @@ const Plat = {
     this.over = true;
     const best = Math.max(+store.get('best-plat', 0), this.stage);
     store.set('best-plat', best);
-    showResult({ title: '💫 게임 오버', subtitle: `스테이지 ${this.stage} · 코인 ${this.coins}개 · 점수 ${this.score} · 최고 스테이지 ${best}`, solo: 'plat' });
+    showResult({ title: '💫 게임 오버', subtitle: `스테이지 ${this.stage} · 코인 ${this.coins}개 · 점수 ${this.score} · 최고 스테이지 ${best}`, solo: 'plat', rec: { v: this.stage } });
   },
 
   draw(countdown) {

@@ -143,7 +143,7 @@ const Shisen = {
     this.score += bonus; this.hud();
     if (this.multi) { socket.emit('sr:score', this.score); socket.emit('sr:over'); setStatus('shisen', `${cleared ? '🎉 클리어!' : '⏰ 끝!'} ${this.score.toLocaleString()}점 — 결과를 기다리는 중…`); return; }
     const best = Math.max(+store.get('best-shisen', 0), this.score); store.set('best-shisen', best);
-    showResult({ title: cleared ? '🀄 클리어!' : '🀄 시간 종료!', subtitle: `점수 ${this.score.toLocaleString()}${cleared ? ` (클리어 보너스 +${bonus})` : ` · 남은 패 ${this.left}장`} · 최고 점수 ${best.toLocaleString()}`, solo: 'shisen' });
+    showResult({ title: cleared ? '🀄 클리어!' : '🀄 시간 종료!', subtitle: `점수 ${this.score.toLocaleString()}${cleared ? ` (클리어 보너스 +${bonus})` : ` · 남은 패 ${this.left}장`} · 최고 점수 ${best.toLocaleString()}`, solo: 'shisen', win: !!cleared, rec: { v: this.score } });
   },
 };
 $('#ss-board').addEventListener('click', e => { const t = e.target.closest('.ss-tile'); if (t) Shisen.click(+t.dataset.r, +t.dataset.c); });

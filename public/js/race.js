@@ -25,7 +25,7 @@ const Race = {
       const t = (Date.now() - this.t0) / 1000;
       const prev = +store.get('best-race', 0);
       const best = prev ? Math.min(prev, t) : t; store.set('best-race', best);
-      showResult({ title: '🏁 완료!', subtitle: `기록 ${t.toFixed(2)}초 · 최고 기록 ${best.toFixed(2)}초${t <= best && prev ? ' 🎉 신기록!' : ''}`, solo: 'race' });
+      showResult({ title: '🏁 완료!', subtitle: `기록 ${t.toFixed(2)}초 · 최고 기록 ${best.toFixed(2)}초${t <= best && prev ? ' 🎉 신기록!' : ''}`, solo: 'race', rec: { v: +t.toFixed(2) } });
     }
   },
 };

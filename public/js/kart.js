@@ -698,7 +698,7 @@ const Kart = {
       subtitle: `${T.name} · ${R.mode === 'item' ? '아이템전' : '스피드전'} · ${R.laps}바퀴`,
       lines: [me.fin != null ? `기록 ${ktFmt(me.fin)}${rec ? (prev ? ' · 최고 기록 갱신!' : ' · 첫 기록!') : ` · 최고 ${ktFmt(prev / 1000)}`}` : '아쉽게 완주하지 못했어요', bestLap && R.laps > 1 ? `가장 빠른 바퀴 ${ktFmt(bestLap)}` : ''].filter(Boolean),
       ranking: R.order.map(k => ({ name: k === me ? `${k.name} (나)` : k.name, value: k.fin != null ? ktFmt(k.fin) : `${clamp(k.lap, 0, R.laps)}/${R.laps}바퀴` })),
-      solo: 'kart',
+      solo: 'kart', win: me.fin != null && me.pos === 1 && R.order.length > 1,
     });
   },
   flash(text, color) { const R = this.R; if (!R || R.attract) return; R.msgs = R.msgs.filter(m => m.text !== text); R.msgs.push({ text, color, t: 1.7 }); if (R.msgs.length > 3) R.msgs.shift(); },

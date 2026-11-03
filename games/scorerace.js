@@ -15,7 +15,7 @@ module.exports = H => {
     const ranked = participants(room).slice().sort((a, b) => b.score - a.score);
     H.finishGame(room, {
       title: `🏆 ${ranked[0] ? ranked[0].name : ''} 우승!`, subtitle: `${cfg.name} · ${why}`,
-      ranking: ranked.map(p => ({ name: p.name, value: `${p.score.toLocaleString()}점` })),
+      ranking: ranked.map(p => ({ id: p.id, name: p.name, value: `${p.score.toLocaleString()}점` })),
     });
   }
   const checkEnd = room => { if (participants(room).every(p => room.game.done.has(p.id))) finish(room, '모두 끝났어요'); };

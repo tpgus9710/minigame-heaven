@@ -19,7 +19,8 @@ module.exports = H => {
     for (const r of res.ranking || []) { const pl = H.getPlayer(room, r.id); if (pl && typeof r.score === 'number') pl.score = r.score; }
     H.finishGame(room, {
       title: res.title, subtitle: res.subtitle || '', lines: res.lines || [], returnIn: 12,
-      ranking: (res.ranking || []).map(r => ({ name: names[r.id] || '?', value: r.value })),
+      ranking: (res.ranking || []).map(r => ({ id: r.id, name: names[r.id] || '?', value: r.value })),
+      ...(Array.isArray(res.winners) ? { winners: res.winners } : {}),
     });
   }
 

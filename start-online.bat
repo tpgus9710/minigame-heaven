@@ -9,8 +9,8 @@ if errorlevel 1 (
   pause
   exit /b
 )
-if not exist node_modules (
-  echo 처음 실행이라 필요한 부품을 설치합니다. 잠시만 기다려 주세요...
+if not exist node_modules\pg\package.json (
+  echo 필요한 부품을 설치합니다 ^(처음 실행 또는 새 버전^). 잠시만 기다려 주세요...
   call npm install
 )
 echo.

@@ -34,7 +34,7 @@ module.exports = H => {
     H.finishGame(room, {
       title: `🔤 ${ranked[0] ? ranked[0].name : ''} 우승!`, subtitle: `이어진 단어 ${g.used.size - 1}개`,
       lines: [g.chain.slice(-12).join(' → ')],
-      ranking: ranked.map(p => ({ name: p.name, value: `${p.score}단어` })),
+      ranking: ranked.map(p => ({ id: p.id, name: p.name, value: `${p.score}단어` })), winners: ranked[0] ? [ranked[0].id] : [],
     });
   }
   function nextTurn(room, advance) {

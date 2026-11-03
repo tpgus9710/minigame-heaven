@@ -52,7 +52,7 @@ const Pong = {
           if (!g.sides.bottom.a || !g.sides.top.a) {
             const win = g.sides.bottom.a;
             this.draw(this.toState());
-            return after(300, () => showResult({ title: win ? '🏆 AI를 이겼어요!' : '💀 AI 승리', subtitle: `남은 목숨 ${g.sides.bottom.hp} : ${g.sides.top.hp}`, solo: 'pong' }));
+            return after(300, () => showResult({ title: win ? '🏆 AI를 이겼어요!' : '💀 AI 승리', subtitle: `남은 목숨 ${g.sides.bottom.hp} : ${g.sides.top.hp}`, solo: 'pong', win: !!win }));
           }
           break;
         }

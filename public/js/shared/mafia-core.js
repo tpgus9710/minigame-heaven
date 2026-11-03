@@ -266,6 +266,7 @@
       subtitle: s.winner === 'mafia' ? '마피아가 끝까지 정체를 숨겼어요.' : '마을의 평화를 지켜냈어요.',
       lines: s.players.map(p => `${p.name} — ${ROLE[p.role].name}${p.alive ? '' : ' (사망)'}`),
       ranking: s.players.slice().sort((a, b) => win(b) - win(a)).map(p => ({ id: p.id, value: `${ROLE[p.role].name} · ${win(p) ? '승리' : '패배'}` })),
+      winners: s.players.filter(win).map(p => p.id),
     };
   }
   function chatRoute(s, id) {

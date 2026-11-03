@@ -83,7 +83,7 @@ const Rain = {
     if (this.acid >= 100) {
       this.over = true;
       const best = Math.max(+store.get('best-rain', 0), this.score); store.set('best-rain', best);
-      after(400, () => showResult({ title: '☔ 산성도 100%!', subtitle: `${this.level()}단계 · 점수 ${this.score.toLocaleString()} · 최고 점수 ${best.toLocaleString()}`, solo: 'rain' }));
+      after(400, () => showResult({ title: '☔ 산성도 100%!', subtitle: `${this.level()}단계 · 점수 ${this.score.toLocaleString()} · 최고 점수 ${best.toLocaleString()}`, solo: 'rain', rec: { v: this.score } }));
     }
   },
   hud() {

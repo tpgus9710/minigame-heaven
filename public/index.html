@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="/css/coup.css">
 <link rel="stylesheet" href="/css/bang.css">
 <link rel="stylesheet" href="/css/rummi.css">
+<link rel="stylesheet" href="/css/account.css">
 </head>
 <body>
 
@@ -23,7 +24,7 @@
   <div class="brand" data-act="home"><i class="brand-ic" data-icon="device-gamepad-2"></i><span>미니게임 천국</span></div>
   <div class="top-right">
     <div class="conn" id="conn"><i></i><span>연결 중…</span></div>
-    <button class="btn ghost sm" data-act="theme" id="theme-btn">☀️ 라이트 모드</button>
+    <button class="btn ghost sm" data-act="theme" id="theme-btn">☀️<span class="tb-t"> 라이트 모드</span></button>
   </div>
 </header>
 
@@ -35,7 +36,7 @@
     <div class="hero">
       <div class="hero-badge">친구들과 함께하는 멀티플레이 미니게임</div>
       <h1>미니게임 천국</h1>
-      <p class="muted">닉네임을 정하고 혼자서, 또는 친구들과 함께 플레이하세요.</p>
+      <p class="muted">혼자서, 또는 친구들과 함께 플레이하세요.</p>
       <div class="invite-banner hidden" id="invite-banner"></div>
       <div class="nick-row"><input type="text" id="nick" maxlength="12" placeholder="닉네임 (최대 12자)"></div>
       <div class="mode-grid">
@@ -380,5 +381,7 @@
 <script src="/js/shared/relay-core.js"></script>
 <script src="/js/relay.js"></script>
 <script src="/js/kart.js"></script>
+<script src="/js/face.js"></script>
+<script src="/js/account.js"></script>
 </body>
 </html>

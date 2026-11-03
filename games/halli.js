@@ -34,7 +34,7 @@ module.exports = H => {
   function finish(room, why) {
     const g = room.game;
     const ranked = g.seats.slice().sort((a, b) => (a.out - b.out) || (total(b) - total(a)));
-    H.finishGame(room, { title: `🔔 ${ranked[0].name} 우승!`, subtitle: why, ranking: ranked.map(s => ({ name: s.name, value: `${total(s)}장` })) });
+    H.finishGame(room, { title: `🔔 ${ranked[0].name} 우승!`, subtitle: why, ranking: ranked.map(s => ({ id: s.id, name: s.name, value: `${total(s)}장` })), winners: [ranked[0].id] });
   }
   /** 카드가 다 떨어진 사람은 탈락 (펼친 카드는 다른 사람이 종을 칠 때까지 남아요) */
   function checkOut(room) {

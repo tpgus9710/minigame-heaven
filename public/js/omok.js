@@ -68,7 +68,7 @@ const Omok = {
   },
   endSolo(win) {
     this.over = true; this.status(win ? '🏆 승리!' : '💀 패배…'); this.draw();
-    after(1000, () => showResult({ title: win ? '🏆 인간의 승리!' : '🤖 컴퓨터 승리', subtitle: win ? '컴퓨터를 이겼어요!' : '다시 도전해 보세요.', solo: 'omok' }));
+    after(1000, () => showResult({ title: win ? '🏆 인간의 승리!' : '🤖 컴퓨터 승리', subtitle: win ? '컴퓨터를 이겼어요!' : '다시 도전해 보세요.', solo: 'omok', win }));
   },
   aiMove() {
     let best = -1, move = { r: 7, c: 7 };

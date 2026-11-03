@@ -302,7 +302,7 @@ module.exports = H => {
       return finishGame(room, {
         title: '💸 파산자 발생!',
         subtitle: `${broke.map(p => p.name).join(', ')} 님의 돈이 바닥났습니다. 대기실로 이동합니다.`,
-        ranking: room.players.slice().sort((a, b) => b.chips - a.chips).map(p => ({ name: p.name, value: won(p.chips) })),
+        ranking: room.players.slice().sort((a, b) => b.chips - a.chips).map(p => ({ id: p.id, name: p.name, value: won(p.chips) })),
         lines: ['파산한 사람은 다음 게임을 시작할 때 100만원을 다시 받습니다.'],
         returnIn: 8,
       });

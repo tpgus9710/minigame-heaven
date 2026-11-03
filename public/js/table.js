@@ -65,7 +65,11 @@ const Table = {
   },
   endSolo(c, res) {
     const name = id => (c.players.find(p => p.id === id) || {}).name || '?';
-    after(1500, () => showResult({ title: res.title, subtitle: res.subtitle || '', lines: res.lines || [], ranking: (res.ranking || []).map(r => ({ name: name(r.id), value: r.value })), solo: c.key }));
+    const rk = res.ranking || [], mine = rk.find(r => r.id === 'me');
+    const top = rk.filter(r => rk.length && r.value === rk[0].value);
+    const win = c.players.length > 1 && (Array.isArray(res.winners) ? res.winners.includes('me') : !/무승부/.test(res.title || '') && top.some(r => r.id === 'me'));
+    const rec = mine && typeof mine.score === 'number' ? { v: mine.score } : undefined;
+    after(1500, () => showResult({ title: res.title, subtitle: res.subtitle || '', lines: res.lines || [], ranking: rk.map(r => ({ name: name(r.id), value: r.value })), solo: c.key, win, rec }));
   },
   stop(key) { const c = this.cur; if (c && (!key || c.key === key)) { if (c.T) c.T.stop(); this.cur = null; } },
   startMulti(key) {

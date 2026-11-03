@@ -2,6 +2,7 @@
 
 친구들과 함께 하는 미니게임 모음입니다. 혼자 하는 게임 36종과 같이 하는 게임 43종이 들어 있어요.
 (같은 와이파이는 물론, `start-online.bat` 으로 인터넷 주소를 만들면 다른 곳의 친구와도 할 수 있어요.)
+**v8부터 얼굴로 회원가입 · 로그인**하고, 게임 기록 · 레벨 · 친구 · 방 초대 · 랭킹을 쓸 수 있어요.
 
 ## 실행 방법
 1. Node.js(LTS)를 설치합니다: https://nodejs.org
@@ -9,10 +10,39 @@
 3. 브라우저에서 `http://localhost:3000`을 엽니다. 친구는 서버 창에 나온 "같은 와이파이" 주소로 들어오면 됩니다.
 
 ### 🌍 다른 곳에 있는 친구와 하기
-- **`start-online.bat`** 을 더블클릭하면 `https://xxxx.trycloudflare.com` 같은 인터넷 주소가 생겨요. 이 주소는 어디서든(다른 와이파이, 휴대폰 데이터) 들어올 수 있어요.
-- 컴퓨터를 꺼도 되는 **고정 사이트**가 필요하면 Render 무료 서버에 올리세요.
-- 두 방법 모두 **[DEPLOY.md](DEPLOY.md)** 에 순서대로 적어 두었어요.
+- **`start-online.bat`** 을 더블클릭하면 `https://xxxx.trycloudflare.com` 같은 인터넷 주소가 생겨요. (내 컴퓨터가 켜져 있는 동안만)
+- **24시간 켜 두려면** GitHub(GitHub Desktop) + Render(GitHub 로그인)에 올리세요. 잠들지 않게 하는 설정까지 들어 있어요. → **`DEPLOY.md` 방법 2**
 - 대기실의 **📋 초대 링크 복사** 버튼으로 받은 링크를 친구가 누르면 그 방으로 바로 들어와요.
+
+## 👤 얼굴 로그인 · 기록 · 친구 (v8)
+**영천GO 키오스크와 같은 방식**으로 얼굴을 알아봐요.
+1. 얼굴 검출 **SCRFD(det_500m)** 로 얼굴 상자와 눈 · 코 · 입꼬리 5점을 찾고, 정면이 아니거나 너무 작은 얼굴은 버려요.
+2. 5점을 기준으로 얼굴을 112×112 로 반듯하게 맞춰 자른 뒤 **ArcFace MobileFaceNet(w600k_mbf)** 으로 특징값 512개를 만들어요.
+3. **가입**: 여러 장면(8장)의 특징값 평균만 저장해요. 이미 가입된 얼굴(유사도 0.45 이상)이면 다시 가입할 수 없어요.
+4. **로그인**: 가장 닮은 회원이 **유사도 0.45 이상**이고 **두 번째로 닮은 회원보다 0.08 이상** 앞설 때만 그 사람으로 인정해요.
+- 계산은 모두 **내 브라우저 안**에서 해요(onnxruntime-web). 서버에는 **사진을 보내지도 저장하지도 않고**, 숫자 512개(특징값)만 보내요.
+- 처음 한 번 얼굴 인식 파일 약 11MB를 받아요. 그다음부터는 브라우저에 보관된 파일을 써요.
+- 한 번 로그인하면 그 기기에서는 자동 로그인돼요. 카메라가 없는 기기는 **내 정보 → 설정 → 로그인 코드 만들기**로 받은 8글자 코드로 로그인해요 (5분 · 한 번만).
+- **카메라는 https 주소나 localhost 에서만** 켜져요 (브라우저 보안 규칙). 같은 와이파이 주소(`http://192.168…`)에서는 카메라를 쓸 수 없으니
+  서버 컴퓨터에서는 `http://localhost:3000`, 친구들은 인터넷 주소(`start-online.bat` 또는 Render 주소)로 들어오면 돼요.
+
+| 기능 | 내용 |
+|---|---|
+| 게임 기록 | 멀티: 게임별 판 수 · 승리 · 순위, 최근 경기(같이 한 사람). 싱글: 게임별 최고 기록 |
+| 레벨 | 멀티 한 판 +20 XP(이기면 +30 더) · 싱글 +8 XP(이기면 +12, 최고 기록 갱신 +10). 너무 짧은 판은 경험치 없이 기록만 |
+| 친구 | 친구 코드(6자리)로 신청 · 같이 게임한 사람에게 바로 신청 · 대기실에서 **+ 친구** · 접속 중 / 어느 방에서 무엇을 하는지 |
+| 방 초대 | 방에 있을 때 접속 중인 친구에게 **초대** → 친구 화면에 알림, **참가** 한 번에 입장. 친구 방으로 **따라가기**도 돼요 |
+| 랭킹 | 레벨 · 멀티 승리 · 친구끼리 · 싱글 게임 최고 기록 |
+| 내 정보 | 닉네임 · 아바타 바꾸기, 얼굴 다시 등록, 로그아웃, **회원 탈퇴(특징값 · 기록 바로 삭제)** |
+
+**계정 저장 위치**: 내 컴퓨터에서 켜면 `userdata/accounts.json` 에 저장돼요 (GitHub 에는 올라가지 않아요).
+Render 같은 클라우드에서는 서버를 다시 시작하면 파일이 지워지므로 **무료 PostgreSQL(Neon)** 을 연결해야 해요 → `DEPLOY.md` 의 **계정 저장소**.
+
+**알아 둘 점**
+- 얼굴 특징값은 **생체 정보**예요. 가입할 때 동의를 받고, 탈퇴하면 바로 지워요. 친구들끼리 쓰는 용도로 만들었어요.
+- 얼굴 인식은 완벽하지 않아요. **아주 닮은 가족 · 쌍둥이**나 **사진**으로도 로그인될 수 있어서 중요한 정보는 저장하지 않아요.
+  더 엄격하게 하려면 서버 환경 변수 `FACE_MATCH`(기본 0.45) · `FACE_MARGIN`(기본 0.08)을 올리세요.
+- 얼굴 인식 모델(InsightFace buffalo_s)은 **비상업적 용도**로만 쓸 수 있어요. 돈을 받는 서비스에 쓰려면 InsightFace 쪽 라이선스를 따로 확인하세요.
 
 ## 게임 목록
 **v7 새 게임** (★ 표시, 카드 · 보드 게임은 봇과 함께 할 수 있어요)
@@ -21,6 +51,15 @@
 
 - **싱글 (36종)**: ★드리프트 카트 · ★계급 전쟁 vs AI · ★궁정 음모 vs AI · ★황야의 총잡이 vs AI · ★러미 타일 vs AI · 사천성 · 리버시 vs AI · 암호 해독 vs AI · 라이어 다이스 · 블랙잭 · 요트 다이스 · 윷놀이 vs AI · 도둑잡기 vs AI · 인생 보드게임 vs AI · 세계여행 vs AI · 벽돌깨기 · 총알피하기 · 점프 어드벤처 · 좀비 웨이브 · 점프 배구 vs AI · 폭탄 배틀 vs 봇 · 탱크 대포 vs AI · 우주 슈팅 · 보석 맞추기 · 과일 합치기 · 탑 쌓기 · 두더지 잡기 · 지뢰찾기 · 2048 · 스네이크 · 산성비 타자 · 테트리스 보스전 · 사과 게임 · 오목 vs AI · 핑퐁 vs AI · 1 to 50
 - **멀티 (43종)**: ★러미 타일 · ★황야의 총잡이 · ★궁정 음모 · ★계급 전쟁 · ★그림 릴레이 · ★드리프트 카트 · 세계여행 보드게임 · 인생 보드게임 · 마피아 · 도둑잡기 · 윷놀이 · 요트 다이스 · 블랙잭 · 라이어 다이스 · 암호 해독 · 리버시 · 사천성 대결 · 총알피하기 배틀 · 점프 레이스 · 점프 배구 · 폭탄 배틀 · 탱크 대포 · 원카드 · 과일 종치기 · OX 퀴즈 · 끝말잇기 · 두더지 잡기 대결 · 보석 맞추기 대결 · 과일 합치기 대결 · 섯다 · 포커 · 사과 게임 · 1 to 50 · 캐치마인드 · 라이어 게임 · 테트리스 배틀 · 오목 · 4인 핑퐁 · 스네이크 배틀 · 산성비 타자 대결 · 지뢰찾기 대결 · 2048 대결 · 빙고
+
+## v8에서 바뀐 점
+- **얼굴로 회원가입 · 로그인** (영천GO 방식 · 사진 저장 없음) + 카메라 없는 기기는 8글자 로그인 코드
+- **게임 기록 · 레벨 · 경험치**: 멀티 게임이 끝나면 자동으로 기록, 싱글 게임은 최고 기록까지 저장 (결과창에 +XP · 레벨 업 표시)
+- **친구**: 친구 코드 · 받은/보낸 신청 · 접속 상태 · 최근 같이 한 사람 · 대기실 **+ 친구** 버튼
+- **방 초대**: 접속 중인 친구에게 초대 알림 → 한 번에 참가, 친구 방 **따라가기**
+- **랭킹**: 레벨 · 멀티 승리 · 친구 · 싱글 게임 기록
+- 로그인하면 대기실에 아바타 · 레벨이 보이고, 홈 화면에 내 카드(레벨 · 경험치 · 전적)가 나와요
+- 계정 저장소: 내 컴퓨터는 파일, 클라우드는 무료 PostgreSQL (`DATABASE_URL`)
 
 ## v7에서 바뀐 점
 - 새 게임 6종 — 규칙은 보내 주신 나무위키 문서를 기준으로 만들었어요.
@@ -57,6 +96,8 @@ server.js               서버 본체 (방 만들기·입장·채팅·게임 연
 lib/util.js             공통 도구 (난수, 섞기, 이름 정리 등)
 lib/helpers.js          게임들이 함께 쓰는 서버 기능 (점수판, 결과창, 대기실 복귀, 타이머)
 lib/tunnel.js           인터넷 공개용 Cloudflare 무료 터널 (start-online.bat)
+lib/accounts.js         계정 · 얼굴 로그인 판정 · 기록 · 레벨 · 친구 · 초대 · 랭킹 (v8)
+lib/store.js            계정 저장소 (DATABASE_URL 이 있으면 PostgreSQL, 없으면 userdata/accounts.json)
 render.yaml             Render 무료 클라우드 서버 설정
 data/words.js           캐치마인드·라이어·산성비 단어 목록
 data/quiz.js            OX 퀴즈 문제
@@ -70,6 +111,12 @@ public/js/shared/table.js  차례형 보드·카드 게임 공통 진행기 (Tab
 games/table.js          보드·카드 게임을 서버에서 돌리는 곳 (빈자리는 봇, 나간 사람은 봇이 대신)
 public/css/board.css    보드·카드 게임 디자인 (v7 게임은 public/css/게임.css 따로)
 public/js/icons.js      아이콘 (Tabler Icons, MIT)
+public/js/face.js       얼굴 인식 엔진 (브라우저 안에서 SCRFD + ArcFace, 영천GO 방식)
+public/js/account.js    로그인 · 회원가입 · 내 정보 · 친구 · 랭킹 · 초대 화면
+public/css/account.css  계정 화면 디자인
+public/models/face-1/   얼굴 인식 모델 2개 (InsightFace buffalo_s, 가중치만 float16 으로 저장해 크기 절반)
+public/vendor/ort-1.20.1/  onnxruntime-web (브라우저에서 모델 실행, MIT)
+userdata/               내 컴퓨터에서 켰을 때 계정이 저장되는 곳 (GitHub 에 안 올라가요)
 public/fonts/           제목 글꼴 Black Han Sans (SIL OFL 1.1, 인터넷이 없어도 보여요)
 ```
 
@@ -77,6 +124,8 @@ public/fonts/           제목 글꼴 Black Han Sans (SIL OFL 1.1, 인터넷이 
 - 서버: `games/새게임.js`를 만들고 `server.js`의 `MODULES` 목록에 이름을 넣습니다.
 - 화면: `public/js/새게임.js`에서 `makeScreen('새게임', {...})`으로 화면을 만들고 `register('새게임', { solo, multi, stop, key, keyup, pad })`로 등록한 뒤, `index.html`에 `<script>` 줄을 추가합니다.
 - 메뉴: `core.js`의 `GAME_INFO`(멀티) / `SOLO_GAMES`(싱글)에 한 줄을 추가합니다.
+- 기록: 멀티는 `H.finishGame` 의 결과표(`ranking`) 1등이 자동으로 승리로 기록돼요. 팀 게임처럼 이긴 사람이 여럿이면 `winners: [id, …]` 를 같이 넘겨요.
+  싱글은 `showResult({ …, solo: '키', win: true/false, rec: { v: 점수 } })` 처럼 결과를 넘기고, `lib/accounts.js` 의 `SOLO_KEYS` 에 키를 넣어요.
 
 ### 차례형 보드·카드 게임 추가하기 (TableKit)
 1. `public/js/shared/새게임-core.js` 에 규칙을 만들어요: `meta` · `setup` · `view`(사람마다 보이는 정보) · `act`(행동, 틀리면 안내 문장 반환) · `pending`(행동할 사람) · `ai`(봇) · `result`.
@@ -87,3 +136,6 @@ public/fonts/           제목 글꼴 Black Han Sans (SIL OFL 1.1, 인터넷이 
 ## 사용한 오픈소스
 - 아이콘: [Tabler Icons](https://tabler.io/icons) — MIT License (`public/js/icons.js` 맨 위에 라이선스 전문)
 - 글꼴: Black Han Sans — SIL Open Font License 1.1 (`public/fonts/black-han-sans/LICENSE`), 본문 글꼴 Noto Sans KR · Noto Serif KR 은 Google Fonts 에서 불러와요
+- 얼굴 인식 모델: [InsightFace](https://github.com/deepinsight/insightface) buffalo_s 의 `det_500m` · `w600k_mbf` — **비상업적 연구 목적으로만** 공개된 모델 (`public/models/face-1/NOTICE.txt`)
+- 모델 실행기: [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) 1.20.1 — MIT License (`public/vendor/ort-1.20.1/LICENSE.txt`)
+- DB 연결: [node-postgres (pg)](https://node-postgres.com) — MIT License

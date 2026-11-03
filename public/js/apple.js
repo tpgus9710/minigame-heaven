@@ -19,7 +19,7 @@ const Apple = {
       $('#apple-time').textContent = left;
       if (this.solo && left <= 0) {
         const best = Math.max(+store.get('best-apple', 0), this.score); store.set('best-apple', best);
-        showResult({ title: '🍎 시간 종료!', subtitle: `이번 점수 ${this.score}개 · 최고 기록 ${best}개`, solo: 'apple' });
+        showResult({ title: '🍎 시간 종료!', subtitle: `이번 점수 ${this.score}개 · 최고 기록 ${best}개`, solo: 'apple', rec: { v: this.score } });
       }
     });
   },

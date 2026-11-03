@@ -15,8 +15,9 @@ module.exports = H => {
       subtitle: why,
       ranking: ranked.map(p => {
         const f = g.finished.find(x => x.id === p.id);
-        return { name: p.name, value: f ? `${(f.t / 1000).toFixed(1)}초 골인` : `${p.score}% 진행` };
+        return { id: p.id, name: p.name, value: f ? `${(f.t / 1000).toFixed(1)}초 골인` : `${p.score}% 진행` };
       }),
+      winners: g.finished.length && ranked[0] ? [ranked[0].id] : [],
     });
   }
 

@@ -3,12 +3,12 @@
 `start.bat`으로 켜면 **같은 와이파이**에 있는 친구만 들어올 수 있어요.
 집이 다른 친구와 하려면 아래 두 방법 중 하나를 쓰세요. 둘 다 무료예요.
 
-| | 방법 1 · 내 컴퓨터를 인터넷에 열기 | 방법 2 · 클라우드에 사이트 만들기 |
+| | 방법 1 · 내 컴퓨터를 인터넷에 열기 | 방법 2 · 클라우드에 사이트 만들기 (24시간) |
 |---|---|---|
-| 준비 | 없음 (더블클릭) | GitHub · Render 가입 (10분) |
+| 준비 | 없음 (더블클릭) | GitHub · Render 가입 (GitHub 로그인, 15분) |
 | 주소 | `https://xxxx.trycloudflare.com` (켤 때마다 바뀜) | `https://minigame-heaven.onrender.com` (고정) |
-| 켜 두기 | 내 컴퓨터가 켜져 있어야 함 | 컴퓨터를 꺼도 24시간 접속 가능 |
-| 단점 | 창을 닫으면 주소가 사라짐 | 15분 동안 아무도 안 들어오면 잠들고, 처음 들어갈 때 1분쯤 기다림 |
+| 켜 두기 | 내 컴퓨터가 켜져 있어야 함 | 컴퓨터를 꺼도 24시간 접속 가능 (잠들지 않게 설정이 들어 있어요) |
+| 단점 | 창을 닫으면 주소가 사라짐 | 무료는 데이터 월 5GB · 서버 성능이 낮아요 (월 7달러를 내면 넉넉해요) |
 
 ---
 
@@ -31,37 +31,72 @@
 
 ---
 
-## 방법 2 · Render 무료 서버에 올려서 고정 주소 만들기
+## 방법 2 · Render에 올려서 24시간 고정 주소 만들기 (GitHub 로그인)
 
-필요한 것: GitHub 계정, Render 계정 (Render는 GitHub 계정으로 바로 가입할 수 있어요)
+필요한 것: GitHub 계정, **GitHub Desktop**(무료 프로그램), Render 계정(GitHub로 로그인)
 
-### ① GitHub에 파일 올리기
-1. <https://github.com> 에 로그인 → 오른쪽 위 **+** → **New repository**
-2. 이름에 `minigame-heaven` 입력 → **Create repository**
-3. 만들어진 페이지에서 **uploading an existing file** 링크를 눌러요.
-4. 이 폴더 안의 파일과 폴더를 **모두 끌어다 놓아요.** (`node_modules`, `bin` 폴더는 빼도 돼요. 없으면 그냥 넘어가요)
-5. 아래 **Commit changes** 버튼을 눌러요.
+### ① GitHub에 올리기 — GitHub Desktop
+웹 브라우저로 올리면 한 번에 파일 100개까지만 돼요. 이 게임은 파일이 200개가 넘어서 GitHub Desktop이 편해요.
+1. <https://desktop.github.com> 에서 GitHub Desktop을 설치하고 **Sign in to GitHub.com** 으로 로그인해요.
+2. 메뉴 **File → Add local repository** → 이 폴더(`minigame`)를 골라요.
+   "This directory does not appear to be a Git repository" 가 나오면 **create a repository** 를 누르고 **Create repository** 를 눌러요.
+   - `node_modules` · `bin` 폴더와 기록 파일은 `.gitignore` 덕분에 자동으로 빠져요.
+3. 오른쪽 위 **Publish repository** → 이름 `minigame-heaven` → **Publish repository**.
+   (**Keep this code private** 는 체크해도 되고 안 해도 돼요)
 
 ### ② Render에서 서버 만들기
-1. <https://render.com> → **Get Started** → **GitHub로 가입/로그인**
-2. 대시보드에서 **New +** → **Web Service** → 방금 만든 `minigame-heaven` 저장소를 골라요.
-   (저장소가 안 보이면 GitHub 권한 설정에서 이 저장소 접근을 허용해 주세요)
-3. 설정을 이렇게 맞춰요.
-   - Region: **Singapore** (한국에서 가장 가까워요)
-   - Build Command: `npm install`
-   - Start Command: `node server.js`
-   - Instance Type: **Free**
-4. **Deploy Web Service** 를 누르고 2~3분 기다리면 `https://minigame-heaven.onrender.com` 같은 주소가 생겨요.
-   (같은 이름이 이미 있으면 뒤에 글자가 조금 붙어요)
+1. <https://render.com> → **Get Started** → **GitHub** 로 가입/로그인해요.
+2. 대시보드에서 **New +** → **Blueprint** → GitHub 저장소 목록에서 `minigame-heaven` 을 골라요.
+   (목록에 없으면 **Configure GitHub** 로 이 저장소 접근을 허용해 주세요)
+3. 들어 있는 `render.yaml` 이 설정을 자동으로 채워요: 싱가포르(한국에서 가장 가까움) · 무료 · `npm install` · `node server.js` · **잠들지 않기(KEEP_AWAKE=1)**.
+   **Apply**(또는 Deploy Blueprint)를 누르고 2~3분 기다리면 `https://minigame-heaven.onrender.com` 같은 주소가 생겨요. (같은 이름이 있으면 뒤에 글자가 조금 붙어요)
+4. 이 주소를 친구들에게 보내면 끝! 대기실의 **초대 링크 복사** 도 이 주소로 만들어져요.
 
-> 💡 **Blueprint**를 쓸 줄 알면 **New + → Blueprint** 로 저장소를 고르기만 해도 돼요. 들어 있는 `render.yaml` 이 위 설정을 자동으로 채워요.
+> Blueprint 대신 **New + → Web Service** 로 만들어도 돼요. Region **Singapore**, Build `npm install`, Start `node server.js`, Instance Type **Free** 로 맞추고,
+> **Environment** 에 `KEEP_AWAKE` = `1` 을 직접 추가하세요.
 
-### 알아 두면 좋은 것
-- 무료 서버는 **15분 동안 아무도 접속하지 않으면 잠들어요.** 다음에 처음 들어가는 사람은 1분쯤 로딩을 기다려야 해요. 게임하는 동안에는 잠들지 않아요.
-- 무료 사용 시간은 한 달에 750시간이에요. 서버 하나는 한 달 내내 켜도 남아요.
-- 게임 코드를 고치면 GitHub에 파일을 다시 올리세요. Render가 알아서 새로 배포해요.
-- 서버가 다시 시작되면 열려 있던 방은 사라져요. (게임 기록은 각자 브라우저에 저장돼 있어서 괜찮아요)
-- 서버 위치가 싱가포르라 반응 속도가 같은 와이파이보다 조금 느려요. (배구·폭탄 배틀 같은 빠른 게임은 화면 위 `ms` 숫자가 작을수록 좋아요)
+### ③ 24시간 켜 두기
+Render 무료 서버는 **15분 동안 아무도 안 들어오면 잠들고**, 다시 깨우는 데 1분쯤 걸려요. 그래서 이렇게 해 뒀어요.
+
+**A. 무료로 계속 깨워 두기 (기본으로 켜져 있음)**
+- `KEEP_AWAKE=1` 이면 서버가 **10분마다 자기 주소의 `/health`** 를 불러서 잠들지 않아요.
+- 무료 사용 시간은 한 달 **750시간**이에요. 한 달은 최대 744시간이라 **서버 1개**는 한 달 내내 켜 둘 수 있어요.
+  같은 Render 계정에 다른 무료 서버가 또 있으면 시간이 모자라서 월말에 멈출 수 있어요.
+- 혹시 몰라 바깥에서도 깨워 주고 싶으면 **UptimeRobot**(무료, 5분 간격)에 `https://내주소/health` 를 HTTP 모니터로 등록하세요. 서버가 멈추면 메일로 알려 줘요.
+- 끄고 싶으면 Render 서비스의 **Environment** 에서 `KEEP_AWAKE` 를 지우거나 `0` 으로 바꿔요.
+
+**B. 유료로 확실하게 (월 7달러)**
+- Render 대시보드 → 내 서비스 → **Settings → Instance Type → Starter** (결제 카드 등록 필요).
+- 잠들지 않고, CPU가 무료의 5배라 **배구 · 폭탄 배틀 · 카트 같은 빠른 게임**이 훨씬 부드러워요. 이때는 `KEEP_AWAKE` 가 필요 없어요.
+
+### ③-2 계정 저장소 연결하기 (얼굴 로그인 · 기록 · 친구를 쓰려면 꼭!)
+Render 무료 서버는 다시 시작하거나 새 버전을 올릴 때마다 **서버 안의 파일이 지워져요.** 그래서 계정을 무료 데이터베이스(**Neon** PostgreSQL)에 저장해요.
+연결하지 않아도 게임은 되지만, 서버가 다시 시작되면 가입한 계정과 기록이 사라져요. (내 정보 → 설정에 경고가 보여요)
+1. <https://neon.com> → **Sign up** 으로 가입해요. (무료 플랜: 카드 등록 없이 시작 · 저장 공간 1GB — 계정 수만 명도 충분해요)
+2. 새 프로젝트를 만들 때 지역(Region)은 **AWS Asia Pacific (Singapore)** 를 고르면 Render 서버(싱가포르)와 가까워서 빨라요.
+3. 프로젝트 화면 위쪽 **Connect** 버튼 → 나오는 연결 주소를 **복사**해요.
+   `postgresql://아이디:비밀번호@ep-xxxx-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require` 처럼 생겼어요.
+4. Render 대시보드 → `minigame-heaven` 서비스 → **Environment** → **Add Environment Variable**
+   - Key: `DATABASE_URL` · Value: 3에서 복사한 주소 → **Save, rebuild, and deploy** (또는 Save Changes 후 Manual Deploy)
+5. 배포가 끝나면 **Logs** 에 `👤 계정 0명 불러옴 · 저장 위치: DB (…neon.tech)` 가 보이면 성공! 표는 처음 켤 때 자동으로 만들어져요.
+- 이 주소에는 DB 비밀번호가 들어 있어요. **GitHub 에 올리거나 친구에게 보내지 마세요.** (Render 의 Environment 에만 넣어요)
+- Neon 무료 DB는 5분 동안 쓰지 않으면 잠들었다가, 누가 게임을 하면 1초 안에 깨어나요. 계정은 서버 메모리에 올려 두고 쓰기 때문에 게임이 느려지지 않아요.
+- 무료 플랜의 계산 시간(한 달 100 CU-시간)을 다 쓰면 그달 남은 기간은 DB가 멈춰요. 친구들끼리 하루 몇 시간 노는 정도는 넉넉해요.
+  최신 한도는 <https://neon.com/pricing> 에서 확인하세요.
+- 내 컴퓨터(`start.bat`)에서 켤 때는 DB 없이 `userdata/accounts.json` 파일에 저장돼요. 이 폴더는 GitHub 에 올라가지 않아요.
+
+### ④ 새 버전으로 바꾸기
+1. 새 압축 파일을 풀어서 나온 파일을 이 폴더에 **덮어써요.**
+2. GitHub Desktop에 바뀐 파일 목록이 보이면, 왼쪽 아래에 한 줄 적고 **Commit to main** → 위쪽 **Push origin**.
+3. Render가 알아서 새로 배포해요. (2~3분, 그동안 열려 있던 방은 사라져요)
+
+### 알아 두면 좋은 것 (무료 서버)
+- **데이터 사용량: 한 달 5GB까지.** 카드 · 보드 게임은 아주 조금 쓰지만, 카트 · 배구 같은 실시간 게임은 8명이 한 판 하면 대략 10~20MB를 써요.
+  Render 대시보드에서 사용량을 확인하세요. 결제 수단 없이 5GB를 넘으면 그 달 남은 기간 동안 서버가 멈춰요. (화면 파일은 압축해서 보내서 아끼고 있어요)
+- 무료 서버는 Render가 가끔 다시 시작할 수 있어요. 그때 열려 있던 방은 사라져요. (계정 · 기록은 ③-2 의 DB에 있어서 괜찮아요)
+- 얼굴 인식 파일(약 11MB)은 기기마다 처음 한 번만 받아요. 데이터 사용량에 조금 더해져요.
+- 서버 위치가 싱가포르라 반응 속도가 같은 와이파이보다 조금 느려요. (화면 위 `ms` 숫자가 작을수록 좋아요)
+- Render의 무료 한도와 가격은 바뀔 수 있어요. 최신 내용은 <https://render.com/docs/free> 와 <https://render.com/pricing> 에서 확인하세요.
 
 ---
 
@@ -74,5 +109,10 @@
 | `MAX_PER_IP` | 50 | 한 IP(한 집·한 학교)에서 동시 접속 |
 | `MAX_ROOMS` | 200 | 동시에 열린 방 |
 | `PUBLIC_URL` | (자동) | 초대 링크에 쓸 주소 (Render는 자동으로 알아요) |
+| `DATABASE_URL` | (없음) | 계정 저장용 PostgreSQL 주소 (없으면 `userdata/accounts.json` 파일) |
+| `MAX_ACCOUNTS` | 5000 | 가입할 수 있는 계정 수 |
+| `FACE_MATCH` · `FACE_MARGIN` | 0.45 · 0.08 | 얼굴 로그인 기준 (올리면 더 엄격해요) |
 
 메시지를 1초에 너무 많이 보내는 접속은 무시하고, 심하면 끊어요. 방에는 4글자 코드나 초대 링크로만 들어올 수 있어요.
+얼굴 로그인 · 가입 · 로그인 코드 입력은 횟수 제한이 있어요 (같은 곳에서 너무 많이 시도하면 잠시 막혀요).
+로그인 코드는 8글자(약 1조 가지)이고 5분 · 한 번만 쓸 수 있으며, 서버 전체로 틀린 코드는 10분에 200번까지만 받아요. 새 가입도 서버 전체로 한 시간에 60명까지예요.

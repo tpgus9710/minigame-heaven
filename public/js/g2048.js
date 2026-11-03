@@ -66,7 +66,7 @@ const G2048 = {
     this.over = true;
     if (this.solo) {
       const best = Math.max(+store.get('best-2048', 0), this.score); store.set('best-2048', best);
-      after(700, () => showResult({ title: '🔢 더 이상 움직일 수 없어요!', subtitle: `점수 ${this.score.toLocaleString()} · 최고 블록 ${Math.max(...this.grid)} · 최고 점수 ${best.toLocaleString()}`, solo: 'g2048' }));
+      after(700, () => showResult({ title: '🔢 더 이상 움직일 수 없어요!', subtitle: `점수 ${this.score.toLocaleString()} · 최고 블록 ${Math.max(...this.grid)} · 최고 점수 ${best.toLocaleString()}`, solo: 'g2048', rec: { v: this.score } }));
     } else {
       socket.emit('g2048:over');
       $('#g2048-status').textContent = '🧱 더 이상 움직일 수 없어요! 다른 사람들을 기다리는 중…';

@@ -89,12 +89,12 @@ const Tetris = {
   die() {
     if (this.dead) return;
     this.dead = true; this.running = false; this.render(true);
-    if (this.solo) after(600, () => showResult({ title: '💀 게임 오버', subtitle: `점수 ${this.score} · 남은 보스 체력 ${this.bossHp}`, solo: 'tetris' }));
+    if (this.solo) after(600, () => showResult({ title: '💀 게임 오버', subtitle: `점수 ${this.score} · 남은 보스 체력 ${this.bossHp}`, solo: 'tetris', rec: { v: this.score } }));
     else { socket.emit('tetris:dead'); $('#tetris-status').textContent = '💀 탈락! 다른 사람들의 경기를 기다리는 중…'; }
   },
   win() {
     this.running = false; this.render();
-    after(500, () => showResult({ title: '🏆 보스 처치!', subtitle: `점수 ${this.score} · ${this.lines}줄`, solo: 'tetris' }));
+    after(500, () => showResult({ title: '🏆 보스 처치!', subtitle: `점수 ${this.score} · ${this.lines}줄`, solo: 'tetris', win: true, rec: { v: this.score } }));
   },
   flash(msg) { $('#tetris-status').textContent = msg; },
   hud() {

@@ -122,7 +122,7 @@ const Brick = {
     this.over = true; this.phase = 'over'; this.rebuild(); this.draw();
     const lv = this.turn - 1, best = Math.max(+store.get('best-breakout2', 0), lv);
     store.set('best-breakout2', best);
-    after(600, () => showResult({ title: '🧱 벽돌이 바닥까지 내려왔어요!', subtitle: `${lv}단계 · 공 ${this.balls}개 · 최고 기록 ${best}단계`, solo: 'breakout' }));
+    after(600, () => showResult({ title: '🧱 벽돌이 바닥까지 내려왔어요!', subtitle: `${lv}단계 · 공 ${this.balls}개 · 최고 기록 ${best}단계`, solo: 'breakout', rec: { v: lv } }));
   },
 
   draw() {

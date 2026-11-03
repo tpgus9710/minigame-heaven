@@ -92,7 +92,7 @@ module.exports = H => {
     const ranked = g.order.slice().sort((a, b) => (b === winnerId) - (a === winnerId) || (!!g.out[a] - !!g.out[b]) || g.hands[a].length - g.hands[b].length);
     H.finishGame(room, {
       title: `🃏 ${nameOf(room, winnerId)} 승리!`, subtitle: why,
-      ranking: ranked.map(id => ({ name: nameOf(room, id), value: g.out[id] ? '파산' : id === winnerId ? '다 털었어요!' : `${g.hands[id].length}장` })),
+      ranking: ranked.map(id => ({ id, name: nameOf(room, id), value: g.out[id] ? '파산' : id === winnerId ? '다 털었어요!' : `${g.hands[id].length}장` })), winners: winnerId ? [winnerId] : [],
     });
   }
   function bust(room, id, why) {

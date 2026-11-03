@@ -15,7 +15,7 @@ module.exports = H => {
   function check(room) {
     const alive = Object.values(room.game.sides).filter(s => s.active);
     if (alive.length > 1) return false;
-    H.finishGame(room, { title: alive[0] ? `🏆 ${alive[0].name} 우승!` : '무승부', subtitle: '마지막까지 공을 막아냈습니다.' });
+    H.finishGame(room, { title: alive[0] ? `🏆 ${alive[0].name} 우승!` : '무승부', subtitle: '마지막까지 공을 막아냈습니다.', winners: alive[0] ? [alive[0].playerId] : [] });
     return true;
   }
   function step(room) {

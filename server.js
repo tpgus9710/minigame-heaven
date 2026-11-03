@@ -6,10 +6,12 @@
  *  접속 :  http://localhost:3000
  *  인터넷 공개 :  node server.js --online   (또는 start-online.bat) → https://xxxx.trycloudflare.com 주소가 생겨요
  *  클라우드 배포 :  Render 등에 올리면 PORT · RENDER_EXTERNAL_URL 을 자동으로 읽어요 (DEPLOY.md 참고)
+ *                  KEEP_AWAKE=1 이면 10분마다 자기 주소를 불러서 무료 서버가 잠들지 않게 해요
+ *  계정 저장   :  DATABASE_URL(무료 PostgreSQL 주소)이 있으면 DB에, 없으면 userdata/accounts.json 에 저장해요
  *
  *  폴더 구조
  *    server.js        방 만들기·입장·채팅 같은 공통 기능
- *    lib/             공통 도구
+ *    lib/             공통 도구 (accounts.js = 얼굴 로그인 · 기록 · 친구, store.js = 계정 저장소)
  *    data/            단어 목록
  *    games/*.js       게임 하나당 파일 하나 (멀티 43종, 보드·카드 게임은 games/table.js 하나로)
  *    public/          화면 (index.html, style.css, js/*.js)
@@ -24,6 +26,7 @@ const makeHelpers = require('./lib/helpers');
 const PORT = Number(process.env.PORT) || 3000;
 const ONLINE = process.argv.includes('--online') || process.env.ONLINE === '1';    // 내 PC를 인터넷에 공개 (start-online.bat)
 const CLOUD = !!(process.env.RENDER || process.env.PUBLIC_URL);                    // 클라우드 서버(Render 등)에서 실행 중
+const KEEP_AWAKE = process.env.KEEP_AWAKE === '1';                                    // 클라우드 무료 서버가 15분 쉬면 잠드는 것 막기
 let publicUrl = String(process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || '').replace(/\/+$/, '');
 // 인터넷에 공개된 서버를 지키는 한도 (환경 변수로 바꿀 수 있어요)
 const LIMITS = {
@@ -37,8 +40,13 @@ const app = express();
 app.disable('x-powered-by');
 const server = http.createServer(app);
 const io = new Server(server, { pingTimeout: 20000, maxHttpBufferSize: 64 * 1024 });
+let compression = null;
+try { compression = require('compression'); } catch { /* 예전 node_modules 그대로면 압축 없이 */ }
+if (compression) app.use(compression());           // 화면 파일을 압축해서 보내요 (무료 서버 데이터 한도 아끼기)
+// 얼굴 인식 모델 · 실행기는 크고 바뀌지 않아서 브라우저가 오래 보관하게 해요 (폴더 이름에 버전이 들어 있어요)
+app.use(['/vendor', '/models'], (req, res, next) => { res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); next(); });
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/health', (req, res) => res.json({ ok: true, rooms: rooms.size, players: io.engine.clientsCount }));   // 클라우드 상태 확인용
+app.get('/health', (req, res) => res.json({ ok: true, rooms: rooms.size, players: io.engine.clientsCount, accounts: ACC.status() }));   // 클라우드 상태 확인용
 
 // 🛡️ 어떤 오류가 나도 서버가 꺼지지 않게 (로그만 남김)
 process.on('uncaughtException', e => console.error('⚠️  처리되지 않은 오류 (서버는 계속 실행됩니다):', e));
@@ -49,6 +57,8 @@ const rooms = new Map();
 let REGISTRY = {};                                   // 게임 키 → { name, min, max, roles, mod }
 const moduleOf = room => (REGISTRY[room.gameType] || {}).mod;
 const H = makeHelpers(io, rooms, moduleOf);
+// 계정 · 기록 · 친구 (게임 모듈보다 먼저 만들어야 게임이 끝날 때 기록돼요)
+const ACC = require('./lib/accounts')({ io, rooms, H, registry: () => REGISTRY, ipOf: s => ipOf(s), cloud: CLOUD });
 
 const MODULES = [
   'cards', 'apple', 'race', 'catch', 'liar', 'tetris', 'omok', 'pong',
@@ -74,14 +84,17 @@ function assignRole(room) {
 }
 
 function addPlayer(room, socket, rawName) {
-  const name = cleanName(rawName);
+  const acc = ACC.playerProps(socket);                 // 로그인했으면 계정 이름 · 레벨 · 아바타로
+  const name = acc ? acc.name : cleanName(rawName);
   const isHost = room.players.length === 0;
-  room.players.push({ id: socket.id, name, isHost, isReady: isHost, score: 0, chips: 1000000, role: assignRole(room), lastChat: 0 });
+  room.players.push({ id: socket.id, name, isHost, isReady: isHost, score: 0, chips: 1000000, role: assignRole(room), lastChat: 0,
+    uid: acc ? acc.uid : null, lv: acc ? acc.lv : 0, av: acc ? acc.av : null, color: acc ? acc.color : null });
   socket.join(room.code);
   socket.data.code = room.code;
   socket.emit('joined', { code: room.code, myId: socket.id });
   sys(room, `👋 ${name} 님이 들어왔습니다.`);
   pushRoom(room);
+  ACC.touch(socket);
 }
 
 function leaveRoom(socket) {
@@ -89,6 +102,7 @@ function leaveRoom(socket) {
   socket.data.code = null;
   if (!room) return;
   socket.leave(room.code);
+  ACC.touch(socket);
   const idx = room.players.findIndex(p => p.id === socket.id);
   if (idx < 0) return;
   const [p] = room.players.splice(idx, 1);
@@ -147,6 +161,7 @@ io.on('connection', socket => {
   };
 
   socket.emit('serverInfo', serverInfo());
+  ACC.attach(socket, on);                                                          // 계정 · 친구 이벤트 (acct:* · fr:*)
   on('ping:t', (t, cb) => { if (typeof cb === 'function') cb(t); });              // 화면 위 지연 시간(ms) 표시용
   /** 초대 링크로 들어온 사람에게 방 정보 미리 보여주기 */
   on('peekRoom', (code, cb) => {
@@ -244,6 +259,7 @@ io.on('connection', socket => {
     room.session++;
     room.isStarted = true;
     room.players.forEach(p => { p.score = 0; });
+    ACC.onStart(room);                                   // 시작할 때 참가자 기억 (기록용)
     info.mod.start(room);
     pushRoom(room);
   });
@@ -282,6 +298,14 @@ io.on('connection', socket => {
 });
 
 /* ─────────────────────────── 서버 시작 ─────────────────────────── */
+ACC.init();                                            // 계정 불러오기 (DB가 느려도 서버는 먼저 켜져요)
+let closing = false;
+const shutdown = sig => {                              // 끄기 전에 바뀐 계정을 저장해요 (Render 재배포 · Ctrl+C · 창 닫기)
+  if (closing) return; closing = true;
+  ACC.flushSync();
+  Promise.race([ACC.flush(), new Promise(r => setTimeout(r, 4000))]).finally(() => process.exit(sig === 'SIGINT' ? 130 : 0));
+};
+['SIGTERM', 'SIGINT', 'SIGHUP'].forEach(s => process.on(s, () => shutdown(s)));
 server.on('error', e => {
   if (e.code === 'EADDRINUSE') {
     console.error(`\n❌ ${PORT}번 포트가 이미 사용 중입니다. (서버가 이미 켜져 있어요)`);
@@ -305,6 +329,15 @@ server.listen(PORT, () => {
   console.log('\n🚀 미니게임 천국 서버가 켜졌습니다!  (멀티 게임 ' + Object.keys(REGISTRY).length + '종)');
   if (CLOUD) {
     console.log(`   인터넷 주소 : ${publicUrl || '(클라우드가 알려주는 주소)'}`);
+    if (KEEP_AWAKE && publicUrl) {                     // 바깥 주소로 나갔다 들어오는 요청이라 '접속'으로 쳐서 잠들지 않아요
+      const min = Math.max(5, Math.min(14, Number(process.env.KEEP_AWAKE_MIN) || 10));
+      const ping = () => {
+        try { require(publicUrl.startsWith('https') ? 'https' : 'http').get(publicUrl + '/health', r => r.resume()).on('error', () => {}); }
+        catch { /* 다음에 다시 */ }
+      };
+      setInterval(ping, min * 60 * 1000);
+      console.log(`   💤 잠들지 않게 ${min}분마다 스스로 깨워요 (KEEP_AWAKE=1)`);
+    }
     return;
   }
   console.log(`   내 컴퓨터     : http://localhost:${PORT}`);

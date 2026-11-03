@@ -12,7 +12,7 @@ module.exports = H => {
     const win = s.tanks.find(t => t.id === s.winner);
     H.finishGame(room, {
       title: win ? `🛡️ ${win.name} 승리!` : '💥 모두 파괴됐어요', subtitle: '탱크 대포',
-      ranking: ranked.map(t => ({ name: t.name, value: t.alive ? `HP ${t.hp}` : '파괴' })),
+      ranking: ranked.map(t => ({ id: t.id, name: t.name, value: t.alive ? `HP ${t.hp}` : '파괴' })), winners: win ? [win.id] : [],
     });
   }
   function startTurn(room) {

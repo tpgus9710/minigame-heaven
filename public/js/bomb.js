@@ -37,7 +37,7 @@ const Bomb = {
   },
   finishSolo() {
     const s = this.s, me = s.players[0], win = s.winner === 'me';
-    showResult({ title: win ? '🏆 최후의 생존자!' : s.winner ? '💥 패배…' : '🤝 무승부', subtitle: `${me.kills}킬 · ${win ? '봇들을 모두 이겼어요!' : '다시 도전해 보세요'}`, solo: 'bomb' });
+    showResult({ title: win ? '🏆 최후의 생존자!' : s.winner ? '💥 패배…' : '🤝 무승부', subtitle: `${me.kills}킬 · ${win ? '봇들을 모두 이겼어요!' : '다시 도전해 보세요'}`, solo: 'bomb', win });
   },
   startMulti(d) {
     stopLocal();

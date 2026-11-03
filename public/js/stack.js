@@ -57,7 +57,7 @@ const Stack = {
     this.over = true;
     const h = this.blocks.length - 1, best = Math.max(+store.get('best-stack', 0), h);
     store.set('best-stack', best);
-    after(900, () => showResult({ title: '🏗️ 탑이 무너졌어요!', subtitle: `높이 ${h}층 · 최고 기록 ${best}층`, solo: 'stack' }));
+    after(900, () => showResult({ title: '🏗️ 탑이 무너졌어요!', subtitle: `높이 ${h}층 · 최고 기록 ${best}층`, solo: 'stack', rec: { v: h } }));
   },
   draw() {
     const c = $('#st-cv').getContext('2d'), H = ST.H, BH = ST.BH;

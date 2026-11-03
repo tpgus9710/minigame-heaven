@@ -1,4 +1,9 @@
+# GitHub에 올리지 않는 것 (설치하면 생기는 것 · 내려받은 도구 · 기록)
 node_modules/
 bin/
 *.log
-*.part
+.DS_Store
+Thumbs.db
+# 계정 · 얼굴 특징값 (내 컴퓨터에서 켰을 때 저장되는 곳) — 절대 올리면 안 돼요
+userdata/
+.env

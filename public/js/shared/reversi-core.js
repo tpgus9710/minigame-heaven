@@ -119,6 +119,7 @@
     return {
       title: s.winner ? `⚫ ${s.players.find(p => p.id === s.winner).name} 님 승리!` : '⚪ 무승부!', subtitle: s.msg,
       ranking: ranked.map(p => ({ id: p.id, value: `${p.color === 1 ? '흑' : '백'} ${count(s.board, p.color)}개` })),
+      winners: s.winner ? [s.winner] : [],
     };
   }
   return {

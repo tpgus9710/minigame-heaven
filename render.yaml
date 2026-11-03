@@ -9,3 +9,8 @@ services:
     startCommand: node server.js
     healthCheckPath: /health
     autoDeployTrigger: commit  # GitHub에 파일을 올리면 자동으로 다시 배포
+    envVars:
+      - key: KEEP_AWAKE        # 1 = 10분마다 스스로 깨워서 잠들지 않게 (무료 750시간이면 서버 1개는 한 달 내내 켜 둘 수 있어요)
+        value: "1"
+      - key: DATABASE_URL      # 계정 저장용 무료 PostgreSQL(Neon) 주소 — Render 화면의 Environment 에서 직접 넣어요 (DEPLOY.md ③-2)
+        sync: false

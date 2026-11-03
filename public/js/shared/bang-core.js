@@ -665,6 +665,7 @@
       title, subtitle: { sheriff: '보안관과 부관이 무법자와 배신자를 모두 잡았어요', outlaw: '무법자들이 보안관을 쓰러뜨렸어요', renegade: '배신자가 끝까지 홀로 살아남았어요' }[s.winRole],
       lines: s.players.map(p => `${p.name}: ${ROLES[p.role].name} · ${CHARS[p.char].name}${p.alive ? '' : ' (쓰러짐)'}`),
       ranking: ranked.map(p => ({ id: p.id, value: `${s.winners.includes(p.id) ? '승리' : '패배'} · ${ROLES[p.role].name}` })),
+      winners: s.winners.slice(),
     };
   }
   return {

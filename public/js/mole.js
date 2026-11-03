@@ -96,7 +96,7 @@ const Mole = {
     if (this.over) return;
     this.over = true;
     const best = Math.max(+store.get('best-mole', 0), this.score); store.set('best-mole', best);
-    showResult({ title: '🔨 시간 종료!', subtitle: `점수 ${this.score} · 최고 점수 ${best}`, solo: 'mole' });
+    showResult({ title: '🔨 시간 종료!', subtitle: `점수 ${this.score} · 최고 점수 ${best}`, solo: 'mole', rec: { v: this.score } });
   },
   startMulti(d) {
     stopLocal();

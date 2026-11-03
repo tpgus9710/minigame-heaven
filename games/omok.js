@@ -33,14 +33,14 @@ module.exports = H => ({
       const win = omokWin(g.board, r, c, v);
       const next = g.turn === 'black' ? 'white' : 'black';
       H.emit(room, 'omok:move', { r, c, color: g.turn, next: win ? null : next });
-      if (win) return void H.finishGame(room, { title: `🏆 ${me.name} 승리!`, subtitle: `${g.turn === 'black' ? '⚫ 흑돌' : '⚪ 백돌'}이 5목을 완성했습니다.` });
-      if (g.moves >= 225) return void H.finishGame(room, { title: '🤝 무승부', subtitle: '판이 가득 찼습니다.' });
+      if (win) return void H.finishGame(room, { title: `🏆 ${me.name} 승리!`, subtitle: `${g.turn === 'black' ? '⚫ 흑돌' : '⚪ 백돌'}이 5목을 완성했습니다.`, winners: [me.id] });
+      if (g.moves >= 225) return void H.finishGame(room, { title: '🤝 무승부', subtitle: '판이 가득 찼습니다.', winners: [] });
       g.turn = next;
     },
   },
   leave(room, p) {
     if (p.role !== 'black' && p.role !== 'white') return;
     const winner = room.players.find(x => x.role === (p.role === 'black' ? 'white' : 'black'));
-    H.finishGame(room, { title: `🏆 ${winner ? winner.name : '상대'} 기권승!`, subtitle: `${p.name} 님이 게임을 나갔습니다.` });
+    H.finishGame(room, { title: `🏆 ${winner ? winner.name : '상대'} 기권승!`, subtitle: `${p.name} 님이 게임을 나갔습니다.`, winners: winner ? [winner.id] : [] });
   },
 });

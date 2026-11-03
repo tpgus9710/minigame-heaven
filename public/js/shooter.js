@@ -192,7 +192,7 @@ const Shooter = {
     if (this.lives <= 0) {
       this.over = true;
       const best = Math.max(+store.get('best-shooter', 0), this.score); store.set('best-shooter', best);
-      after(900, () => showResult({ title: '🚀 격추됐어요!', subtitle: `웨이브 ${this.wave} · 점수 ${this.score.toLocaleString()} · 최고 점수 ${best.toLocaleString()}`, solo: 'shooter' }));
+      after(900, () => showResult({ title: '🚀 격추됐어요!', subtitle: `웨이브 ${this.wave} · 점수 ${this.score.toLocaleString()} · 최고 점수 ${best.toLocaleString()}`, solo: 'shooter', rec: { v: this.score } }));
     }
   },
   bomb() {

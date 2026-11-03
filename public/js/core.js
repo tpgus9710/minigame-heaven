@@ -102,7 +102,7 @@ function toast(msg, type = '') {
 /* ─── 테마 (기본 다크) ─── */
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
-  $('#theme-btn').textContent = t === 'dark' ? '☀️ 라이트 모드' : '🌙 다크 모드';
+  $('#theme-btn').innerHTML = t === 'dark' ? '☀️<span class="tb-t"> 라이트 모드</span>' : '🌙<span class="tb-t"> 다크 모드</span>';
   store.set('theme', t);
 }
 applyTheme(store.get('theme', 'dark'));
@@ -266,7 +266,10 @@ $('#emoji-row').innerHTML = EMOJIS.map(e => `<button class="emo-btn" data-act="e
 
 /* ─── 닉네임 ─── */
 $('#nick').value = store.get('nick', '');
-const nick = () => { const v = $('#nick').value.trim().slice(0, 12) || '게이머'; store.set('nick', v); return v; };
+const nick = () => {
+  if (typeof Acct !== 'undefined' && Acct.me) return Acct.me.name;                 // 로그인했으면 계정 이름 (account.js)
+  const v = $('#nick').value.trim().slice(0, 12) || '게이머'; store.set('nick', v); return v;
+};
 
 /* =====================================================================
  *  소켓 연결
@@ -351,9 +354,10 @@ function renderInvite() {
   }
   $('#invite-multi').innerHTML = html;
   const link = inviteLink();
+  const friendBtn = typeof Acct !== 'undefined' && Acct.me ? ' <button class="btn sm" data-act="acInviteFriends">👥 친구 초대</button>' : '';
   $('#invite-lobby').innerHTML = link
-    ? `🔗 <b>초대 링크</b> — 받은 친구는 누르기만 하면 이 방으로 와요<br><code>${esc(link)}</code><br><button class="btn sm good" data-act="copyInvite">📋 초대 링크 복사</button>`
-    : html + '<br>접속 후 <b>방 코드</b>를 입력하면 들어올 수 있어요.';
+    ? `🔗 <b>초대 링크</b> — 받은 친구는 누르기만 하면 이 방으로 와요<br><code>${esc(link)}</code><br><button class="btn sm good" data-act="copyInvite">📋 초대 링크 복사</button>${friendBtn}`
+    : html + '<br>접속 후 <b>방 코드</b>를 입력하면 들어올 수 있어요.' + friendBtn;
 }
 /** 클립보드 복사 (http 주소에서도 동작하도록 예전 방식으로도 시도) */
 function copyText(text, okMsg) {
@@ -504,8 +508,9 @@ function renderLobby() {
         : p.isReady ? '<span class="tag ready">✅ 준비 완료</span>' : '<span class="tag wait">💤 대기 중</span>',
       card ? `<span class="tag chips">💰 ${won(p.chips)}</span>` : '',
     ].join('');
-    return `<div class="pcard ${p.id === S.myId ? 'me' : ''}"><div class="avatar" style="background:${avColor(p.id)}">${esc(p.name[0] || '?')}</div>
-      <div class="pinfo"><div class="pname">${esc(p.name)}${p.id === S.myId ? ' (나)' : ''}</div>${tags}</div></div>`;
+    const av = (typeof Acct !== 'undefined' && Acct.lobbyAvatar(p)) || `<div class="avatar" style="background:${avColor(p.id)}">${esc(p.name[0] || '?')}</div>`;
+    return `<div class="pcard ${p.id === S.myId ? 'me' : ''}">${av}
+      <div class="pinfo"><div class="pname">${esc(p.name)}${p.id === S.myId ? ' (나)' : ''}</div>${tags}${typeof Acct !== 'undefined' ? Acct.lobbyTags(p) : ''}</div></div>`;
   }).join('');
 
   // 버튼
@@ -579,6 +584,7 @@ function showResult(d) {
     ovTimer = setInterval(() => { n = Math.max(0, n - 1); draw(); if (!n) clearInterval(ovTimer); }, 1000);
   }
   $('#overlay').classList.add('show');
+  if (typeof Acct !== 'undefined') Acct.onResult(d);                      // 로그인했으면 기록 저장 · 경험치 표시 (account.js)
 }
 function hideOverlay() { clearInterval(ovTimer); $('#overlay').classList.remove('show'); }
 

@@ -106,7 +106,7 @@ const Dodge = {
     this.over = true;
     const best = Math.max(+store.get('best-dodge-' + this.mode, 0), this.t);
     store.set('best-dodge-' + this.mode, best.toFixed(2));
-    after(700, () => showResult({ title: '💥 맞았어요!', subtitle: `${this.mode === 'bamboo' ? '🎋 대나무' : '🎯 총알'} 모드 · ${this.t.toFixed(2)}초 버팀 · 최고 기록 ${best.toFixed(2)}초`, solo: 'dodge' }));
+    after(700, () => showResult({ title: '💥 맞았어요!', subtitle: `${this.mode === 'bamboo' ? '🎋 대나무' : '🎯 총알'} 모드 · ${this.t.toFixed(2)}초 버팀 · 최고 기록 ${best.toFixed(2)}초`, solo: 'dodge', rec: { k: this.mode, v: +this.t.toFixed(2) } }));
   },
   onTick(d) {
     if (!isScreen('dodge') || !this.multi) return;

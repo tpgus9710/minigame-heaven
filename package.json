@@ -1,7 +1,7 @@
 {
   "name": "minigame-heaven",
-  "version": "7.0.0",
-  "description": "친구들과 함께하는 미니게임 (싱글 36종 · 멀티 43종)",
+  "version": "8.0.0",
+  "description": "친구들과 함께하는 미니게임 (싱글 36종 · 멀티 43종) + 얼굴 로그인 · 기록 · 친구",
   "private": true,
   "main": "server.js",
   "scripts": {
@@ -9,7 +9,9 @@
     "online": "node server.js --online"
   },
   "dependencies": {
+    "compression": "^1.8.2",
     "express": "^4.21.2",
+    "pg": "^8.23.1",
     "socket.io": "^4.8.1"
   },
   "engines": {

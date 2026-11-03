@@ -10,7 +10,7 @@ module.exports = H => {
     const win = s.winner && s.players.find(p => p.id === s.winner);
     H.finishGame(room, {
       title: win ? `💥 ${win.name} 승리!` : '🤝 무승부', subtitle: win ? '최후의 생존자!' : (s.time >= s.limit ? '⏰ 시간 종료' : '모두 쓰러졌어요'),
-      ranking: ranked.map(p => ({ name: p.name, value: `${p.kills}킬${p.alive ? ' · 생존' : ''}` })),
+      ranking: ranked.map(p => ({ id: p.id, name: p.name, value: `${p.kills}킬${p.alive ? ' · 생존' : ''}` })), winners: win ? [win.id] : [],
     });
   }
 

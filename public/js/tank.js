@@ -62,7 +62,7 @@ const Tank = {
   finishSolo() {
     this.over = true;
     const win = this.s.winner === 'me';
-    showResult({ title: win ? '🏆 승리! 모든 AI 탱크를 물리쳤어요' : '💥 내 탱크가 파괴됐어요', subtitle: `남은 HP ${this.s.tanks[0].hp}`, solo: 'tank' });
+    showResult({ title: win ? '🏆 승리! 모든 AI 탱크를 물리쳤어요' : '💥 내 탱크가 파괴됐어요', subtitle: `남은 HP ${this.s.tanks[0].hp}`, solo: 'tank', win });
   },
   fire() {
     if (!this.myTurn()) return;

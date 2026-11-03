@@ -37,7 +37,7 @@ const Volley = {
   onPoint(side) { this.msg = { txt: `${this.names[side]} 득점!`, t: 1.2 }; setStat('volley', 'score', `${this.s.score[0]} : ${this.s.score[1]}`); },
   finishSolo() {
     const win = this.s.winner === 0;
-    showResult({ title: win ? '🏆 승리!' : '😢 아쉽게 졌어요', subtitle: `${this.s.score[0]} : ${this.s.score[1]} · 난이도 ${{ 0.35: '쉬움', 0.65: '보통', 0.95: '어려움' }[this.lv]}`, solo: 'volley' });
+    showResult({ title: win ? '🏆 승리!' : '😢 아쉽게 졌어요', subtitle: `${this.s.score[0]} : ${this.s.score[1]} · 난이도 ${{ 0.35: '쉬움', 0.65: '보통', 0.95: '어려움' }[this.lv]}`, solo: 'volley', win });
   },
   startMulti(d) {
     stopLocal();

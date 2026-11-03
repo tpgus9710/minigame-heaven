@@ -32,8 +32,9 @@ module.exports = H => {
       subtitle: `${TRACKS[g.track]} · ${g.mode === 'item' ? '아이템전' : '스피드전'} · ${g.laps}바퀴 · ${why}`,
       ranking: ranked.map(p => {
         const f = g.finished.find(x => x.id === p.id), s = g.st[p.id];
-        return { name: p.name, value: f ? fmt(f.t) : s ? `${clamp(s[5], 0, g.laps)}/${g.laps}바퀴 · 완주 못 함` : '완주 못 함' };
+        return { id: p.id, name: p.name, value: f ? fmt(f.t) : s ? `${clamp(s[5], 0, g.laps)}/${g.laps}바퀴 · 완주 못 함` : '완주 못 함' };
       }),
+      winners: win ? [win.id] : [],
     });
   }
   function checkEnd(room) {

@@ -90,7 +90,7 @@ const Fruit = {
     this.over = true;
     if (this.multi) { socket.emit('sr:score', this.score); socket.emit('sr:over'); setStatus('fruit', `${why} ${this.score}점 — 결과를 기다리는 중…`); return; }
     const best = Math.max(+store.get('best-fruit', 0), this.score); store.set('best-fruit', best);
-    after(600, () => showResult({ title: '🍉 ' + why, subtitle: `점수 ${this.score} · 최고 점수 ${best}`, solo: 'fruit' }));
+    after(600, () => showResult({ title: '🍉 ' + why, subtitle: `점수 ${this.score} · 최고 점수 ${best}`, solo: 'fruit', rec: { v: this.score } }));
   },
   draw(now) {
     const c = $('#fr-cv').getContext('2d');
