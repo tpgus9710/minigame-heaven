@@ -14,7 +14,7 @@ const ACC_WHY = {
   already: '이미 친구예요.', sent: '이미 친구 신청을 보냈어요.', max: '친구 · 신청이 너무 많아요.', noreq: '받은 신청이 없어요.',
   notfriend: '친구에게만 초대를 보낼 수 있어요.', noroom: '먼저 방을 만들거나 들어가 주세요.', offline: '친구가 지금 접속해 있지 않아요.',
   here: '이미 같은 방에 있어요.', timeout: '서버가 응답하지 않아요. 연결을 확인해 주세요.', sure: '탈퇴를 확인해 주세요.',
-  unknown: '같은 방에 있거나 같이 게임한 사람에게만 바로 신청할 수 있어요. 친구 코드로 신청해 주세요.',
+  unknown: '지금 접속 중이거나, 같은 방에 있거나, 같이 게임한 사람에게만 바로 신청할 수 있어요. 친구 코드로 신청해 주세요.',
 };
 const FACE_TIP = {
   none: '얼굴이 보이지 않아요. 화면 가운데를 봐 주세요', many: '한 사람만 화면에 나오게 해 주세요', small: '조금 더 가까이 와 주세요',
@@ -145,7 +145,8 @@ const Acct = {
     el.innerHTML = `<div class="ac-home">${avatarOf(m, 'lg')}
       <div class="ac-home-t"><b>${esc(m.name)}님 반가워요!</b> ${lvTag(m.lv)}
         <div class="xpbar"><i style="width:${pct}%"></i></div>
-        <small>다음 레벨까지 ${(m.next - m.xp).toLocaleString()} XP · 멀티 ${m.plays}판 ${m.wins}승 · 싱글 ${m.sp}판</small></div>
+        <small>다음 레벨까지 ${(m.next - m.xp).toLocaleString()} XP · 멀티 ${m.plays}판 ${m.wins}승 · 싱글 ${m.sp}판</small>
+        ${this.fr ? `<button class="ac-online-link" data-act="acOpen" data-tab="fr"><i></i>지금 접속 중인 회원 ${this.fr.onlineN || 0}명</button>` : ''}</div>
       <div class="ac-home-btns">
         <button class="btn sm ghost" data-act="acOpen" data-tab="rec">${icon('chart-bar')}기록</button>
         <button class="btn sm ghost" data-act="acOpen" data-tab="fr">${icon('users')}친구${on ? `<i class="ac-on">${on}</i>` : ''}${m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : ''}</button>
@@ -177,6 +178,7 @@ const Acct = {
     $('#acct-modal').className = 'modal acct ' + (view === 'me' ? 'wide' : '');
   },
   close() {
+    clearInterval(this.frPoll); this.frPoll = null;
     this.ui.sess++; this.ui.view = null;
     this.stopCam();
     $('#acct-ov').classList.remove('show');
@@ -444,6 +446,8 @@ const Acct = {
     const t = this.ui.tab;
     if (t === 'rec') this.renderRecords();
     else if (t === 'fr') { this.renderFriends(); this.loadFriends(); }
+    clearInterval(this.frPoll); this.frPoll = null;
+    if (t === 'fr') this.frPoll = setInterval(() => { if (this.ui.view === 'me' && this.ui.tab === 'fr' && !document.hidden) this.loadFriends(); }, 15000);
     else if (t === 'rank') this.renderRank();
     else this.renderSettings();
   },
@@ -482,6 +486,11 @@ const Acct = {
       if (!f.room) return '<small class="st on">접속 중</small>';
       return `<small class="st on">${esc(stripEmoji(f.game))} ${f.playing ? '게임 중' : '대기실'} · ${f.n}/${f.max}명</small>`;
     };
+    const here = u => `<small class="st on">${u.st === 'home' ? '메뉴에 있어요' : `${esc(stripEmoji(u.game))} ${u.st === 'game' ? '게임 중' : '대기실'}`}</small>`;
+    const onBtn = u => (u.rel === 'friend' ? '<span class="tag frtag">친구</span>'
+      : u.rel === 'sent' ? '<span class="tag wait">신청함</span>'
+        : u.rel === 'got' ? `<button class="btn sm good" data-act="acAccept" data-uid="${esc(u.id)}">수락</button>`
+          : `<button class="btn sm" data-act="acAddUid" data-uid="${esc(u.id)}">${icon('user-plus')}친구 신청</button>`);
     const fbtn = f => {
       const b = [];
       if (f.on && inRoom && f.room !== S.code) b.push(`<button class="btn sm good" data-act="acInvite" data-uid="${esc(f.id)}">${icon('send')}초대</button>`);
@@ -493,6 +502,10 @@ const Acct = {
         <button class="btn sm good" data-act="acAddCode">${icon('user-plus')}친구 신청</button>
         <span class="small muted">내 코드 <b class="ac-mycode" data-act="acCopyCode">${esc(fr.code)}</b></span></div>
       ${fr.reqIn.length ? `<h4>${icon('bell')}받은 신청</h4><div class="ac-list">${fr.reqIn.map(u => row(u, `<button class="btn sm good" data-act="acAccept" data-uid="${esc(u.id)}">수락</button><button class="btn sm ghost" data-act="acDecline" data-uid="${esc(u.id)}">거절</button>`)).join('')}</div>` : ''}
+      <h4><i class="ac-live"></i>지금 접속 중인 회원 ${fr.onlineN || 0}명 <small class="muted">· 눌러서 바로 친구 신청</small></h4>
+      ${(fr.online || []).length ? `<div class="ac-list">${fr.online.map(u => row(u, onBtn(u), here(u))).join('')}</div>`
+        : '<p class="muted small">지금 접속 중인 다른 회원이 없어요.</p>'}
+      ${this.me && this.me.hide ? '<p class="small muted">🙈 나는 지금 이 목록에서 숨겨져 있어요. (설정에서 바꿀 수 있어요)</p>' : ''}
       <h4>${icon('users')}친구 ${fr.friends.length}명 <small class="muted">· 접속 중 ${fr.friends.filter(f => f.on).length}명</small></h4>
       ${fr.friends.length ? `<div class="ac-list">${fr.friends.map(f => row(f, fbtn(f), where(f))).join('')}</div>`
         : '<p class="muted small">아직 친구가 없어요. 친구 코드를 받거나, 같이 게임한 사람에게 신청해 보세요.</p>'}
@@ -538,6 +551,9 @@ const Acct = {
         <label>닉네임<input type="text" id="ac-name" maxlength="10" value="${esc(m.name)}" autocomplete="off"></label>
         <div class="ac-avs" id="ac-avs">${this.avPicker(f)}</div><div class="ac-cols" id="ac-cols">${this.colPicker(f)}</div>
         <button class="btn sm good" data-act="acSave">${icon('check')}저장</button></div>
+      <div class="ac-set"><h4>${icon('eye')}접속 중 목록</h4>
+        <label class="ac-check"><input type="checkbox" data-act="acHide" ${m.hide ? '' : 'checked'}><span>다른 회원의 <b>지금 접속 중인 회원</b> 목록에 나를 보여 주기</span></label>
+        <p class="small muted">끄면 친구가 아닌 사람에게는 접속해 있어도 안 보여요. (친구 목록에는 그대로 보여요)</p></div>
       <div class="ac-set"><h4>${icon('device-mobile')}다른 기기에서 로그인</h4>
         <p class="small muted">카메라가 없는 컴퓨터 등에서 <b>코드로 로그인</b>을 누르고 이 코드를 넣으면 돼요. (5분 동안 한 번만 쓸 수 있어요)</p>
         <div id="ac-link"><button class="btn sm" data-act="acMkCode">${icon('key')}로그인 코드 만들기</button></div></div>
@@ -692,6 +708,12 @@ Object.assign(ACT, {
     el.disabled = true; el.innerHTML = `${icon('check')}보냄`;
   },
   acInviteFriends: () => Acct.openMe('fr'),
+  acHide: async el => {
+    const r = await ask('acct:edit', { hide: !el.checked });
+    if (!r.ok) { el.checked = !el.checked; return toast(whyText(r), 'error'); }
+    Acct.setMe({ ...r.me, reqs: Acct.fr ? Acct.fr.reqIn.length : r.me.reqs });
+    toast(el.checked ? '접속 중 목록에 나를 보여 줘요.' : '접속 중 목록에서 나를 숨겼어요.', 'good');
+  },
   acJoinCode: el => { const c = el.closest('.ac-invite'); if (c) c.remove(); Acct.joinRoom(el.dataset.code); },
   acDismiss: el => { const c = el.closest('.ac-invite'); if (c) c.remove(); },
 });
@@ -718,3 +740,4 @@ socket.on('fr:ping', d => {
   frTimer = setTimeout(() => Acct.loadFriends(), 500);
 });
 socket.on('fr:invited', d => Acct.invited(d));
+setInterval(() => { if (Acct.me && $('#scr-home').classList.contains('active') && !Acct.ui.view && !document.hidden) Acct.loadFriends(); }, 30000);   // 홈 카드의 '지금 접속 중' 숫자

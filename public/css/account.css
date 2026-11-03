@@ -143,6 +143,12 @@
 .ac-warn{display:flex;gap:10px;align-items:flex-start;background:color-mix(in srgb,var(--warn) 14%,var(--panel2));border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:14px;padding:10px 12px;margin-bottom:12px;font-size:13.5px;line-height:1.5}
 .ac-warn .ic{width:20px;height:20px;color:var(--warn);margin-top:1px}
 
+/* ── 지금 접속 중 ── */
+.ac-online-link{display:inline-flex;align-items:center;gap:6px;margin-top:5px;cursor:pointer;border:0;background:none;padding:0;color:var(--good);font:700 13px 'Noto Sans KR',sans-serif}
+.ac-online-link i,.ac-live{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good);display:inline-block;flex:none}
+.ac-check{flex-direction:row!important;align-items:center;gap:10px!important;color:var(--text)!important;font-weight:400!important;cursor:pointer}
+.ac-check input{width:20px;height:20px;accent-color:var(--good);flex:none}
+
 /* ── 대기실 태그 ── */
 .tag.lvtag{background:linear-gradient(135deg,#ffe082,#ffb300);color:#2b1d00}
 .tag.frtag{background:rgba(232,93,156,.18);color:#ff8cc0}
