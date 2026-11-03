@@ -15,6 +15,7 @@ const ACC_WHY = {
   notfriend: '친구에게만 초대를 보낼 수 있어요.', noroom: '먼저 방을 만들거나 들어가 주세요.', offline: '친구가 지금 접속해 있지 않아요.',
   here: '이미 같은 방에 있어요.', timeout: '서버가 응답하지 않아요. 연결을 확인해 주세요.', sure: '탈퇴를 확인해 주세요.',
   unknown: '지금 접속 중이거나, 같은 방에 있거나, 같이 게임한 사람에게만 바로 신청할 수 있어요. 친구 코드로 신청해 주세요.',
+  empty: '보낼 내용을 입력해 주세요.',
 };
 const FACE_TIP = {
   none: '얼굴이 보이지 않아요. 화면 가운데를 봐 주세요', many: '한 사람만 화면에 나오게 해 주세요', small: '조금 더 가까이 와 주세요',
@@ -31,6 +32,11 @@ const REC_GAMES = [['g2048', ''], ['fruit', ''], ['gem', ''], ['apple', ''], ['r
   ['dodge:bullet', ''], ['dodge:bamboo', ''], ['snake', ''], ['stack', ''], ['breakout', ''], ['shisen', ''], ['rain', ''], ['mole', ''],
   ['shooter', ''], ['tetris', ''], ['zombie', ''], ['plat', ''], ['yacht', '']];
 
+const DM_WHY = { notfriend: '친구에게만 귓속말을 보낼 수 있어요.', offline: '친구가 지금 접속해 있지 않아요. 접속하면 보낼 수 있어요.',
+  limit: '너무 빨리 보내고 있어요. 잠깐 쉬었다가 보내 주세요.', nouser: '그 친구를 찾을 수 없어요.' };
+const MENU_SCREENS = new Set(['home', 'single', 'multi', 'lobby']);       // 이 화면들 말고는 게임 화면이에요
+const hhmm = t => new Date(t).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
+const dmDot = n => (n ? `<i class="ac-dot wh" title="안 읽은 귓속말 ${n}개">${icon('message-circle')}${n > 99 ? '99+' : n}</i>` : '');
 const ask = (ev, d) => new Promise(res => socket.timeout(10000).emit(ev, d, (err, r) => res(err ? { ok: false, why: 'timeout' } : (r || { ok: false, why: 'bad' }))));
 const whyText = r => ACC_WHY[r && r.why] || '잠시 후 다시 해 주세요.';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -67,8 +73,11 @@ const iconOf = key => { const base = String(key).split(':')[0]; return gameIcon(
 
 const Acct = {
   me: null, persist: null, state: 'loading', fr: null, gain: null,
-  ui: { view: null, tab: 'rec', rankK: 'xp', rankG: 'g2048', sess: 0, form: null },
+  ui: { view: null, tab: 'rec', rankK: 'xp', rankG: 'g2048', sess: 0, form: null, dm: null },
   cam: null,
+  missed: new Map(),     // 게임하는 동안 온 귓속말: 보낸 친구 id → { from, n, x, during }
+  invMissed: [],         // 게임하는 동안 온 방 초대
+  wasBusy: false, busyG: undefined,
 
   get token() { return store.get('mgAuth', ''); },
   setToken(t) { store.set('mgAuth', t || ''); },
@@ -105,6 +114,12 @@ const Acct = {
     if (!r.ok || !this.me) return;
     this.fr = r;
     this.me.reqs = r.reqIn.length;
+    this.me.dm = r.friends.reduce((a, f) => a + (f.unread || 0), 0);
+    const d = this.ui.dm;
+    if (this.ui.view === 'dm' && d && !d.loading) {
+      const nf = r.friends.find(f => f.id === d.uid);
+      if (nf) { d.friend = nf; this.dmStatus(); } else this.dmGone();
+    }
     this.renderChip(); this.renderHome();
     if (this.ui.view === 'me') this.refreshHead();
     if (this.ui.view === 'me' && this.ui.tab === 'fr') this.renderFriends();
@@ -125,7 +140,7 @@ const Acct = {
     const el = $('#acct-chip'); if (!el) return;
     const m = this.me;
     el.innerHTML = m
-      ? `${avatarOf(m, 'sm')}<span class="ac-chip-name">${esc(m.name)}</span>${lvTag(m.lv)}${m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : ''}`
+      ? `${avatarOf(m, 'sm')}<span class="ac-chip-name">${esc(m.name)}</span>${lvTag(m.lv)}${m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : ''}${dmDot(m.dm)}`
       : `${icon('face-id')}<span class="ac-chip-name">얼굴 로그인</span>`;
     el.classList.toggle('in', !!m);
     el.title = m ? '내 정보 · 기록 · 친구' : '얼굴로 로그인 / 회원가입';
@@ -149,7 +164,7 @@ const Acct = {
         ${this.fr ? `<button class="ac-online-link" data-act="acOpen" data-tab="fr"><i></i>지금 접속 중인 회원 ${this.fr.onlineN || 0}명</button>` : ''}</div>
       <div class="ac-home-btns">
         <button class="btn sm ghost" data-act="acOpen" data-tab="rec">${icon('chart-bar')}기록</button>
-        <button class="btn sm ghost" data-act="acOpen" data-tab="fr">${icon('users')}친구${on ? `<i class="ac-on">${on}</i>` : ''}${m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : ''}</button>
+        <button class="btn sm ghost" data-act="acOpen" data-tab="fr">${icon('users')}친구${on ? `<i class="ac-on">${on}</i>` : ''}${m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : ''}${dmDot(m.dm)}</button>
         <button class="btn sm ghost" data-act="acOpen" data-tab="rank">${icon('trophy')}랭킹</button></div></div>`;
   },
   /** 대기실 참가자 카드: 계정 아바타 */
@@ -175,11 +190,11 @@ const Acct = {
   open(view) {
     this.ui.view = view;
     $('#acct-ov').classList.add('show');
-    $('#acct-modal').className = 'modal acct ' + (view === 'me' ? 'wide' : '');
+    $('#acct-modal').className = 'modal acct ' + (view === 'me' ? 'wide' : view === 'dm' ? 'whv' : '');
   },
   close() {
     clearInterval(this.frPoll); this.frPoll = null;
-    this.ui.sess++; this.ui.view = null;
+    this.ui.sess++; this.ui.view = null; this.ui.dm = null;
     this.stopCam();
     $('#acct-ov').classList.remove('show');
     $('#acct-modal').innerHTML = '';
@@ -415,7 +430,7 @@ const Acct = {
   /* ───────── 내 정보 (기록 · 친구 · 랭킹 · 설정) ───────── */
   openMe(tab) {
     if (!this.me) return this.login();
-    this.ui.sess++; this.stopCam();
+    this.ui.sess++; this.stopCam(); this.ui.dm = null;
     if (tab) this.ui.tab = tab;
     this.open('me');
     this.renderProfile();
@@ -429,7 +444,7 @@ const Acct = {
           <div class="xpbar"><i style="width:${pct}%"></i></div>
           <small>${m.xp.toLocaleString()} XP · 다음 레벨까지 ${(m.next - m.xp).toLocaleString()} XP</small></div>
         <div class="ac-code-chip" data-act="acCopyCode" title="눌러서 복사"><small>친구 코드</small><b>${esc(m.code)}</b></div></div>
-      <div class="ac-tabs">${tab('rec', 'chart-bar', '기록')}${tab('fr', 'users', '친구', m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : '')}${tab('rank', 'trophy', '랭킹')}${tab('set', 'settings', '설정')}</div>`;
+      <div class="ac-tabs">${tab('rec', 'chart-bar', '기록')}${tab('fr', 'users', '친구', (m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : '') + dmDot(m.dm))}${tab('rank', 'trophy', '랭킹')}${tab('set', 'settings', '설정')}</div>`;
   },
   /** 내 정보가 바뀌었을 때 위쪽(이름 · 레벨 · 탭)만 다시 그리기 — 입력 중인 내용은 그대로 */
   refreshHead() {
@@ -483,16 +498,18 @@ const Acct = {
     const row = (u, right, sub = '') => `<div class="ac-row fr">${avatarOf(u)}<span class="grow"><b>${esc(u.name)}</b> ${lvTag(u.lv)}${sub}</span><span class="ac-btns">${right}</span></div>`;
     const where = f => {
       if (!f.on) return `<small class="st off">오프라인${f.seen ? ' · ' + ago(f.seen) : ''}</small>`;
-      if (!f.room) return '<small class="st on">접속 중</small>';
+      if (!f.room) return f.solo ? `<small class="st on">${esc(gameLabel(f.solo))} 게임 중 (싱글)</small>` : '<small class="st on">접속 중</small>';
       return `<small class="st on">${esc(stripEmoji(f.game))} ${f.playing ? '게임 중' : '대기실'} · ${f.n}/${f.max}명</small>`;
     };
-    const here = u => `<small class="st on">${u.st === 'home' ? '메뉴에 있어요' : `${esc(stripEmoji(u.game))} ${u.st === 'game' ? '게임 중' : '대기실'}`}</small>`;
-    const onBtn = u => (u.rel === 'friend' ? '<span class="tag frtag">친구</span>'
+    const here = u => `<small class="st on">${u.st === 'home' ? '메뉴에 있어요' : u.st === 'solo' ? `${esc(gameLabel(u.solo || ''))} 게임 중 (싱글)` : `${esc(stripEmoji(u.game))} ${u.st === 'game' ? '게임 중' : '대기실'}`}</small>`;
+    const dmBtn = (f, label) => `<button class="btn sm ${f.unread ? 'good' : ''} ${label ? '' : 'icon-only'}" data-act="acDMOpen" data-uid="${esc(f.id)}" title="귓속말">${icon('message-circle')}${label ? '귓속말' : ''}${f.unread ? `<i class="ac-dot">${f.unread}</i>` : ''}</button>`;
+    const onBtn = u => (u.rel === 'friend' ? `<span class="tag frtag">친구</span>${dmBtn(this.fr.friends.find(f => f.id === u.id) || u, false)}`
       : u.rel === 'sent' ? '<span class="tag wait">신청함</span>'
         : u.rel === 'got' ? `<button class="btn sm good" data-act="acAccept" data-uid="${esc(u.id)}">수락</button>`
           : `<button class="btn sm" data-act="acAddUid" data-uid="${esc(u.id)}">${icon('user-plus')}친구 신청</button>`);
     const fbtn = f => {
       const b = [];
+      if (f.on || f.unread) b.push(dmBtn(f, f.on));
       if (f.on && inRoom && f.room !== S.code) b.push(`<button class="btn sm good" data-act="acInvite" data-uid="${esc(f.id)}">${icon('send')}초대</button>`);
       if (f.room && f.room !== S.code && !f.playing && f.n < f.max) b.push(`<button class="btn sm" data-act="acJoinCode" data-code="${esc(f.room)}">${icon('door-enter')}따라가기</button>`);
       b.push(`<button class="btn sm ghost icon-only" data-act="acRemove" data-uid="${esc(f.id)}" data-name="${esc(f.name)}" title="친구 끊기">${icon('user-x')}</button>`);
@@ -509,6 +526,7 @@ const Acct = {
       <h4>${icon('users')}친구 ${fr.friends.length}명 <small class="muted">· 접속 중 ${fr.friends.filter(f => f.on).length}명</small></h4>
       ${fr.friends.length ? `<div class="ac-list">${fr.friends.map(f => row(f, fbtn(f), where(f))).join('')}</div>`
         : '<p class="muted small">아직 친구가 없어요. 친구 코드를 받거나, 같이 게임한 사람에게 신청해 보세요.</p>'}
+      ${fr.friends.length ? '<p class="small muted ac-hint">💬 접속 중인 친구에게 <b>귓속말</b>을 보낼 수 있어요. 게임 중인 친구에게는 알림 없이 조용히 전달되고, 게임이 끝나면 알려 줘요.</p>' : ''}
       ${inRoom ? '' : '<p class="small muted ac-hint">💡 방에 들어가 있으면 접속 중인 친구에게 <b>초대</b>를 보낼 수 있어요.</p>'}
       ${fr.reqOut.length ? `<h4>${icon('clock')}보낸 신청</h4><div class="ac-list">${fr.reqOut.map(u => row(u, `<button class="btn sm ghost" data-act="acCancel" data-uid="${esc(u.id)}">취소</button>`)).join('')}</div>` : ''}
       ${fr.recent.length ? `<h4>${icon('history')}최근 같이 한 사람</h4><div class="ac-list">${fr.recent.map(u => row(u, `<button class="btn sm" data-act="acAddUid" data-uid="${esc(u.id)}">${icon('user-plus')}신청</button>`)).join('')}</div>` : ''}`;
@@ -519,6 +537,171 @@ const Acct = {
       inp.addEventListener('keydown', e => { if (e.key === 'Enter') ACT.acAddCode(); });
     }
   },
+  /* ───────── 귓속말 ───────── */
+  /** 지금 게임을 하고 있는지 (싱글 · 멀티) — 게임 중에는 귓속말 · 초대 알림을 띄우지 않아요 */
+  busy() {
+    if ($('#overlay').classList.contains('show')) return false;           // 결과창이면 게임이 끝난 거예요
+    if (S.solo) return true;
+    return !!(S.room && S.room.isStarted && S.screen && !MENU_SCREENS.has(S.screen));
+  },
+  /** 1초마다: 싱글 게임 중인지 서버에 알려 주고(친구에게 '게임 중'으로 보여요), 게임이 끝나면 모아 둔 알림을 보여 줘요 */
+  tickBusy() {
+    const b = this.busy(), g = b && S.solo ? String(S.solo) : null;
+    if (socket.connected && g !== this.busyG) { this.busyG = g; socket.emit('acct:busy', { g }); }
+    if (b === this.wasBusy) return;
+    this.wasBusy = b;
+    if (b) this.stashCards(); else this.flushMissed();
+  },
+  /** 게임을 시작하면 떠 있던 알림 카드는 접어 둬요 (안 읽은 귓속말은 게임이 끝나면 다시 알려 줘요) */
+  stashCards() {
+    const box = $('#ac-invites'); if (!box) return;
+    for (const el of [...box.children]) {
+      if (el._dm) { const x = this.missed.get(el._dm.from.id); this.missed.set(el._dm.from.id, { ...el._dm, n: Math.max(el._dm.n, x ? x.n : 0), during: !!(x && x.during) }); }
+      clearTimeout(el._t); el.remove();
+    }
+  },
+  flushMissed() {
+    const list = [...this.missed.values()].slice(-3);
+    this.missed.clear();
+    for (const x of list) {
+      const f = this.fr && this.fr.friends.find(y => y.id === x.from.id);
+      if (f && !f.unread) continue;                                        // 그사이 다른 기기에서 읽었어요
+      this.dmPopup(x.from, x.x, (f && f.unread) || x.n, x.during);
+    }
+    const inv = this.invMissed.filter(v => Date.now() - v.at < 300000).slice(-2);
+    this.invMissed = [];
+    for (const v of inv) this.invited(v, true);
+  },
+  /** 귓속말이 왔어요 (내가 다른 기기에서 보낸 것도 와요) */
+  onDM(m) {
+    if (!this.me || !m || !m.from) return;
+    const mine = m.f === this.me.id, peer = mine ? m.to : m.f, d = this.ui.dm;
+    if (this.ui.view === 'dm' && d && d.uid === peer) {                    // 이 친구와의 대화 창을 보고 있으면 바로 보여 줘요
+      this.dmAppend(m);
+      if (!mine) ask('dm:read', { uid: peer });
+      return;
+    }
+    if (mine) return;
+    this.me.dm = (this.me.dm || 0) + 1;
+    const f = this.fr && this.fr.friends.find(x => x.id === peer);
+    if (f) f.unread = (f.unread || 0) + 1;
+    this.renderBadges();
+    if (this.busy()) {                                                     // 게임 중: 알림 없이 배지만 · 게임이 끝나면 알려 줘요
+      const x = this.missed.get(peer);
+      this.missed.delete(peer);
+      this.missed.set(peer, { from: m.from, n: (x ? x.n : 0) + 1, x: m.x, during: true });
+      return;
+    }
+    this.dmPopup(m.from, m.x, f ? f.unread : 1, false);
+  },
+  /** 귓속말을 읽었어요 (이 기기나 다른 기기에서) */
+  onRead(d) {
+    if (!this.me || !d) return;
+    this.me.dm = d.total || 0;
+    const f = this.fr && this.fr.friends.find(x => x.id === d.from);
+    if (f) f.unread = 0;
+    this.missed.delete(d.from);
+    for (const el of [...($('#ac-invites') || { children: [] }).children]) if (el.dataset.dm === d.from) el.remove();
+    this.renderBadges();
+  },
+  renderBadges() {
+    this.renderChip(); this.renderHome();
+    if (this.ui.view === 'me') { this.refreshHead(); if (this.ui.tab === 'fr') this.renderFriends(); }
+  },
+  /** 오른쪽 위 알림 카드 (같은 친구 것은 한 장으로 모아요) */
+  dmPopup(from, text, n, during) {
+    const box = $('#ac-invites'); if (!box || !from) return;
+    let el = [...box.children].find(c => c.dataset.dm === from.id);
+    if (!el) { el = document.createElement('div'); el.className = 'ac-invite wh'; el.dataset.dm = from.id; }
+    el._dm = { from, n, x: text, during };
+    el.innerHTML = `${avatarOf(from)}<div class="ac-inv-t"><b>${esc(from.name)}</b>님의 귓속말${n > 1 ? ` ${n}개` : ''}
+        ${during ? '<small class="wh-tag">🎮 게임하는 동안 왔어요</small>' : ''}<small class="wh-pv">${esc(text)}</small></div>
+      <div class="ac-inv-b"><button class="btn sm good" data-act="acDMOpen" data-uid="${esc(from.id)}">답장</button><button class="btn sm ghost" data-act="acDismiss">닫기</button></div>`;
+    box.prepend(el);
+    while (box.children.length > 3) box.lastChild.remove();
+    clearTimeout(el._t); el._t = setTimeout(() => el.remove(), 15000);
+  },
+  /** 친구와의 귓속말 창 */
+  async openDM(uid) {
+    if (!this.me) return this.login();
+    if (typeof uid !== 'string' || !uid) return;
+    this.ui.sess++; this.stopCam();
+    clearInterval(this.frPoll); this.frPoll = null;
+    const f0 = this.fr && this.fr.friends.find(x => x.id === uid);
+    const d = this.ui.dm = { uid, list: [], friend: f0 || { id: uid, name: '…', lv: 1, av: -1, color: 0, on: true }, loading: true };
+    this.open('dm');
+    this.renderDM();
+    this.frPoll = setInterval(() => { if (this.ui.view === 'dm' && !document.hidden) this.loadFriends(); }, 20000);   // 친구 상태 (게임 중 · 오프라인)
+    const r = await ask('dm:history', { uid });
+    if (this.ui.view !== 'dm' || this.ui.dm !== d) return;
+    if (!r.ok) return this.dmGone(DM_WHY[r.why] || whyText(r));
+    const got = new Set(r.list.map(m => m.id));
+    d.list = [...r.list, ...d.list.filter(m => !got.has(m.id))].sort((a, b) => a.id - b.id).slice(-40);
+    d.friend = r.friend; d.loading = false;
+    const head = $('.wh-head');
+    if (head) head.outerHTML = this.dmHeadHTML();
+    this.dmStatus(); this.dmLog();
+    ask('dm:read', { uid });
+  },
+  dmHeadHTML() {
+    const f = this.ui.dm.friend;
+    return `<div class="wh-head"><button class="btn sm ghost icon-only" data-act="acOpen" data-tab="fr" title="친구 목록" aria-label="친구 목록으로">${icon('arrow-left')}</button>
+      ${avatarOf(f)}<div class="wh-who"><b>${esc(f.name)}</b> ${lvTag(f.lv || 1)}<small id="wh-st" class="st"></small></div></div>`;
+  },
+  renderDM() {
+    const d = this.ui.dm; if (!d) return;
+    this.body(`${this.dmHeadHTML()}
+      <div class="wh-log" id="wh-log"></div>
+      <div class="wh-send"><input type="text" id="wh-in" maxlength="200" autocomplete="off" enterkeyhint="send" aria-label="귓속말 내용">
+        <button class="btn good" id="wh-go" data-act="acDMSend">${icon('send')}보내기</button></div>
+      <p class="wh-note">${icon('bell-off')}<span>게임 중인 친구에게는 알림 없이 조용히 전달되고, 게임이 끝나면 알려 줘요. 대화는 저장하지 않아서 하루가 지나거나 서버가 다시 켜지면 사라져요.</span></p>`);
+    this.dmStatus(); this.dmLog();
+    const inp = $('#wh-in');
+    inp.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;   // 한글 조합 중 Enter는 무시 (마지막 글자 중복 방지)
+      e.preventDefault(); ACT.acDMSend();
+    });
+    if (!TOUCH) setTimeout(() => { if ($('#wh-in') === inp && !inp.disabled) inp.focus(); }, 30);
+  },
+  /** 친구 상태 줄 · 오프라인이면 보내기 막기 */
+  dmStatus() {
+    const d = this.ui.dm, el = $('#wh-st'); if (!d || !el) return;
+    const f = d.friend, inp = $('#wh-in'), go = $('#wh-go');
+    let t, cls = 'on';
+    if (d.loading) t = '불러오는 중…';
+    else if (!f.on) { t = '오프라인 · 접속하면 보낼 수 있어요'; cls = 'off'; }
+    else if (f.solo || (f.room && f.playing)) { t = `${f.solo ? gameLabel(f.solo) : stripEmoji(f.game)} 게임 중 · 알림 없이 조용히 전달돼요`; cls = 'on game'; }
+    else if (f.room) t = `${stripEmoji(f.game)} 대기실에 있어요`;
+    else t = '접속 중';
+    el.className = 'st ' + cls; el.textContent = t;
+    const can = !d.loading ? !!f.on : true;
+    if (inp) { inp.disabled = !can; inp.placeholder = can ? `${f.name}님에게 귓속말 (최대 200자)` : '친구가 접속하면 보낼 수 있어요'; }
+    if (go) go.disabled = !can;
+  },
+  /** 친구가 아니게 됐거나 불러오지 못했을 때 */
+  dmGone(why = '이제 친구가 아니라서 귓속말을 보낼 수 없어요.') {
+    const d = this.ui.dm; if (!d) return;
+    d.loading = false; d.friend = { ...d.friend, on: false };
+    this.dmStatus();
+    const el = $('#wh-st'); if (el) { el.className = 'st off'; el.textContent = why; }
+  },
+  dmLog() {
+    const box = $('#wh-log'), d = this.ui.dm; if (!box || !d) return;
+    box.innerHTML = d.list.length ? d.list.map(m => this.dmBubble(m)).join('')
+      : `<p class="wh-empty">${d.loading ? '불러오는 중…' : '아직 나눈 귓속말이 없어요.<br>먼저 인사해 보세요! 👋'}</p>`;
+    box.scrollTop = box.scrollHeight;
+  },
+  dmBubble(m) {
+    const mine = !!this.me && m.f === this.me.id;
+    return `<div class="wh-msg ${mine ? 'me' : ''}"><p>${esc(m.x)}</p><small>${hhmm(m.t)}${mine && m.q ? ` · ${icon('bell-off')}조용히 전달` : ''}</small></div>`;
+  },
+  dmAppend(m) {
+    const d = this.ui.dm; if (!d || !m || d.list.some(x => x.id === m.id)) return;
+    d.list.push(m);
+    if (d.list.length > 40) d.list.shift();
+    this.dmLog();
+  },
+
   async renderRank() {
     const box = $('#ac-body');
     if (!box) return;
@@ -593,12 +776,16 @@ const Acct = {
   },
 
   /* ───────── 친구 초대 받기 ───────── */
-  invited(d) {
+  invited(d, late) {
     const box = $('#ac-invites'); if (!box || !d || !d.from) return;
+    if (!late && this.busy()) {                                            // 게임 중이면 게임이 끝난 뒤에 보여 줘요
+      this.invMissed = this.invMissed.filter(v => v.from.id !== d.from.id).concat({ ...d, at: Date.now() }).slice(-3);
+      return;
+    }
     const el = document.createElement('div');
     el.className = 'ac-invite';
     el.innerHTML = `${avatarOf(d.from)}<div class="ac-inv-t"><b>${esc(d.from.name)}</b>님이 초대했어요
-      <small>${esc(stripEmoji(d.game))} · 방 ${esc(d.code)} · ${d.n}/${d.max}명${d.playing ? ' · 지금 게임 중' : ''}</small></div>
+      ${late ? '<small class="wh-tag">🎮 게임하는 동안 왔어요</small>' : ''}<small>${esc(stripEmoji(d.game))} · 방 ${esc(d.code)} · ${d.n}/${d.max}명${d.playing ? ' · 지금 게임 중' : ''}</small></div>
       <div class="ac-inv-b"><button class="btn sm good" data-act="acJoinCode" data-code="${esc(d.code)}">참가</button><button class="btn sm ghost" data-act="acDismiss">닫기</button></div>`;
     box.prepend(el);
     while (box.children.length > 3) box.lastChild.remove();
@@ -716,10 +903,32 @@ Object.assign(ACT, {
   },
   acJoinCode: el => { const c = el.closest('.ac-invite'); if (c) c.remove(); Acct.joinRoom(el.dataset.code); },
   acDismiss: el => { const c = el.closest('.ac-invite'); if (c) c.remove(); },
+  acDMOpen: el => { const c = el.closest('.ac-invite'); if (c) c.remove(); Acct.openDM(el.dataset.uid); },
+  acDMSend: async () => {
+    const d = Acct.ui.dm, inp = $('#wh-in');
+    if (!d || !inp || d.sending || d.loading) return;
+    const text = inp.value.replace(/\s+/g, ' ').trim();
+    if (!text) { inp.focus(); return; }
+    d.sending = true;
+    const r = await ask('dm:send', { uid: d.uid, text });
+    d.sending = false;
+    if (Acct.ui.dm !== d) return;
+    if (!r.ok) {
+      toast(DM_WHY[r.why] || whyText(r), 'error');
+      if (r.why === 'offline') { d.friend = { ...d.friend, on: false }; Acct.dmStatus(); }
+      if (r.why === 'notfriend') Acct.dmGone();
+      return;
+    }
+    const { id, name, av, color, lv } = d.friend;
+    if (r.to) { d.friend = { id, name, av, color, lv, ...r.to }; Acct.dmStatus(); }
+    const cur = $('#wh-in');
+    if (cur) { cur.value = ''; cur.focus(); }
+    Acct.dmAppend(r.msg);
+  },
 });
 
 /* ─── 서버 이벤트 ─── */
-socket.on('connect', () => Acct.hello());
+socket.on('connect', () => { Acct.busyG = undefined; Acct.hello(); });
 if (socket.connected) Acct.hello();                     // 이 파일이 읽히기 전에 이미 연결됐으면 바로 인사
 socket.on('acct:ready', () => Acct.hello());
 socket.on('acct:me', me => { if (Acct.me && me && me.id === Acct.me.id) Acct.setMe({ ...me, reqs: Acct.fr ? Acct.fr.reqIn.length : me.reqs }); });
@@ -740,4 +949,7 @@ socket.on('fr:ping', d => {
   frTimer = setTimeout(() => Acct.loadFriends(), 500);
 });
 socket.on('fr:invited', d => Acct.invited(d));
+socket.on('dm:msg', m => Acct.onDM(m));
+socket.on('dm:unread', d => Acct.onRead(d));
+setInterval(() => Acct.tickBusy(), 1000);
 setInterval(() => { if (Acct.me && $('#scr-home').classList.contains('active') && !Acct.ui.view && !document.hidden) Acct.loadFriends(); }, 30000);   // 홈 카드의 '지금 접속 중' 숫자

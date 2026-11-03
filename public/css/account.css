@@ -161,6 +161,34 @@
 .ac-inv-b{display:flex;flex-direction:column;gap:5px}
 @keyframes acSlide{from{transform:translateX(30px);opacity:0}}
 
+/* ── 귓속말 ── */
+.ac-dot.wh{display:inline-flex;align-items:center;gap:2px;background:#2b7de9}
+.ac-dot.wh .ic{width:11px;height:11px;margin:0;vertical-align:0}
+.modal.acct.whv{width:min(520px,100%);text-align:left;display:flex;flex-direction:column}
+.wh-head{display:flex;align-items:center;gap:10px;padding-right:44px}
+.wh-who{flex:1;min-width:0;line-height:1.35} .wh-who b{font-size:17px}
+.wh-who .st{font-size:12.5px;color:var(--muted)}
+.st.off{color:var(--muted)!important}
+.st.game{color:var(--warn)!important} .st.game::before{background:var(--warn)!important;box-shadow:0 0 6px var(--warn)!important}
+.wh-log{height:min(46vh,380px);overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:8px;margin:14px 0 10px;padding:12px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:16px}
+.wh-msg{max-width:80%;align-self:flex-start;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.wh-msg p{margin:0;padding:8px 12px;border-radius:16px 16px 16px 5px;background:var(--panel);border:1px solid var(--line);line-height:1.45;font-size:15px;overflow-wrap:anywhere;white-space:pre-wrap}
+.wh-msg.me{align-self:flex-end;align-items:flex-end}
+.wh-msg.me p{background:var(--accent);border-color:transparent;color:#fff;border-radius:16px 16px 5px 16px}
+.wh-msg small{display:flex;align-items:center;gap:3px;color:var(--muted);font-size:11px;padding:0 4px}
+.wh-msg small .ic{width:11px;height:11px}
+.wh-empty{margin:auto;text-align:center;color:var(--muted);font-size:14px;line-height:1.6}
+.wh-send{display:flex;gap:8px}
+.wh-send input{flex:1;min-width:0}
+.wh-send .btn{flex:none;display:flex;align-items:center}
+.wh-note{display:flex;gap:6px;align-items:flex-start;margin:10px 0 0;font-size:12px;line-height:1.5;color:var(--muted)}
+.wh-note .ic{width:14px;height:14px;flex:none;margin-top:2px}
+.ac-invite.wh{border-color:#2b7de9}
+.ac-inv-t .wh-pv{color:var(--text);font-size:13px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.ac-inv-t .wh-tag{color:var(--warn)}
+.ac-btns{flex-wrap:wrap;justify-content:flex-end}
+
 /* ── 결과창 경험치 ── */
 .ov-xp{display:none;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0 2px}
 .ov-xp.show,.ov-xp:has(.ac-hint-btn){display:flex}
@@ -195,4 +223,10 @@
   .ac-tab{padding:6px 12px}
   .ac-row .ac-btns .btn{padding:6px 9px;font-size:13px}
   #ac-invites{top:66px;right:10px;left:10px;width:auto}
+  .ac-row.fr{flex-wrap:wrap}
+  .ac-row.fr .ac-btns{margin-left:auto}
+  .wh-log{height:min(52vh,360px)}
+  .wh-send .btn .ic{margin:0}
+  .wh-send .btn{font-size:0;padding:10px 14px}
+  .wh-send .btn .ic{width:20px;height:20px}
 }
