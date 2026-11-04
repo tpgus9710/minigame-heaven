@@ -189,6 +189,9 @@
     },
     value, BETS, START,
     setup, act, ai, view, result, pending, timeup,
+    /** 사람이 모두 칩을 잃으면 봇끼리 이어 하지 않고 끝내요 (TableKit: out · endNow) */
+    out: (s, id) => { const p = s.players.find(x => x.id === id); return !p || (p.chips < BETS[0] && !p.hands.some(h => h.bet > 0)); },
+    endNow(s) { finish(s, '사람이 모두 칩을 잃어서 게임을 마쳤어요.'); return result(s); },
     auto: (s, id) => (s.phase === 'bet' ? { t: 'bet', amt: BETS[0] } : { t: 'stand' }),
     deadline: s => (s.over || s.phase === 'play' ? null : s.deadline),
   };

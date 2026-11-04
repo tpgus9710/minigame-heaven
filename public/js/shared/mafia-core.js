@@ -285,6 +285,15 @@
     },
     ROLE, MS,
     setup, act, free, ai, view, result, pending, drop, chatRoute,
+    /** 사람이 모두 탈락하면 봇끼리 이어 하지 않고 끝내요 (TableKit: out · endNow) */
+    out: (s, id) => { const p = P(s, id); return !p || !p.alive; },
+    endNow(s) {
+      s.over = true; s.phase = 'over'; s.deadline = null; s.winner = 'none';
+      s.msg = '사람이 모두 죽어서 게임을 마쳤어요.';
+      return { title: '🏁 게임 끝!', subtitle: '사람이 모두 죽어서 봇끼리는 더 하지 않아요',
+        lines: s.players.map(p => `${p.name} — ${ROLE[p.role].name}${p.alive ? '' : ' (사망)'}`),
+        ranking: s.players.slice().sort((a, b) => b.alive - a.alive).map(p => ({ id: p.id, value: `${ROLE[p.role].name} · ${p.alive ? '생존' : '사망'}` })), winners: [] };
+    },
     deadline: s => (s.over ? null : s.deadline),
     timeup: s => { if (!s.over) advance(s); },
   };

@@ -1,0 +1,105 @@
+/* v10 전체 공지 · 운영자 (public/js/admin.js) */
+
+/* ── 위쪽 띠: 게임 화면 위 (화면을 가리지 않고 자리를 차지해요 → 화면 맞춤이 그만큼 줄여요) ── */
+#notice-bar{display:flex;flex-direction:column;gap:6px;margin:0 0 10px}
+#notice-bar.hidden{display:none}
+.nb-line{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 12px;border-radius:12px;border:1px solid var(--line);font-size:14px;
+  background:color-mix(in srgb,var(--accent) 16%,var(--panel));animation:pop .25s}
+.nb-line > .ic{width:18px;height:18px;flex:none;color:var(--accent-2)}
+.nb-line.patch{background:color-mix(in srgb,var(--warn) 18%,var(--panel));border-color:color-mix(in srgb,var(--warn) 45%,var(--line))} .nb-line.patch > .ic{color:var(--warn)}
+.nb-line.urgent{background:color-mix(in srgb,var(--bad) 20%,var(--panel));border-color:color-mix(in srgb,var(--bad) 50%,var(--line))} .nb-line.urgent > .ic{color:var(--bad)}
+.nb-line.upd{background:color-mix(in srgb,var(--good) 16%,var(--panel));border-color:color-mix(in srgb,var(--good) 45%,var(--line))} .nb-line.upd > .ic{color:var(--good)}
+.nb-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb-t b{margin-right:2px} .nb-cd{font-variant-numeric:tabular-nums}
+.nb-line .btn.sm{padding:5px 11px;flex:none}
+.nb-x{flex:none;width:30px;height:30px;border:none;border-radius:9px;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.nb-x:hover{background:rgba(255,255,255,.08);color:var(--text)} .nb-x .ic{width:16px;height:16px}
+body.gaming #notice-bar{margin-bottom:8px}
+body.gaming .nb-line{font-size:13px;padding:3px 4px 3px 10px}
+@media (max-width:520px){ .nb-line{font-size:13px;gap:6px} }
+
+/* ── 공지 창 ── */
+#notice-ov{z-index:160}
+.notice-modal{width:min(480px,100%);text-align:left;padding:24px 24px 20px;max-height:calc(100dvh - 24px);overflow-y:auto}
+.nt-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.nt-kind{display:inline-flex;align-items:center;gap:5px;padding:4px 11px 4px 9px;border-radius:99px;font-weight:900;font-size:13px;
+  background:color-mix(in srgb,var(--accent) 22%,transparent);color:var(--accent-2)}
+.nt-kind .ic{width:15px;height:15px}
+.nt-kind.patch{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn)}
+.nt-kind.urgent{background:color-mix(in srgb,var(--bad) 22%,transparent);color:var(--bad)}
+.nt-kind.sm{padding:2px 8px;font-size:11px;flex:none}
+.nt-prev{font-size:12px;font-weight:700;color:var(--warn)}
+.modal .nt-title{font-size:26px;line-height:1.3;margin:2px 0 10px;word-break:keep-all;overflow-wrap:anywhere}
+.modal .nt-body{white-space:pre-wrap;color:var(--text);font-size:16px;line-height:1.65;margin:0 0 12px;overflow-wrap:anywhere}
+.nt-eta{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--warn) 14%,var(--panel2));border:1px solid color-mix(in srgb,var(--warn) 40%,var(--line));font-size:14px;line-height:1.5;margin-bottom:12px}
+.nt-eta .ic{width:18px;height:18px;flex:none;margin-top:2px;color:var(--warn)} .nt-eta b{font-variant-numeric:tabular-nums}
+.nt-by{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);font-weight:700}
+.nt-by .ic{width:15px;height:15px;color:var(--good)}
+.notice-modal .ov-actions{justify-content:flex-end;margin-top:14px}
+@media (max-width:420px){ .notice-modal{padding:20px 16px 16px} .modal .nt-title{font-size:22px} .modal .nt-body{font-size:15px} }
+
+/* ── 홈 화면 공지 카드 ── */
+.home-notice{display:flex;align-items:center;gap:12px;width:min(640px,100%);margin:0 auto 16px;padding:10px 10px 10px 14px;text-align:left;
+  border-radius:16px;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--accent)}
+.home-notice.hidden{display:none}
+.home-notice.patch{border-left-color:var(--warn)} .home-notice.urgent{border-left-color:var(--bad)}
+.hn-ic{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent-2)}
+.home-notice.patch .hn-ic{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+.home-notice.urgent .hn-ic{background:color-mix(in srgb,var(--bad) 20%,transparent);color:var(--bad)}
+.hn-ic .ic{width:20px;height:20px}
+.hn-t{flex:1;min-width:0;overflow:hidden;display:flex;flex-direction:column;line-height:1.35}
+.hn-t small{font-size:12px;font-weight:700;color:var(--muted)} .hn-t b{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hn-t span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── 운영자 표시 (프로필 · 대기실 · 채팅) ── */
+.op-badge{display:inline-flex;align-items:center;gap:3px;vertical-align:middle;padding:2px 8px 2px 6px;border-radius:99px;font-style:normal;font-size:12px;font-weight:900;
+  font-family:'Noto Sans KR',sans-serif;background:color-mix(in srgb,var(--info) 22%,transparent);color:var(--info);white-space:nowrap}
+.op-badge.owner{background:linear-gradient(135deg,rgba(255,194,75,.28),rgba(255,154,31,.22));color:#ffc24b}
+[data-theme="light"] .op-badge.owner{color:#b26b00}
+.op-badge .ic{width:14px;height:14px}
+.op-badge.sm{padding:2px;border-radius:7px} .op-badge.sm .ic{width:13px;height:13px}
+.chat-log .op-badge.sm{margin-right:4px;vertical-align:-2px}
+.modal h2 .op-badge{font-size:13px}
+
+/* ── 운영 탭 ── */
+.op-panel .ac-set h4{display:flex;align-items:center;gap:6px;width:100%}
+.op-refresh{margin-left:auto;padding:3px 8px} .op-refresh .ic{margin:0}
+.op-seg{display:flex;flex-wrap:wrap;gap:6px}
+.op-seg .seg-btn{padding:6px 12px;border-radius:10px;font-size:14px}
+.op-form textarea{width:100%;font:inherit;font-size:15px;line-height:1.5;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--panel);color:var(--text);resize:vertical;min-height:90px}
+.op-form textarea:focus{outline:none;border-color:var(--accent)}
+.op-form input[type=text]{background:var(--panel)}
+.op-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.op-l{font-weight:700;font-size:14px;color:var(--muted)}
+.op-live{display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.op-live b{font-size:16px} .op-live .btn{align-self:flex-end}
+.op-tiles{grid-template-columns:repeat(5,1fr);width:100%}
+.op-tiles .ac-tile b small{font-size:13px;color:var(--muted)}
+.op-find{display:flex;gap:8px;width:100%}
+.op-find input{flex:1;min-width:0;font-size:15px;padding:9px 12px}
+.op-find input[type=password]{font:inherit;font-size:15px;padding:9px 12px;border-radius:12px;border:2px solid var(--line);background:var(--panel);color:var(--text)}
+.op-u .op-on,.op-on{color:var(--good);font-weight:700}
+.op-logs{max-height:280px;overflow-y:auto;width:100%}
+.op-logs .ac-row{min-height:0;padding:6px 10px;font-size:13px}
+.op-t{flex:none;font-variant-numeric:tabular-nums}
+.op-a{flex:none;font-size:11px;font-weight:900;padding:2px 7px;border-radius:99px;background:var(--panel);color:var(--muted)}
+.op-a.notice{color:var(--accent-2)} .op-a.end{color:var(--muted)} .op-a.grant,.op-a.claim{color:var(--good)} .op-a.revoke,.op-a.resign{color:var(--warn)} .op-a.claim-fail{color:var(--bad)}
+.op-panel .ac-list{width:100%}
+.op-claim summary{cursor:pointer;font-weight:900;display:flex;align-items:center;gap:6px;list-style:none}
+.op-claim summary::-webkit-details-marker{display:none}
+.op-claim summary .ic{width:18px;height:18px}
+@media (max-width:560px){ .op-tiles{grid-template-columns:repeat(3,1fr)} }
+.op-nm{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+.op-nm b{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.op-u > small{flex:none;font-size:12px}
+.op-hist .ac-row{flex-wrap:wrap;row-gap:2px}
+.op-hist .grow{min-width:0;font-weight:700}
+@media (max-width:560px){ .op-hist .ac-row > small{flex-basis:100%;padding-left:2px} .op-u .btn.sm{padding:5px 9px} }
+/* 휴대폰 가로 등 낮은 화면: 띠를 더 얇게 (게임 화면이 덜 줄어들게) */
+@media (max-height:520px){
+  body.gaming #notice-bar{gap:3px;margin-bottom:5px}
+  body.gaming .nb-line{font-size:12px;padding:1px 3px 1px 8px;border-radius:9px}
+  body.gaming .nb-line > .ic{width:15px;height:15px}
+  body.gaming .nb-line .btn.sm{padding:3px 9px;font-size:12px}
+  body.gaming .nb-x{width:24px;height:24px}
+}

@@ -19,6 +19,8 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const os = require('os');
 const { Server } = require('socket.io');
 const makeHelpers = require('./lib/helpers');
@@ -39,7 +41,36 @@ const LIMITS = {
 const app = express();
 app.disable('x-powered-by');
 const server = http.createServer(app);
-const io = new Server(server, { pingTimeout: 20000, maxHttpBufferSize: 64 * 1024 });
+// 연결이 잠깐 끊겨도 (휴대폰 · 태블릿에서 다른 앱으로 넘어감, 와이파이 끊김) 이 시간 안에 돌아오면 같은 자리로 이어서 해요
+const AWAY_GAME_MS = Number(process.env.RECONNECT_MS) || 180000;          // 게임 중: 3분
+const AWAY_LOBBY_MS = Math.min(AWAY_GAME_MS, Number(process.env.RECONNECT_LOBBY_MS) || 45000);   // 대기실: 45초 (방장이 오래 비우면 다른 사람이 못 시작해서)
+const io = new Server(server, { pingTimeout: 20000, maxHttpBufferSize: 64 * 1024,
+  // socket.io 연결 복구: 다시 연결되면 같은 id · 같은 방으로 돌아오고, 그동안 놓친 메시지도 받아요
+  // (자리는 아래 타이머가 정확히 AWAY 시간에 빼요. 복구 정보는 1분 더 넉넉히 둬서 '자리가 없어졌어요' 안내까지 할 수 있게)
+  connectionStateRecovery: { maxDisconnectionDuration: AWAY_GAME_MS + 60000, skipMiddlewares: false } });
+// 조용한 대기실에서도 복구가 되도록 50초마다 아주 작은 신호를 보내요 (화면이 마지막으로 받은 메시지 번호가 너무 오래되지 않게)
+setInterval(() => io.emit('hb'), 50000).unref();
+// 실시간 게임이 1초에 수십 번 보내는 움직임 정보는 복구용으로 보관하지 않아요 (똑같이 바로 보내요).
+// 몇 분치를 쌓아 두면 메모리를 많이 쓰고, 돌아온 사람에게 지난 움직임을 한꺼번에 다시 보내 화면이 버벅여요 → 돌아오면 다음 최신 상태부터 받아요
+const STREAM_EVENTS = new Set(['bomb:s', 'dodge:tick', 'kt:sts', 'plat:ghosts', 'pong:state', 'snake:state', 'tank:pos', 'tank:aim', 'volley:s']);
+{
+  const ad = io.of('/').adapter, plain = Object.getPrototypeOf(Object.getPrototypeOf(ad) || {});
+  if (ad && Array.isArray(ad.packets) && plain && typeof plain.broadcast === 'function') {
+    const keep = ad.broadcast.bind(ad);
+    ad.broadcast = (packet, opts) => (packet && Array.isArray(packet.data) && STREAM_EVENTS.has(packet.data[0])
+      ? plain.broadcast.call(ad, packet, opts) : keep(packet, opts));
+  }
+}
+// 같은 화면이 다시 연결했는데 서버는 예전 연결이 아직 살아 있다고 알 때 → 예전 연결을 정리하고 한 번 더 연결하게 해요
+const quietAway = new Set();                         // 이렇게 정리한 예전 연결 (채팅에 '끊겼어요'를 남기지 않아요)
+const takeovers = new Map();                         // 복구 정보 → 최근 정리한 시각들 (같은 탭을 복제해서 서로 뺏는 일 막기)
+function takeoverOk(pid) {
+  const now = Date.now(), list = (takeovers.get(pid) || []).filter(t => now - t < 60000);
+  if (list.length >= 3) return false;
+  list.push(now); takeovers.set(pid, list);
+  if (takeovers.size > 500) for (const [k, v] of takeovers) if (now - v[v.length - 1] > 60000) takeovers.delete(k);
+  return true;
+}
 let compression = null;
 try { compression = require('compression'); } catch { /* 예전 node_modules 그대로면 압축 없이 */ }
 if (compression) app.use(compression());           // 화면 파일을 압축해서 보내요 (무료 서버 데이터 한도 아끼기)
@@ -59,6 +90,22 @@ const moduleOf = room => (REGISTRY[room.gameType] || {}).mod;
 const H = makeHelpers(io, rooms, moduleOf);
 // 계정 · 기록 · 친구 (게임 모듈보다 먼저 만들어야 게임이 끝날 때 기록돼요)
 const ACC = require('./lib/accounts')({ io, rooms, H, registry: () => REGISTRY, ipOf: s => ipOf(s), cloud: CLOUD });
+// 운영자 · 전체 공지 (환경 변수 ADMIN_KEY 로 최고 운영자 인증)
+const ADM = require('./lib/admin')({ io, rooms, acc: ACC, limiter: ACC._int.limiter });
+// 버그 · 불편 신고함 (운영자만 볼 수 있어요)
+const REP = require('./lib/report')({ io, rooms, acc: ACC, limiter: ACC._int.limiter });
+/** 화면 파일 버전: 패치로 화면 파일이 바뀌면 값이 달라져요 → 열려 있던 화면에 '새로 고침' 안내 (서버만 다시 켜진 것은 그대로) */
+const BUILD = (() => {
+  const h = crypto.createHash('sha1');
+  const walk = dir => {
+    for (const f of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const p = path.join(dir, f.name);
+      if (f.isDirectory()) { if (f.name !== 'vendor' && f.name !== 'models') walk(p); }
+      else if (/\.(js|css|html)$/.test(f.name)) h.update(f.name).update(fs.readFileSync(p));
+    }
+  };
+  try { walk(path.join(__dirname, 'public')); return h.digest('hex').slice(0, 12); } catch { return 'dev'; }
+})();
 
 const MODULES = [
   'cards', 'apple', 'race', 'catch', 'liar', 'tetris', 'omok', 'pong',
@@ -88,7 +135,7 @@ function addPlayer(room, socket, rawName) {
   const name = acc ? acc.name : cleanName(rawName);
   const isHost = room.players.length === 0;
   room.players.push({ id: socket.id, name, isHost, isReady: isHost, score: 0, chips: 1000000, role: assignRole(room), lastChat: 0,
-    uid: acc ? acc.uid : null, lv: acc ? acc.lv : 0, av: acc ? acc.av : null, color: acc ? acc.color : null });
+    uid: acc ? acc.uid : null, lv: acc ? acc.lv : 0, av: acc ? acc.av : null, color: acc ? acc.color : null, op: acc ? acc.op : '' });
   socket.join(room.code);
   socket.data.code = room.code;
   socket.emit('joined', { code: room.code, myId: socket.id });
@@ -103,13 +150,21 @@ function leaveRoom(socket) {
   if (!room) return;
   socket.leave(room.code);
   ACC.touch(socket);
-  const idx = room.players.findIndex(p => p.id === socket.id);
+  dropPlayer(room, socket.id);
+}
+/** 방에서 사람 빼기 (나가기 · 연결이 끊긴 채 돌아오지 않음) */
+function dropPlayer(room, id, msg) {
+  const idx = room.players.findIndex(p => p.id === id);
   if (idx < 0) return;
   const [p] = room.players.splice(idx, 1);
+  clearTimeout(p.awayTimer);
 
   if (!room.players.length) { stopTimers(room); rooms.delete(room.code); return; }
-  if (p.isHost) { room.players[0].isHost = true; room.players[0].isReady = true; sys(room, `👑 ${room.players[0].name} 님이 새 방장이 되었습니다.`); }
-  sys(room, `🚪 ${p.name} 님이 나갔습니다.`);
+  if (p.isHost) {
+    const next = room.players.find(x => !x.away) || room.players[0];            // 연결이 끊긴 사람보다 지금 있는 사람에게
+    next.isHost = true; next.isReady = true; sys(room, `👑 ${next.name} 님이 새 방장이 되었습니다.`);
+  }
+  sys(room, msg || `🚪 ${p.name} 님이 나갔습니다.`);
 
   if (room.isStarted && room.game && !room.game.over) {
     const info = REGISTRY[room.gameType];
@@ -149,7 +204,7 @@ function lanAddresses() {
     .filter(i => i && (i.family === 'IPv4' || i.family === 4) && !i.internal).map(i => i.address);
 }
 
-const serverInfo = () => ({ lan: CLOUD ? [] : lanAddresses(), port: PORT, publicUrl, online: ONLINE || CLOUD });
+const serverInfo = () => ({ lan: CLOUD ? [] : lanAddresses(), port: PORT, publicUrl, online: ONLINE || CLOUD, build: BUILD });
 
 /* ─── 접속 한도: 인터넷에 공개해도 서버가 버티도록 ─── */
 const perIp = new Map();
@@ -185,7 +240,42 @@ io.on('connection', socket => {
   };
 
   socket.emit('serverInfo', serverInfo());
+  // 연결 복구: 잠깐 끊겼다 돌아온 사람 → 맡아 둔 자리로 (socket.io 가 같은 id · 방 · data 를 되돌려 줘요)
+  if (socket.recovered) {
+    // 다 쓴 복구 정보는 지워요 (socket.io 는 남겨 두는데, 같은 정보로 또 들어오면 같은 id 연결이 둘이 돼서 꼬여요 → 아래 정리 과정으로)
+    try { socket.nsp.adapter.sessions.delete(socket.pid); } catch { /* socket.io 내부가 바뀌었으면 그냥 둬요 */ }
+    const room = rooms.get(socket.data.code), p = room && room.players.find(x => x.id === socket.id);
+    if (p) {
+      clearTimeout(p.awayTimer); p.awayTimer = null;
+      if (p.away) {
+        if (!p.awayQuiet) sys(room, `📶 ${p.name} 님이 다시 연결됐어요.`);
+        p.away = 0; p.awayQuiet = false;
+        const mod = moduleOf(room);                   // 차례형 게임: 짧아졌던 내 차례 시간을 원래대로
+        if (room.isStarted && room.game && !room.game.over && mod && mod.back) { try { mod.back(room, p); } catch (e) { console.error('⚠️  복귀 처리 오류:', e); } }
+      }
+      ACC.resume(socket);
+      pushRoom(room);
+      socket.emit('resumed', { code: room.code, myId: socket.id, room: H.publicRoom(room), playing: !!(room.isStarted && room.game && !room.game.over) });
+    } else if (socket.data.code) {                    // 너무 오래 끊겨서 자리가 없어졌어요 (또는 그사이 방장이 내보냄)
+      const kicked = !!room && kickedFrom(room, socket);
+      socket.leave(socket.data.code); socket.data.code = null;
+      socket.emit(kicked ? 'kicked' : 'resumeFail', { code: room ? room.code : null });
+    }
+  } else if (typeof (socket.handshake.auth || {}).pid === 'string') {
+    // 복구 정보를 들고 왔는데 복구가 안 됐어요. 서버가 예전 연결을 아직 살아 있다고 알고 있으면 (휴대폰이 잠깐 멈췄다 돌아옴 · 새로 고침)
+    // 예전 연결을 정리해서 자리를 맡아 두고, 화면에게 한 번 더 연결해 달라고 해요. 아니면 자리가 없어졌다고 알려요.
+    const pid = socket.handshake.auth.pid;
+    const old = [...io.sockets.sockets.values()].find(s => s !== socket && s.pid === pid);
+    if (old && old.data.code && rooms.has(old.data.code) && takeoverOk(pid)) {
+      quietAway.add(old.id);
+      old.conn.close(true);                           // 'forced close' → socket.io 가 복구 정보를 보관하고 아래 disconnect 에서 자리를 맡아 둬요
+      quietAway.delete(old.id);
+      socket.emit('resumeRetry');
+    } else socket.emit('resumeFail');
+  }
   ACC.attach(socket, on);                                                          // 계정 · 친구 이벤트 (acct:* · fr:*)
+  ADM.attach(socket, on);                                                          // 운영자 · 전체 공지 (admin:* · notice:*)
+  REP.attach(socket, on);                                                          // 신고함 (report:* · admin:report*)
   on('ping:t', (t, cb) => { if (typeof cb === 'function') cb(t); });              // 화면 위 지연 시간(ms) 표시용
   /** 초대 링크로 들어온 사람에게 방 정보 미리 보여주기 */
   on('peekRoom', (code, cb) => {
@@ -265,11 +355,34 @@ io.on('connection', socket => {
     room.kicked.add(id); if (p.uid) room.kicked.add('u:' + p.uid);
     const s = io.sockets.sockets.get(id);
     if (s) { leaveRoom(s); s.emit('kicked', { code: room.code }); }
-    sys(room, `🚫 방장이 ${p.name} 님을 내보냈어요.`);
+    else dropPlayer(room, id, `🚫 방장이 ${p.name} 님을 내보냈어요.`);       // 연결이 끊긴 채 자리만 있는 사람
+    if (s) sys(room, `🚫 방장이 ${p.name} 님을 내보냈어요.`);
   });
 
   on('leaveRoom', () => leaveRoom(socket));
-  on('disconnect', () => leaveRoom(socket));
+  on('disconnect', reason => {
+    const room = rooms.get(socket.data.code), p = room && room.players.find(x => x.id === socket.id);
+    // 일부러 나간 것(방 나가기 · 서버 종료)이면 바로 빼고, 연결이 끊긴 것이면 잠깐 자리를 맡아 둬요
+    if (!room || !p || /namespace disconnect|shutting down/.test(String(reason))) return leaveRoom(socket);
+    const ms = room.isStarted ? AWAY_GAME_MS : AWAY_LOBBY_MS;
+    p.away = Date.now(); p.awayQuiet = quietAway.has(socket.id);
+    clearTimeout(p.awayTimer);
+    p.awayTimer = setTimeout(() => {
+      if (rooms.get(room.code) === room && room.players.includes(p) && p.away) dropPlayer(room, p.id, `🚪 ${p.name} 님이 돌아오지 않아서 방에서 나갔습니다.`);
+    }, ms);
+    const mod = moduleOf(room);                       // 차례형 게임: 끊긴 사람 차례는 짧게 기다려요 (다른 사람이 오래 기다리지 않게)
+    if (room.isStarted && room.game && !room.game.over && mod && mod.away) { try { mod.away(room, p); } catch (e) { console.error('⚠️  연결 끊김 처리 오류:', e); } }
+    if (!p.awayQuiet) sys(room, `📶 ${p.name} 님의 연결이 끊겼어요. ${ms >= 60000 ? Math.round(ms / 60000) + '분' : Math.round(ms / 1000) + '초'} 안에 돌아오면 그대로 이어서 해요.`);
+    pushRoom(room);
+  });
+  /** 새로 고침한 뒤 다시 연결됐을 때: 진행 중인 게임 화면을 다시 보내 줘요 (차례형 게임) */
+  on('resync', () => {
+    const { room, me } = ctx();
+    if (!room || !me) return;
+    pushRoom(room);
+    const mod = moduleOf(room);
+    if (room.isStarted && room.game && !room.game.over && mod && mod.resync) mod.resync(room, me, socket);
+  });
 
   on('setOption', d => {
     const { room, me } = ctx();
@@ -354,7 +467,7 @@ io.on('connection', socket => {
     if (!msg) return;
     const mod = moduleOf(room);
     if (room.game && !room.game.over && mod && mod.chat && mod.chat(room, me, msg, emoji)) return;   // 캐치마인드 정답 · 마피아 밤 채팅 등
-    H.emit(room, 'chat', { id: me.id, name: me.name, msg, emoji });
+    H.emit(room, 'chat', { id: me.id, name: me.name, msg, emoji, ...(me.op ? { op: me.op } : {}) });   // op: 운영자 표시
   });
 
   /* ── 게임별 이벤트: 해당 게임이 진행 중일 때만 그 모듈로 전달 ── */

@@ -49,12 +49,24 @@ module.exports = H => {
         const err = room.game.T.act(me.id, a);
         if (typeof err === 'string') return err;
       },
+      /** 화면을 만지는 중 (시간 초과로 짧아진 차례 시간을 원래대로) */
+      'tb:here'(room, me) { room.game.T.here(me.id); },
     },
     leave(room, p) {
       const g = room.game;
       if (!g.players.some(x => x.id === p.id)) return;
       if (!CORES[room.gameType].drop) H.sys(room, `🤖 ${p.name} 님 대신 봇이 이어서 해요.`);
       g.T.drop(p.id);
+    },
+    /** 연결이 끊긴 사람 (자리는 맡아 둠): 그 사람 차례는 짧게 기다려요 · 돌아오면 원래 시간으로 */
+    away(room, p) { const g = room.game; if (g && g.T && g.players.some(x => x.id === p.id)) g.T.away(p.id); },
+    back(room, p) { const g = room.game; if (g && g.T && g.players.some(x => x.id === p.id)) g.T.here(p.id); },
+    /** 새로 고침하고 돌아온 사람에게 게임 화면을 다시 보내요 */
+    resync(room, p, socket) {
+      const g = room.game;
+      if (!g || !g.T) return;
+      socket.emit('tb:start', { game: room.gameType });
+      socket.emit('tb:view', { game: room.gameType, v: g.T.view(p.id) });
     },
     /** 마피아처럼 채팅을 일부에게만 보내야 하는 게임 */
     chat(room, me, msg, emoji) {

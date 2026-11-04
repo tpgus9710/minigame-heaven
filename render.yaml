@@ -14,3 +14,5 @@ services:
         value: "1"
       - key: DATABASE_URL      # 계정 저장용 무료 PostgreSQL(Neon) 주소 — Render 화면의 Environment 에서 직접 넣어요 (DEPLOY.md ③-2)
         sync: false
+      - key: ADMIN_KEY         # 운영자 키 — 이 값을 아는 회원이 '최고 운영자'가 돼요. Environment 에서 직접 넣어요 (DEPLOY.md ③-3)
+        sync: false

@@ -327,6 +327,15 @@
     },
     BOARD, GROUPS, LEVELS, TOLL, BUILD, START_MONEY, SALARY, KEYS, buildCost,
     setup, act, ai, view, result,
+    /** 사람이 모두 탈락하면 봇끼리 이어 하지 않고 끝내요 (TableKit: out · endNow) */
+    out: (s, id) => { const p = P(s, id); return !p || !!p.out; },
+    endNow(s) {
+      s.over = true; s.phase = 'over';
+      s.msg = '사람이 모두 파산해서 게임을 마쳤어요.';
+      const ranked = s.players.slice().sort((a, b) => (a.out - b.out) || worth(s, b) - worth(s, a));
+      return { title: '🏁 게임 끝!', subtitle: '사람이 모두 파산해서 봇끼리는 더 하지 않아요',
+        ranking: ranked.map(p => ({ id: p.id, value: p.out ? '파산' : `${worth(s, p).toLocaleString()}만원` })), winners: [] };
+    },
     pending: s => (s.over ? [] : [cur(s).id]),
     drop(s, id) { const p = P(s, id); if (!p || p.out) return; p.out = true; s.owner.forEach((o, i) => { if (o === id) { s.owner[i] = null; s.level[i] = 0; } }); s.msg = `${p.name} 님이 나갔어요.`; if (cur(s).id === id) endTurn(s); else checkOver(s); },
   };

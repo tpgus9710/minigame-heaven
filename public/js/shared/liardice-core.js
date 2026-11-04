@@ -137,6 +137,15 @@
       options: [{ key: 'bots', label: '🤖 봇 추가', def: 0, values: [[0, '없음'], [1, '1명'], [2, '2명'], [3, '3명'], [4, '4명']] }] },
     countFace, START,
     setup, act, ai, view, result, timeup,
+    /** 사람이 모두 탈락하면 봇끼리 이어 하지 않고 끝내요 (TableKit: out · endNow) */
+    out: (s, id) => { const p = P(s, id); return !p || !p.dice.length; },
+    endNow(s) {
+      s.over = true; s.phase = 'over'; s.winner = null; s.deadline = null;
+      s.msg = '사람이 모두 탈락해서 게임을 마쳤어요.';
+      const order = s.players.filter(p => p.dice.length).map(p => p.id).concat(s.outOrder.slice().reverse());
+      return { title: '🏁 게임 끝!', subtitle: '사람이 모두 탈락해서 봇끼리는 더 하지 않아요',
+        ranking: [...new Set(order)].map(id => ({ id, value: P(s, id).dice.length ? `주사위 ${P(s, id).dice.length}개 남음` : '탈락' })), winners: [] };
+    },
     auto: (s, id) => (s.bid ? { t: 'liar' } : ai(s, id)),
     deadline: s => (s.over || s.phase !== 'reveal' ? null : s.deadline),
     pending: s => (s.over || s.phase !== 'bid' ? [] : [cur(s).id]),

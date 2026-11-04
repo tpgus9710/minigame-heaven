@@ -108,7 +108,7 @@ const CP = {
     let head = '', body = '', btns = '', art = '';
     const kindName = { income: '소득', aid: '해외 원조', coup: '쿠데타', tax: '세금', assassin: '암살', steal: '갈취', exchange: '교환' };
     if (v.over) {
-      head = `<h3 class="cp-big">${N(v.winner)} 님이 궁정을 차지했어요!</h3>`;
+      head = v.winner ? `<h3 class="cp-big">${N(v.winner)} 님이 궁정을 차지했어요!</h3>` : `<h3 class="cp-big">${esc(v.msg || '게임이 끝났어요.')}</h3>`;
       body = '<p>모든 카드가 공개됐어요. 결과 화면이 곧 열려요.</p>';
     } else if (d) {
       const tgt = d.target ? ` → <b>${N(d.target)}</b>` : '';

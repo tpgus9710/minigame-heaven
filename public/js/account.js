@@ -441,11 +441,11 @@ const Acct = {
     const pct = Math.round(100 * (m.xp - m.cur) / Math.max(1, m.next - m.cur));
     const tab = (k, ic, label, extra = '') => `<button class="ac-tab ${this.ui.tab === k ? 'on' : ''}" data-act="acTab" data-tab="${k}">${icon(ic)}${label}${extra}</button>`;
     return `<div class="ac-head">${avatarOf(m, 'xl')}
-        <div class="ac-head-t"><h2>${esc(m.name)} ${lvTag(m.lv)}</h2>
+        <div class="ac-head-t"><h2>${esc(m.name)} ${lvTag(m.lv)} ${typeof opBadge === 'function' ? opBadge(m.role) : ''}</h2>
           <div class="xpbar"><i style="width:${pct}%"></i></div>
           <small>${m.xp.toLocaleString()} XP · 다음 레벨까지 ${(m.next - m.xp).toLocaleString()} XP</small></div>
         <div class="ac-code-chip" data-act="acCopyCode" title="눌러서 복사"><small>친구 코드</small><b>${esc(m.code)}</b></div></div>
-      <div class="ac-tabs">${tab('rec', 'chart-bar', '기록')}${tab('fr', 'users', '친구', (m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : '') + dmDot(m.dm))}${tab('rank', 'trophy', '랭킹')}${tab('set', 'settings', '설정')}</div>`;
+      <div class="ac-tabs">${tab('rec', 'chart-bar', '기록')}${tab('fr', 'users', '친구', (m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : '') + dmDot(m.dm))}${tab('rank', 'trophy', '랭킹')}${m.role ? tab('op', 'shield-check', '운영', typeof Report !== 'undefined' && Report.opNew ? `<i class="ac-dot">${Report.opNew}</i>` : '') : ''}${tab('set', 'settings', '설정')}</div>`;
   },
   /** 내 정보가 바뀌었을 때 위쪽(이름 · 레벨 · 탭)만 다시 그리기 — 입력 중인 내용은 그대로 */
   refreshHead() {
@@ -457,6 +457,7 @@ const Acct = {
   },
   renderProfile() {
     const m = this.me; if (!m) return;
+    if (this.ui.tab === 'op' && !m.role) this.ui.tab = 'rec';             // 운영자에서 해제됐으면
     this.body(`${this.headHTML()}
       <div class="ac-body" id="ac-body"><div class="muted center ac-load">불러오는 중…</div></div>`);
     const t = this.ui.tab;
@@ -465,6 +466,7 @@ const Acct = {
     clearInterval(this.frPoll); this.frPoll = null;
     if (t === 'fr') this.frPoll = setInterval(() => { if (this.ui.view === 'me' && this.ui.tab === 'fr' && !document.hidden) this.loadFriends(); }, 15000);
     else if (t === 'rank') this.renderRank();
+    else if (t === 'op') Admin.render();
     else this.renderSettings();
   },
   async renderRecords() {
@@ -765,6 +767,12 @@ const Acct = {
       <div class="ac-set"><h4>${icon('scan')}얼굴</h4>
         <p class="small muted">로그인할 때 잘 못 알아보면 지금 모습으로 다시 등록하세요.</p>
         <button class="btn sm" data-act="acReface">${icon('camera')}얼굴 다시 등록</button></div>
+      ${m.role ? `<div class="ac-set"><h4>${icon('shield-check')}운영자</h4>
+        <p class="small">지금 <b>${OP_NAME[m.role]}</b>예요. <b>운영</b> 탭에서 전체 공지를 보내고 ${m.role === 'owner' ? '운영자를 지정할' : '서버 현황을 볼'} 수 있어요.</p>
+        <button class="btn sm ghost" data-act="opResign">${icon('user-minus')}운영자 그만두기</button></div>`
+      : `<details class="ac-set op-claim"><summary>${icon('shield')}운영자 인증</summary>
+        <p class="small muted">사이트를 운영하는 사람만 써요. 서버에 설정한 운영자 키(ADMIN_KEY)를 넣으면 최고 운영자가 돼요.</p>
+        <div class="op-find"><input type="password" id="op-key" maxlength="200" autocomplete="off" placeholder="운영자 키"><button class="btn sm" data-act="opClaim">${icon('key')}인증</button></div></details>`}
       <div class="ac-set"><h4>${icon('logout')}계정</h4>
         <div class="ac-btnrow"><button class="btn sm ghost" data-act="acLogout">${icon('logout')}로그아웃</button>
         <button class="btn sm bad" data-act="acDelete">${icon('trash')}회원 탈퇴</button></div>
@@ -834,7 +842,10 @@ const Acct = {
       else if (r.canAdd) btns.push(`<button class="btn sm good" data-act="acAddUid" data-uid="${esc(u.id)}">${icon('user-plus')}친구 신청</button>`);
       else btns.push('<span class="small muted">친구 코드로 신청할 수 있어요</span>');
     } else btns.push(`<button class="btn sm" data-act="acLogin">${icon('face-id')}로그인하고 친구 신청</button>`);
-    this.body(`<div class="cd-head">${avatarOf(u, 'xl')}<div class="cd-t"><h2>${esc(u.name)} ${lvTag(u.lv)}</h2>
+    if (this.me && this.me.role === 'owner' && r.rel !== 'me' && u.op !== 'owner')
+      btns.push(u.op ? `<button class="btn sm ghost" data-act="opRevoke" data-uid="${esc(u.id)}" data-name="${esc(u.name)}">${icon('user-minus')}운영자 해제</button>`
+        : `<button class="btn sm ghost" data-act="opGrant" data-uid="${esc(u.id)}" data-name="${esc(u.name)}">${icon('user-shield')}운영자로 지정</button>`);
+    this.body(`<div class="cd-head">${avatarOf(u, 'xl')}<div class="cd-t"><h2>${esc(u.name)} ${lvTag(u.lv)} ${opBadge(u.op)}</h2>
         <div class="xpbar"><i style="width:${pct}%"></i></div>
         <small>${st ? `<span class="st on">${esc(st)}</span>` : ''}${u.streak > 1 ? `<span class="cd-streak">${icon('flame')}${u.streak}일 연속 출석</span>` : ''}</small></div></div>
       <div class="ac-tiles">${tile(u.plays, '멀티 판')}${tile(u.wins, '승리')}${tile(rate + '%', '승률')}${tile(u.sp, '싱글 판')}</div>

@@ -204,6 +204,15 @@
       options: [{ key: 'bots', label: '🤖 봇 추가', def: 0, values: [[0, '없음'], [1, '1명'], [2, '2명'], [3, '3명']] }] },
     JOKER, key, candidates, knownInfo,
     setup, act, ai, view, result,
+    /** 사람이 모두 탈락하면 봇끼리 이어 하지 않고 끝내요 (TableKit: out · endNow) */
+    out: (s, id) => s.out.includes(id),
+    endNow(s) {
+      s.over = true; s.phase = 'over'; s.drawnUid = null; s.winner = null;
+      s.msg = '사람의 암호가 모두 풀려서 게임을 마쳤어요.';
+      const order = s.players.map(p => p.id).filter(id => !s.out.includes(id)).concat(s.out.slice().reverse());
+      return { title: '🏁 게임 끝!', subtitle: '사람의 암호가 모두 풀려서 봇끼리는 더 하지 않아요',
+        ranking: [...new Set(order)].map(id => ({ id, value: s.out.includes(id) ? '해독됨' : `숨긴 타일 ${P(s, id).tiles.filter(t => !t.open).length}장` })), winners: [] };
+    },
     auto: (s, id) => (s.phase === 'after' ? { t: 'stop' } : ai(s, id)),
     pending: s => (s.over ? [] : [cur(s).id]),
   };

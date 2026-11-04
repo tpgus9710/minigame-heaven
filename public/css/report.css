@@ -1,0 +1,115 @@
+/* v10 버그 · 불편 신고 · 신고함 (public/js/report.js) */
+
+/* ── 위쪽 [신고] 버튼 ── */
+.rp-top{position:relative;display:inline-flex;align-items:center;gap:5px}
+.rp-top > .ic{width:18px;height:18px;margin:0}
+.rp-top .rp-dot{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--bad);color:#fff;
+  font:700 11px/18px 'Noto Sans KR',sans-serif;text-align:center;display:none;box-shadow:0 0 0 2px var(--bg)}
+.rp-top.has .rp-dot{display:block}
+@media (max-width:760px){ .rp-top{padding:6px 9px} }
+
+/* ── 홈 화면 아래 링크 ── */
+.rp-home{display:inline-flex;align-items:center;gap:6px;margin:18px auto 0;padding:6px 12px;border:none;border-radius:99px;background:transparent;
+  color:var(--muted);font:500 13.5px 'Noto Sans KR',sans-serif;cursor:pointer}
+.rp-home:hover{background:var(--panel2);color:var(--text)}
+.rp-home .ic{width:16px;height:16px;margin:0} .rp-home b{color:var(--accent-2);font-weight:700}
+
+/* ── 신고 창 ── */
+#rp-ov{z-index:158}
+.rp-modal{width:min(560px,100%);text-align:left;padding:22px 22px 18px}
+.rp-head{display:flex;align-items:flex-start;gap:12px}
+.rp-head > div{flex:1;min-width:0}
+.rp-head h2{font-size:22px;line-height:1.25;margin:0 0 3px}
+.rp-head p{margin:0;font-size:13.5px;line-height:1.45}
+.rp-ic{flex:none;width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+.rp-ic .ic{width:22px;height:22px;margin:0}
+.rp-opbar{display:flex;align-items:center;gap:8px;width:100%;margin-top:12px;padding:8px 12px;border-radius:12px;cursor:pointer;text-align:left;
+  border:1px solid color-mix(in srgb,var(--info) 40%,var(--line));background:color-mix(in srgb,var(--info) 12%,var(--panel2));color:var(--text);font:700 14px 'Noto Sans KR',sans-serif}
+.rp-opbar .ic{width:18px;height:18px;flex:none;color:var(--info);margin:0} .rp-opbar span{flex:1} .rp-opbar b{color:var(--bad)}
+.rp-tabs{margin:14px 0 12px}
+.rp-kinds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.seg-btn.rp-k{flex-direction:row;align-items:center;justify-content:center;gap:5px;padding:9px 6px;border-radius:12px;font:700 14px 'Noto Sans KR',sans-serif;white-space:nowrap}
+.rp-k .ic{width:17px;height:17px;margin:0;flex:none}
+.rp-k.bug.on .ic{color:var(--bad)} .rp-k.ux.on .ic{color:var(--warn)} .rp-k.idea.on .ic{color:var(--good)}
+.rp-form textarea{width:100%;display:block;font:inherit;font-size:15px;line-height:1.55;padding:10px 12px;border-radius:12px;border:2px solid var(--line);
+  background:var(--panel2);color:var(--text);resize:vertical;min-height:130px}
+.rp-form textarea:focus{outline:none;border-color:var(--accent)}
+.rp-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;flex-wrap:wrap}
+.rp-ctx{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:700;cursor:pointer}
+.rp-ctx input{width:17px;height:17px;accent-color:var(--accent);margin:0}
+.rp-ctxv{display:flex;align-items:flex-start;gap:5px;margin-top:5px;font-size:12.5px;line-height:1.45}
+.rp-ctxv .ic{width:14px;height:14px;flex:none;margin:2px 0 0}
+.rp-ctxv.off{text-decoration:line-through;opacity:.55}
+.rp-guest{margin:8px 0 0}
+.rp-form .ov-actions,.rp-done .ov-actions{justify-content:flex-end}
+.rp-done{text-align:center;padding:8px 4px 2px}
+.rp-done > .ic{width:48px;height:48px;color:var(--good);margin:0}
+.rp-done h3{margin:6px 0 6px;font-size:20px}
+.rp-done p{margin:0;line-height:1.55}
+.rp-done .ov-actions{justify-content:center}
+
+/* ── 신고 목록 (내 신고 · 운영자 신고함) ── */
+.rp-list{display:flex;flex-direction:column;gap:8px;width:100%}
+.rp-item{border:1px solid var(--line);background:var(--panel2);border-radius:14px;padding:10px 12px;min-width:0}
+.rp-item.unread{border-color:color-mix(in srgb,var(--good) 55%,var(--line));box-shadow:0 0 0 2px color-mix(in srgb,var(--good) 22%,transparent)}
+.rp-item.op{background:var(--panel)}
+.rp-item.op.new{border-left:4px solid var(--warn)}
+.rp-item.op.done{opacity:.82}
+.rp-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px}
+.rp-top > small{margin-left:auto;white-space:nowrap}
+.rp-kind{display:inline-flex;align-items:center;gap:4px;padding:2px 9px 2px 7px;border-radius:99px;font-weight:900;font-size:12px;white-space:nowrap;
+  background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent-2)}
+.rp-kind .ic{width:14px;height:14px;margin:0}
+.rp-kind.bug{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.rp-kind.ux{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.rp-kind.idea{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.rp-st{font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--panel);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.rp-item.op .rp-st{background:var(--panel2)}
+.rp-st.new{color:var(--warn)} .rp-st.seen{color:var(--info)} .rp-st.done{color:var(--good)}
+.rp-who{display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%}
+.rp-who b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rp-text{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 6px;font-size:15px;line-height:1.55;color:var(--text)}
+.rp-ctx-v{display:flex;gap:6px;align-items:flex-start;font-size:12.5px;color:var(--muted);line-height:1.45;overflow-wrap:anywhere}
+.rp-ctx-v .ic{width:15px;height:15px;flex:none;margin:1px 0 0}
+.rp-reply{display:flex;gap:8px;margin-top:8px;padding:8px 10px;border-radius:12px;background:color-mix(in srgb,var(--good) 11%,var(--panel));border:1px solid color-mix(in srgb,var(--good) 35%,var(--line))}
+.rp-reply > .ic{width:17px;height:17px;flex:none;color:var(--good);margin:2px 0 0}
+.rp-reply > div{min-width:0}
+.rp-reply b{font-size:13px}
+.rp-reply p{margin:3px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px;line-height:1.5}
+.rp-by{display:block;margin-top:6px;font-size:12px}
+.rp-rbox{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.rp-rbox textarea{width:100%;font:inherit;font-size:14.5px;line-height:1.5;padding:8px 10px;border-radius:10px;border:2px solid var(--line);background:var(--panel2);color:var(--text);resize:vertical}
+.rp-rbox textarea:focus{outline:none;border-color:var(--accent)}
+.rp-rbox .ac-btnrow{justify-content:flex-end}
+.rp-acts{margin-top:8px;justify-content:flex-end}
+.rp-acts .btn.sm{padding:5px 10px}
+.rp-empty{padding:14px 0;margin:0}
+.rp-more{align-self:center}
+
+/* ── 운영 탭: 신고함 · 공지 · 관리 칸 ── */
+.op-subs{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.op-subs .seg-btn{flex-direction:row;align-items:center;gap:6px;padding:8px 14px;border-radius:12px;font:700 14px 'Noto Sans KR',sans-serif}
+.op-subs .seg-btn .ic{width:17px;height:17px;margin:0}
+.op-subs .ac-dot{margin-left:2px}
+.rp-fs .seg-btn{flex-direction:row;align-items:center;gap:5px;padding:6px 12px}
+.rp-fs .seg-btn b{font-size:13px;color:var(--muted);margin-left:1px}
+.rp-fs .seg-btn.on b{color:var(--text)}
+.rp-op > .rp-list{margin-top:2px}
+
+@media (max-width:480px){
+  .rp-modal{padding:18px 14px 14px}
+  .rp-head h2{font-size:20px}
+  .rp-kinds{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rp-top > small{margin-left:0;flex-basis:100%}
+  .rp-item.op .rp-top > small{flex-basis:auto;margin-left:auto}
+}
+
+/* 휴대폰: [신고] 버튼이 생겨도 위쪽 막대가 두 줄로 커지지 않게 버튼 사이 · 여백을 줄여요 */
+@media (max-width:520px){
+  .topbar{padding-left:12px;padding-right:12px;gap:8px}
+  .top-right{gap:6px}
+  .top-right > .btn.sm{padding:7px 9px}
+  .brand{gap:6px}
+}
+@media (max-width:380px){ .brand{font-size:18px} .brand-ic{width:26px;height:26px} }
+@media (max-width:340px){ body.gaming .brand span{display:none} }   /* 아주 좁은 휴대폰: 게임 중에는 로고만 */

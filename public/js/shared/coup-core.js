@@ -378,6 +378,15 @@
       options: [{ key: 'bots', label: '🤖 봇 추가', def: 0, values: [[0, '없음'], [1, '1명'], [2, '2명'], [3, '3명'], [4, '4명'], [5, '5명']] }] },
     CARDS, NAME, ACTIONS, unseen,
     setup, act, ai, auto, pending, view, result,
+    /** 사람이 모두 탈락하면 봇끼리 이어 하지 않고 끝내요 (TableKit: out · endNow) */
+    out: (s, id) => { const p = P(s, id); return !p || !alive(p); },
+    endNow(s) {
+      s.over = true; s.phase = 'over'; s.win = null; s.pend = null; s.losses = []; s.winner = null;
+      say(s, '사람이 모두 탈락해서 게임을 마쳤어요.', 'out');
+      const order = [...new Set(alivePlayers(s).map(p => p.id).concat(s.out.slice().reverse(), s.players.map(p => p.id)))];
+      return { title: '🏁 게임 끝!', subtitle: '사람이 모두 탈락해서 봇끼리는 더 하지 않아요',
+        ranking: order.map(id => { const p = P(s, id); return { id, value: alive(p) ? `남은 카드 ${live(p).length}장 · 코인 ${p.coins}개` : '탈락' }; }), winners: [] };
+    },
     deadline: s => (s.phase === 'window' && s.win && s.win.end ? s.win.end : null),
     timeup: s => { if (s.phase === 'window' && s.win) { s.win.passed = s.win.responders.slice(); advance(s); } },
   };

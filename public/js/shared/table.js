@@ -15,6 +15,7 @@
  *    deadline(state) / timeup(state) → 시간으로 넘어가는 단계 (예: 마피아 낮·밤)
  *    drop(state, id)           → 나간 사람 처리 (없으면 봇이 대신함)
  *    chatRoute(state, id)      → 채팅을 누구에게 보낼지 (마피아 밤 채팅 등)
+ *    out(state, id) · endNow(state) → 사람이 모두 탈락(쓰러짐 · 파산 · 탈출)하면 봇끼리 이어 하지 않고 바로 끝내요 (endNow 가 결과를 돌려줘요)
  * ===================================================================== */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -27,12 +28,20 @@
     const state = Core.setup(players.map(p => ({ id: p.id, name: p.name, bot: !!p.bot })), o.rnd || Math.random, o.opts || {});
     const bots = new Set(players.filter(p => p.bot).map(p => p.id));
     let timers = [], ended = false;
-    const afk = new Set();               // 시간 초과로 대신 둔 사람 → 다시 직접 할 때까지 짧게 기다려요
+    const afk = new Map();               // 시간 초과로 대신 둔 횟수 (연달아 2번이면 짧게 기다려요 · 직접 하거나 화면을 만지면 0)
+    const humans0 = players.filter(p => !p.bot).map(p => p.id);
+    /** 봇과 함께 하는데 남은 사람이 모두 탈락했나요? */
+    const humansOut = () => {
+      if (!Core.out || !Core.endNow || !bots.size) return false;
+      const hs = humans0.filter(id => !bots.has(id));
+      return hs.length > 0 && hs.every(id => Core.out(state, id));
+    };
     const clearAll = () => { timers.forEach(t => o.clearTimer(t)); timers = []; };
 
     function checkEnd() {
       if (ended) return true;
-      const res = Core.result(state);
+      let res = Core.result(state);
+      if (!res && humansOut()) res = Core.endNow(state);
       if (!res) return false;
       ended = true; clearAll();
       o.onEnd(res);
@@ -48,14 +57,14 @@
       for (const id of waiting) if (bots.has(id)) timers.push(o.setTimer(() => botMove(id), lo + Math.random() * (hi - lo)));
       const humans = waiting.filter(id => !bots.has(id));
       if (!dl && humans.length && meta.turnSec && o.timeouts !== false) {
-        const sec = humans.every(id => afk.has(id)) ? Math.min(meta.turnSec, 5) : meta.turnSec;
+        const sec = humans.every(id => (afk.get(id) || 0) >= 2) ? Math.min(meta.turnSec, 10) : meta.turnSec;
         state.turnEnd = Date.now() + sec * 1000;
         timers.push(o.setTimer(() => humans.forEach(id => { if (!ended && Core.pending(state).includes(id)) force(id); }), sec * 1000));
       } else state.turnEnd = dl || null;
     }
     function tryAct(id, a) { return a == null ? 'no-move' : Core.act(state, id, a); }
     function force(id) {
-      afk.add(id);
+      afk.set(id, (afk.get(id) || 0) + 1);
       let err = tryAct(id, Core.auto ? Core.auto(state, id) : Core.ai(state, id));
       if (err && Core.auto) err = tryAct(id, Core.ai(state, id));
       if (err) { if (o.log) o.log(`시간 초과 처리 실패 (${id}): ${err}`); return; }
@@ -69,6 +78,7 @@
       schedule(); o.onUpdate();
     }
 
+    const isAfk = id => (afk.get(id) || 0) > 0 || !!(state.afk && state.afk[id]);
     const api = {
       state,
       /** 사람의 행동 → 오류 문자열 또는 undefined */
@@ -83,7 +93,21 @@
         if (!free) schedule(); else checkEnd();
         o.onUpdate();   // 다음 차례 시간(turnEnd)까지 정한 뒤 화면에 알려요
       },
-      view(id) { return Object.assign(Core.view(state, id), { me: id, turnEnd: state.turnEnd || null, now: Date.now(), myTurn: !ended && Core.pending(state).includes(id) }); },
+      view(id) { return Object.assign(Core.view(state, id), { me: id, turnEnd: state.turnEnd || null, now: Date.now(), myTurn: !ended && Core.pending(state).includes(id), afk: isAfk(id) }); },
+      /** 화면을 만졌어요 (예: 러미 타일을 고르는 중) → 시간 초과 기록을 지우고, 짧아졌던 시간은 원래대로 */
+      here(id) {
+        if (ended || !isAfk(id)) return false;
+        afk.delete(id);
+        if (state.afk) delete state.afk[id];
+        if (Core.pending(state).includes(id)) { schedule(); o.onUpdate(); }
+        return true;
+      },
+      /** 연결이 끊긴 사람 (서버가 자리를 맡아 둠): 다른 사람이 오래 기다리지 않게 다음 차례부터 짧게 (돌아오면 here 로 원래대로) */
+      away(id) {
+        if (ended || bots.has(id)) return;
+        afk.set(id, Math.max(2, afk.get(id) || 0));
+        (state.afk = state.afk || {})[id] = Math.max(2, state.afk[id] || 0);
+      },
       /** 나간 사람: 게임이 처리하거나 봇이 대신 */
       drop(id) {
         if (ended) return;

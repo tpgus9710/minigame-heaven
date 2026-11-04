@@ -108,6 +108,15 @@
       options: [{ key: 'bots', label: '🤖 봇 추가', def: 0, values: [[0, '없음'], [1, '1명'], [2, '2명'], [3, '3명']] }] },
     rankOf, discardPairs,
     setup, act, ai, view, result,
+    /** 사람이 모두 탈출하면 남은 봇끼리 이어 하지 않고 끝내요 (TableKit: out · endNow) */
+    out: (s, id) => { const p = P(s, id); return !p || !!p.out; },
+    endNow(s) {
+      s.over = true; s.loser = null;
+      s.msg = '사람이 모두 탈출해서 게임을 마쳤어요.';
+      const order = s.players.slice().sort((a, b) => (a.out || 99) - (b.out || 99));
+      return { title: '🃏 사람이 모두 탈출했어요!', subtitle: '남은 봇끼리는 더 하지 않아요',
+        ranking: order.map(p => ({ id: p.id, value: p.out ? `${p.out}등 탈출` : '끝까지 남음' })) };
+    },
     free: (s, id, a) => a.t === 'hover' || a.t === 'shuffle',
     pending: s => (s.over ? [] : [cur(s).id]),
   };

@@ -190,7 +190,7 @@
 
   /* ── 차례 진행 ── */
   function arm(s, sec) { s.dlAt = Date.now() + sec * 1000; }
-  function wait(s, kind, who, extra = {}, sec = 15) { s.wait = Object.assign({ kind, who }, extra); arm(s, s.afk && s.afk[who] ? Math.min(sec, 5) : sec); }
+  function wait(s, kind, who, extra = {}, sec = 15) { s.wait = Object.assign({ kind, who }, extra); arm(s, s.afk && s.afk[who] >= 2 ? Math.min(sec, 8) : sec); }
   function beginTurn(s) {
     if (s.over) return;
     const p = cur(s);
@@ -675,12 +675,22 @@
     },
     CARDS, CHARS, ROLES, SUIT, RANK, distance, range, unlimited, canPlay,
     setup, act, ai, auto, view, result,
+    /** 사람이 모두 탈락하면 봇끼리 이어 하지 않고 끝내요 (TableKit: out · endNow) */
+    out: (s, id) => { const p = s.players.find(x => x.id === id); return !p || !p.alive; },
+    endNow(s) {
+      s.over = true; s.winRole = null; s.wait = null; s.queue = []; s.duel = null; s.store = null; s.winners = [];
+      note(s, '사람이 모두 쓰러져서 게임을 마쳤어요.');
+      const ranked = s.players.slice().sort((a, b) => (b.alive - a.alive) || (s.deaths.indexOf(b.id) - s.deaths.indexOf(a.id)));
+      return { title: '🏁 게임 끝!', subtitle: '사람이 모두 쓰러져서 봇끼리는 더 하지 않아요',
+        lines: s.players.map(p => `${p.name}: ${ROLES[p.role].name} · ${CHARS[p.char].name}${p.alive ? '' : ' (쓰러짐)'}`),
+        ranking: ranked.map(p => ({ id: p.id, value: `${p.alive ? '살아남음' : '쓰러짐'} · ${ROLES[p.role].name}` })), winners: [] };
+    },
     pending: s => (s.over || !s.wait ? [] : [s.wait.who]),
     deadline: s => (s.over || s.solo || !s.wait ? null : s.dlAt),
     timeup: s => {
       const w = s.wait;
       if (!w || s.over) return;
-      (s.afk = s.afk || {})[w.who] = true;               // 자리를 비운 것 같아요 → 다음 결정은 짧게
+      (s.afk = s.afk || {})[w.who] = (s.afk[w.who] || 0) + 1;   // 연달아 두 번 시간이 지나면 자리를 비운 것 같아요 → 다음 결정은 짧게
       s.timing = true;
       let err = act(s, w.who, auto(s, w.who));
       if (err) err = act(s, w.who, ai(s, w.who));

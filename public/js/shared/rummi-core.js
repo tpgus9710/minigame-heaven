@@ -300,7 +300,7 @@
     setup, act, ai, view, result,
     auto: () => ({ t: 'draw' }),
     pending: s => (s.over ? [] : [cur(s).id]),
-    deadline: s => (s.over || !s.timeSec ? null : s.turnStart + (s.afk && s.afk[cur(s).id] ? Math.min(5, s.timeSec) : s.timeSec) * 1000),
-    timeup: s => { if (s.over) return; const p = cur(s), had = s.pool.length; (s.afk = s.afk || {})[p.id] = true; s.timing = true; act(s, p.id, { t: 'draw' }); s.timing = false; if (!s.over) s.msg = had ? `시간 초과! ${p.name} 님은 타일을 한 장 가져갔어요.` : `시간 초과! ${p.name} 님 차례를 넘겨요.`; },
+    deadline: s => (s.over || !s.timeSec ? null : s.turnStart + (s.afk && s.afk[cur(s).id] >= 2 ? Math.min(10, s.timeSec) : s.timeSec) * 1000),
+    timeup: s => { if (s.over) return; const p = cur(s), had = s.pool.length; (s.afk = s.afk || {})[p.id] = (s.afk[p.id] || 0) + 1; s.timing = true; act(s, p.id, { t: 'draw' }); s.timing = false; if (!s.over) s.msg = had ? `시간 초과! ${p.name} 님은 타일을 한 장 가져갔어요.` : `시간 초과! ${p.name} 님 차례를 넘겨요.`; },
   };
 });

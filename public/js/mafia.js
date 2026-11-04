@@ -22,7 +22,7 @@ const Mafia = {
     wrap.className = 'mf-wrap ' + v.phase + (me && !me.alive ? ' ghost' : '');
     const [k, t] = this.PHASE[v.phase] || ['', ''];
     $('#mf-phase-k').textContent = k;
-    $('#mf-phase-t').textContent = v.over ? (v.winner === 'mafia' ? '마피아 승리' : '시민 승리') : ['night', 'morning', 'day'].includes(v.phase) ? `${v.round}일째 ${t}` : t;
+    $('#mf-phase-t').textContent = v.over ? (v.winner === 'mafia' ? '마피아 승리' : v.winner === 'town' ? '시민 승리' : '게임 끝') : ['night', 'morning', 'day'].includes(v.phase) ? `${v.round}일째 ${t}` : t;
     $('#mf-msg').textContent = v.msg;
     setStat('mafia', 'round', v.round ? `${v.round}일째` : '-');
     setStat('mafia', 'alive', `${v.players.filter(p => p.alive).length} / ${v.players.length}`);

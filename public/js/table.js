@@ -81,6 +81,17 @@ const Table = {
   },
 };
 socket.on('tb:start', d => Table.startMulti(d.game));
+/* 시간 초과로 차례 시간이 짧아진 사람이 화면을 만지면 '여기 있어요' → 원래 시간으로 (러미 타일처럼 고르기만 하는 동안에도) */
+const tbHere = () => {
+  const c = Table.cur, v = c && c.view;
+  if (!v || !v.myTurn || !v.afk) return;
+  const k = `${c.key}:${v.turnEnd || ''}`;
+  if (Table.hereK === k) return;
+  Table.hereK = k;
+  if (c.mode === 'solo') { if (c.T.here('me')) Table.refresh(); } else socket.emit('tb:here');
+};
+document.addEventListener('pointerdown', tbHere, true);
+document.addEventListener('keydown', tbHere, true);
 socket.on('tb:view', d => {
   if (!Table.cur || Table.cur.mode !== 'multi' || Table.cur.key !== d.game) Table.startMulti(d.game);
   if (d.v && d.v.now) Table.skew = d.v.now - Date.now();

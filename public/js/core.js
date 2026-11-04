@@ -406,6 +406,43 @@ const nick = () => {
  * ===================================================================== */
 // 인터넷으로 접속할 때 반응이 빠르도록 WebSocket을 먼저 쓰고, 막혀 있으면 다른 방식으로 자동 전환
 const socket = io({ transports: ['websocket', 'polling'], tryAllTransports: true });
+/* 연결 복구: 잠깐 끊겨도 (다른 앱으로 넘어감 · 와이파이) 서버가 3분 동안 자리를 맡아 둬요.
+ * 화면이 새로 고쳐져도(휴대폰이 탭을 다시 불러옴) 이 탭에 보관한 복구 정보로 같은 자리로 돌아가요. */
+let RC = null;                // 다시 연결할 때 쓸 복구 정보 { pid, off } — 끊긴 순간의 것 (새로 고친 화면은 이 탭의 보관함에서)
+let rcWait = null, rcRetry = false;   // 복구가 안 된 연결: 서버 답을 기다리는 중 · 한 번 더 연결하는 중
+try {
+  const r = JSON.parse(sessionStorage.getItem('mgRecover') || 'null');
+  if (r && r.pid && r.off && Date.now() - r.t < 170000) { RC = { pid: r.pid, off: r.off }; socket._pid = r.pid; socket._lastOffset = r.off; }
+} catch { /* 보관함을 못 쓰면 그냥 새로 연결 */ }
+const saveRecover = () => {
+  try {
+    if (rcWait || rcRetry) return;                   // 서버 답을 기다리는 동안에는 새 연결 정보로 덮어쓰지 않아요
+    if (S.code && socket.connected && socket._pid && socket._lastOffset) sessionStorage.setItem('mgRecover', JSON.stringify({ pid: socket._pid, off: socket._lastOffset, t: Date.now() }));
+    else if (!S.code && !RC) sessionStorage.removeItem('mgRecover');
+  } catch { /* 무시 */ }
+};
+setInterval(saveRecover, 2000);
+window.addEventListener('pagehide', saveRecover);
+// 다른 앱에 갔다가 돌아오면: 연결이 살아 있는지 바로 확인하고, 대답이 없으면 기다리지 않고 바로 다시 연결해요
+document.addEventListener('visibilitychange', () => {
+  saveRecover();
+  if (document.visibilityState !== 'visible') return;
+  if (!socket.connected) { if (!socket.active) socket.connect(); return; }
+  socket.timeout(2500).emit('ping:t', 0, err => { if (err && socket.connected && socket.io.engine) socket.io.engine.close(); });
+});
+/** 자리를 되찾지 못했어요 (너무 오래 끊김 · 서버가 다시 켜짐) → 방에서 나와요 */
+function lostSeat() {
+  const had = !!(S.code || RC);
+  RC = null; rcRetry = false; clearTimeout(rcWait); rcWait = null;
+  try { sessionStorage.removeItem('mgRecover'); } catch { /* 무시 */ }
+  Reconn.hide();
+  if (S.code) { S.code = null; S.room = null; stopLocal(); hideOverlay(); show('multi'); renderInvite(); }
+  if (had) toast('연결이 오래 끊겨서 방에서 나왔어요. 방 코드로 다시 들어가 주세요.', 'error');
+}
+const Reconn = {
+  show() { let el = document.getElementById('reconn'); if (!el) { el = document.createElement('div'); el.id = 'reconn'; el.setAttribute('role', 'status'); document.body.append(el); } el.innerHTML = '<i></i>연결이 끊겼어요 · 다시 연결하는 중… <small>(3분 안에 돌아오면 그대로 이어서 해요)</small>'; el.classList.add('show'); },
+  hide() { const el = document.getElementById('reconn'); if (el) el.classList.remove('show'); },
+};
 let pingTimer = null;
 function measurePing() {
   const t = performance.now();
@@ -419,6 +456,19 @@ function measurePing() {
 socket.on('connect', () => {
   $('#conn').classList.add('on'); $('#conn span').textContent = '서버 연결됨';
   clearInterval(pingTimer); pingTimer = setInterval(measurePing, 5000); measurePing();
+  rcRetry = false; clearTimeout(rcWait); rcWait = null;
+  if (!S.code && !RC) { Reconn.hide(); return; }    // 방에 있지 않았어요
+  // 방에 있었어요 → 서버 답을 기다려요: 'resumed'(맡아 둔 자리로) · 'resumeRetry'(한 번 더 연결) · 'resumeFail'(자리 없음).
+  // 답이 없으면(예전 서버) 잠시 뒤 정리해요
+  rcWait = setTimeout(() => { rcWait = null; lostSeat(); }, 6000);
+});
+/* 서버: "예전 연결을 정리했으니 같은 복구 정보로 한 번 더 연결해 주세요" (한 번만) */
+socket.on('resumeRetry', () => {
+  clearTimeout(rcWait); rcWait = null;
+  if (!RC || RC.tried) return lostSeat();
+  RC.tried = true; rcRetry = true;
+  socket._pid = RC.pid; socket._lastOffset = RC.off;
+  socket.disconnect(); socket.connect();
 });
 socket.on('connect_error', err => {
   $('#conn span').textContent = '연결 중…';
@@ -427,14 +477,45 @@ socket.on('connect_error', err => {
   if (msg === 'too-many') toast('같은 곳에서 너무 많이 접속했어요. 다른 탭을 닫아 주세요.', 'error');
   if (!socket.active) setTimeout(() => socket.connect(), 10000);   // 서버가 거절한 경우에도 잠시 뒤 다시 시도
 });
-socket.on('disconnect', () => {
+socket.on('disconnect', reason => {
   clearInterval(pingTimer);
   $('#conn').classList.remove('on'); delete $('#conn').dataset.q; $('#conn span').textContent = '연결 끊김 · 다시 연결 중…';
-  if (S.code) {
+  if (rcRetry && reason === 'io client disconnect') return;        // 복구를 한 번 더 시도하는 중
+  const quit = reason === 'io client disconnect' || reason === 'io server disconnect';
+  if ((rcWait || rcRetry) && !quit) {                               // 서버 답을 기다리다 또 끊김 → 처음 복구 정보로 다시
+    if (RC) { socket._pid = RC.pid; socket._lastOffset = RC.off; }
+    clearTimeout(rcWait); rcWait = null; rcRetry = false;
+    return;
+  }
+  if (!S.code) { if (quit && RC) lostSeat(); return; }
+  if (quit) {                                       // 일부러 끊음 → 방에서 나와요
+    RC = null; clearTimeout(rcWait); rcWait = null; rcRetry = false; Reconn.hide();
     S.code = null; S.room = null; stopLocal(); hideOverlay(); show('multi'); renderInvite();
     toast('서버와 연결이 끊어졌어요. 인터넷 연결이나 서버 창이 켜져 있는지 확인해 주세요.', 'error');
+  } else {                                          // 잠깐 끊김 → 화면은 그대로 두고 다시 연결되면 이어서
+    if (socket._pid && socket._lastOffset) {
+      RC = { pid: socket._pid, off: socket._lastOffset };
+      try { sessionStorage.setItem('mgRecover', JSON.stringify({ pid: RC.pid, off: RC.off, t: Date.now() })); } catch { /* 무시 */ }
+    }
+    Reconn.show();
   }
 });
+/* 다시 연결됐어요 (서버가 맡아 둔 자리로) */
+socket.on('resumed', d => {
+  RC = null; rcRetry = false; clearTimeout(rcWait); rcWait = null;
+  Reconn.hide();
+  if (S.code === d.code) { toast('📶 다시 연결됐어요!', 'good'); return; }      // 화면이 그대로 있으면 놓친 내용은 서버가 다시 보내 줘요
+  // 화면이 새로 고쳐진 뒤: 방 정보부터 다시 → 차례형 게임은 화면을 다시 받아요
+  S.myId = d.myId; S.code = d.code; S.room = d.room;
+  $('#chat-room').textContent = '방 ' + d.code;
+  if (location.search) history.replaceState(null, '', location.pathname);
+  renderInvite();
+  if (!d.playing) { show('lobby'); renderLobby(); toast('📶 다시 연결됐어요! 대기실로 돌아왔어요.', 'good'); return; }
+  if (!S.screen || MENU_IDS.has(S.screen)) { show('lobby'); renderLobby(); }
+  socket.emit('resync');
+  toast('📶 다시 연결됐어요! 진행 중인 게임으로 돌아가요. (게임에 따라 이번 판이 끝난 뒤 대기실에서 이어져요)', 'good');
+});
+socket.on('resumeFail', () => { clearTimeout(rcWait); rcWait = null; if (S.code || RC) lostSeat(); });
 socket.on('serverInfo', d => { S.serverInfo = d; renderInvite(); });
 socket.on('toast', d => toast(d.msg, d.type));
 
@@ -463,6 +544,8 @@ socket.on('rematch', d => { S.rematch = d; if (ovDraw) ovDraw(); });
 socket.on('rematch:go', () => { if (typeof Sound !== 'undefined') Sound.play('invite'); });
 /** 방장이 나를 내보냈어요 */
 socket.on('kicked', () => {
+  RC = null; rcRetry = false; clearTimeout(rcWait); rcWait = null; Reconn.hide();
+  try { sessionStorage.removeItem('mgRecover'); } catch { /* 무시 */ }
   S.code = null; S.room = null; stopLocal(); hideOverlay(); show('multi'); renderInvite();
   toast('방장이 방에서 내보냈어요.', 'error');
 });
@@ -640,7 +723,7 @@ $('#liar-guess-input').addEventListener('keydown', e => { if (e.key === 'Enter' 
 
 function leaveRoom() {
   if (S.code) socket.emit('leaveRoom');
-  S.code = null; S.room = null;
+  S.code = null; S.room = null; saveRecover();
   stopLocal(); hideOverlay(); show('multi');
 }
 
@@ -693,12 +776,13 @@ function renderLobby() {
       p.isHost ? '<span class="tag host">👑 방장</span>' : p.role === 'spectator' ? '<span class="tag wait">👀 관전</span>'
         : p.isReady ? '<span class="tag ready">✅ 준비 완료</span>' : '<span class="tag wait">💤 대기 중</span>',
       card ? `<span class="tag chips">💰 ${won(p.chips)}</span>` : '',
+      p.away ? '<span class="tag away">📶 연결 끊김</span>' : '',
     ].join('');
     const av = (typeof Acct !== 'undefined' && Acct.lobbyAvatar(p)) || `<div class="avatar" style="background:${avColor(p.id)}">${esc(p.name[0] || '?')}</div>`;
     const kick = m.isHost && !r.isStarted && p.id !== S.myId ? `<button class="pc-kick" data-act="kick" data-id="${esc(p.id)}" data-name="${esc(p.name)}" title="내보내기" aria-label="${esc(p.name)} 내보내기">${icon('x')}</button>` : '';
     const prof = p.uid ? ` data-act="acCard" data-uid="${esc(p.uid)}" role="button" tabindex="0" title="프로필 보기"` : '';
     return `<div class="pcard ${p.id === S.myId ? 'me' : ''}">${p.uid ? `<span class="pc-who"${prof}>${av}</span>` : av}
-      <div class="pinfo"><div class="pname ${p.uid ? 'link' : ''}"${prof}>${esc(p.name)}${p.id === S.myId ? ' (나)' : ''}</div>${tags}${typeof Acct !== 'undefined' ? Acct.lobbyTags(p) : ''}</div>${kick}</div>`;
+      <div class="pinfo"><div class="pname ${p.uid ? 'link' : ''}"${prof}>${esc(p.name)}${p.id === S.myId ? ' (나)' : ''}${p.op && typeof opBadge === 'function' ? ' ' + opBadge(p.op, true) : ''}</div>${tags}${typeof Acct !== 'undefined' ? Acct.lobbyTags(p) : ''}</div>${kick}</div>`;
   }).join('');
 
   // 버튼
@@ -718,7 +802,7 @@ function addChat(d) {
   const div = document.createElement('div');
   div.className = 'msg' + (d.system ? ' sys' : '') + (d.id === S.myId ? ' mine' : '');
   if (d.tag) div.classList.add('tagged');
-  div.innerHTML = d.system ? esc(d.msg) : `${d.tag ? `<em class="chat-tag">${esc(d.tag)}</em>` : ''}<b>${esc(d.name)}</b>${d.emoji ? `<span class="emo">${esc(d.msg)}</span>` : esc(d.msg)}`;
+  div.innerHTML = d.system ? esc(d.msg) : `${d.tag ? `<em class="chat-tag">${esc(d.tag)}</em>` : ''}${d.op && typeof opBadge === 'function' ? opBadge(d.op, true) : ''}<b>${esc(d.name)}</b>${d.emoji ? `<span class="emo">${esc(d.msg)}</span>` : esc(d.msg)}`;
   box.append(div);
   while (box.children.length > 200) box.firstChild.remove();
   box.scrollTop = box.scrollHeight;
