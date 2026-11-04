@@ -115,6 +115,8 @@
         schedule(); o.onUpdate();
       },
       isBot: id => bots.has(id),
+      /** 다시 계획 세우기 (봇을 잠깐 멈춰 두었다가 다시 움직이게 할 때 · 튜토리얼) */
+      poke() { if (ended) return; schedule(); o.onUpdate(); },
       stop() { ended = true; clearAll(); },
     };
     schedule();

@@ -38,6 +38,10 @@ module.exports = H => {
     chat(room, me, msg, emoji) {
       if (emoji) return false;
       const g = room.game;
+      if (me.id === g.drawerId && !g.solved && g.word && H.normWord(msg).includes(g.word)) {     // 그리는 사람이 채팅으로 정답을 말하면 안 보내요
+        H.toPlayer(me.id, 'toast', { msg: '그리는 사람은 채팅으로 정답을 말할 수 없어요!', type: 'error' });
+        return true;
+      }
       if (g.solved || me.id === g.drawerId || H.normWord(msg) !== g.word) return false;
       g.solved = true;
       me.score += 10;

@@ -1,0 +1,71 @@
+/* v11 스도쿠 (public/js/sudoku.js) — 판 크기 --sz 는 js(core.js fitSquare)가 남은 높이 · 너비를 재서 px 로 넣어요 */
+#scr-sudoku{--sz:460px}
+#scr-sudoku .mode-row{margin-bottom:10px}
+#scr-sudoku .su-gap{margin-left:10px}
+.su-wrap{display:flex;gap:18px;align-items:flex-start;justify-content:center}
+.su-board{display:grid;grid-template-columns:repeat(9,1fr);width:var(--sz);aspect-ratio:1 / 1;min-width:240px;flex:none;box-sizing:border-box;
+  border:3px solid var(--su-ink);border-radius:10px;overflow:hidden;background:var(--su-bg);user-select:none;-webkit-user-select:none;touch-action:manipulation;
+  --su-ink:#3b3f5c;--su-bg:#fbfaf6;--su-line:#c9c6d8;--su-given:#1d2033;--su-user:#3758d6;--su-peer:#eceaf6;--su-same:#cfd8ff;--su-sel:#9fb2ff}
+:root[data-theme=dark] .su-board{--su-ink:#8a8fb8;--su-bg:#1b1e33;--su-line:#3a3e5e;--su-given:#eef0ff;--su-user:#8fb0ff;--su-peer:#262a46;--su-same:#2f3d78;--su-sel:#3d55b8}
+.su-board .sc{position:relative;display:grid;place-items:center;min-width:0;min-height:0;cursor:pointer;
+  border-right:1px solid var(--su-line);border-bottom:1px solid var(--su-line);font:700 calc(var(--sz) / 15.5)/1 'Noto Sans KR',sans-serif;color:var(--su-given)}
+.su-board .sc:nth-child(9n){border-right:none}
+.su-board .sc:nth-child(9n+3),.su-board .sc:nth-child(9n+6){border-right:2px solid var(--su-ink)}
+.su-board .sc:nth-child(n+19):nth-child(-n+27),.su-board .sc:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid var(--su-ink)}
+.su-board .sc:nth-child(n+73){border-bottom:none}
+.su-board .sc b{font-weight:800}
+.su-board .sc.u{color:var(--su-user)}
+.su-board .sc.u b{font-weight:600}
+.su-board .sc.peer{background:var(--su-peer)}
+.su-board .sc.same{background:var(--su-same)}
+.su-board .sc.sel{background:var(--su-sel)}
+.su-board .sc.bad b,.su-board .sc.wrong b{color:#e53935}
+.su-board .sc.bad::after{content:'';position:absolute;inset:2px;border-radius:4px;box-shadow:inset 0 0 0 2px rgba(229,57,53,.6);pointer-events:none}
+.su-board .sc.hint{animation:suHint 1.2s ease-in-out 2}
+.su-board .nt{position:absolute;inset:6%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font:600 calc(var(--sz) / 40)/1 'Noto Sans KR',sans-serif;color:#7a7f9e;font-style:normal}
+.su-board .nt s{display:grid;place-items:center;text-decoration:none}
+.su-board.win .sc{animation:suWin .7s ease both}
+.su-board.win .sc:nth-child(odd){animation-delay:.08s}
+@keyframes suHint{50%{background:#ffe082}}
+@keyframes suWin{40%{background:#c8f7d4;transform:scale(1.06)}}
+.su-side{width:300px;flex:none;display:flex;flex-direction:column;gap:10px}
+.su-msg{min-height:44px;padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);font-size:14px;line-height:1.5}
+.su-msg:empty{display:none}
+.su-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.su-n{position:relative;aspect-ratio:1.25 / 1;border-radius:14px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;display:grid;place-items:center;
+  font:400 30px/1 'Black Han Sans',sans-serif;touch-action:manipulation}
+.su-n b{font-weight:400}
+.su-n small{position:absolute;right:7px;bottom:5px;font:700 11px/1 'Noto Sans KR',sans-serif;color:var(--muted)}
+.su-n:hover{border-color:var(--accent)}
+.su-n.cur{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 40%,transparent)}
+.su-n.full{opacity:.35}
+.su-tools{display:flex;flex-wrap:wrap;gap:6px}
+.su-tools .btn .ic{width:16px;height:16px}
+
+/* 좁은 화면: 판 → 안내 → 숫자 한 줄 → 도구 */
+@media (max-width:760px){
+  .su-wrap{flex-direction:column;align-items:center;gap:8px}
+  .su-side{width:var(--sz);min-width:240px;gap:6px}
+  .su-msg{padding:7px 10px;font-size:13px;min-height:0}
+  .su-pad{grid-template-columns:repeat(9,1fr);gap:4px}
+  .su-n{aspect-ratio:auto;height:clamp(40px, calc(var(--sz) / 8), 56px);border-radius:10px;font-size:clamp(20px, calc(var(--sz) / 15), 28px)}
+  .su-n small{right:3px;bottom:3px;font-size:9.5px}
+  .su-tools{flex-wrap:nowrap;justify-content:space-between}
+  .su-tools .btn{flex:1;padding:7px 4px;font-size:12px;white-space:nowrap;justify-content:center}
+}
+@media (max-width:420px){
+  #scr-sudoku .mode-row{gap:4px;flex-wrap:nowrap}
+  #scr-sudoku .mode-row > .muted{display:none}
+  #scr-sudoku .mode-row .seg-btn{padding:5px 9px;font-size:12.5px;white-space:nowrap}
+  .su-tools .btn .ic{display:none}
+}
+/* 휴대폰 가로: 판 왼쪽 · 숫자판 오른쪽 */
+@media (max-height:520px) and (orientation:landscape){
+  #scr-sudoku .mode-row{margin-bottom:4px}
+  .su-wrap{flex-direction:row;align-items:flex-start}
+  .su-side{width:300px;min-width:0}
+  .su-pad{grid-template-columns:repeat(3,1fr);gap:5px}
+  .su-n{aspect-ratio:auto;height:clamp(34px, calc(var(--sz) / 7.5), 52px);font-size:22px}
+  .su-tools{flex-wrap:wrap}
+  .su-tools .btn{flex:0 1 auto}
+}

@@ -96,7 +96,7 @@ const DM = {
         <table><tr><th>순위</th><th>이름</th><th>다음 계급</th><th>점수</th></tr>
         ${(S ? S.rows : []).map(r => `<tr class="${r.id === ctx.me ? 'me' : ''}"><td>${r.place}</td><td>${N(r.id)}</td><td>${this.titleChip(r.title)}</td><td>+${r.pts} <small>(${r.total})</small></td></tr>`).join('')}</table>
         ${v.over ? `<p class="dm-final">${N(v.winner)} 님이 최고의 달무티!</p>`
-          : ask && ask.k === 'next' ? `<button class="btn good" data-act="dmNext">다음 판 시작</button><small class="muted">곧 자동으로 시작해요</small>`
+          : ask && ask.k === 'next' ? `<button class="btn good" data-act="dmNext">다음 판 시작</button>${v.turnEnd ? '<small class="muted">곧 자동으로 시작해요</small>' : ''}`
             : `<p class="muted">다른 사람을 기다리는 중… ${v.players.filter(p => p.ready).length ? '' : ''}</p>`}</div>`;
     } else if (v.phase === 'deal') {
       html = `<div class="dm-emptypile">${icon('cards')}<span>카드 정리 중…</span></div><p class="dm-rule">곧 세금을 걷어요.</p>`;
@@ -123,7 +123,8 @@ const DM = {
           <div class="dm-fan">${x.cards.map(c => this.card(c, lastOne ? 'md' : 'sm')).join('')}</div>${lastOne ? `<small>${N(x.by)}</small>` : ''}</div>`;
       }).join('') : '';
       const lead = !t ? (v.turnId === ctx.me ? '<b>내가 선이에요!</b> 같은 숫자 카드를 원하는 만큼 내세요.' : `<b>${N(v.turnId)}</b> 님이 새로 시작해요…`)
-        : `다음 사람: <b>${t.count}장</b>, <b>${t.num === 13 ? '아무 숫자' : t.num + '보다 낮은 숫자'}</b>${t.num === 13 ? '' : ''}`;
+        : t.num === 1 ? '<b>1</b>은 가장 센 카드라 아무도 못 이겨요 — 패스!'
+          : `다음 사람: <b>${t.count}장</b>, <b>${t.num === 13 ? '아무 숫자' : t.num + '보다 낮은 숫자'}</b>`;
       html = `<div class="dm-pile ${t ? '' : 'empty'}">${pileHtml || `<div class="dm-emptypile">${icon('crown')}<span>새로운 판</span></div>`}</div>
         <p class="dm-rule">${lead}</p>`;
     }

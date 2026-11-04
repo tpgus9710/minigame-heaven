@@ -128,7 +128,8 @@ const CP = {
       const c = w.card, claimer = N(w.claimant);
       const what = ask.k === 'chal' ? `${claimer} 님이 <b class="c-${c}">${cpJ(CP_CARD[c].n, '이라고', '라고')}</b> 주장해요.` : `${claimer} 님이 <b class="c-${c}">${cpRo(CP_CARD[c].n)}</b> 막겠대요.`;
       const vsMe = (ask.k === 'chal' && d && d.target === ctx.me) || (ask.k === 'bchal' && d && d.actor === ctx.me);
-      btns = `<p class="cp-q">${what} ${vsMe ? '<b class="cp-warn">나를 노리고 있어요!</b>' : ''} 도전할까요?</p>
+      const warn = !vsMe ? '' : ask.k === 'bchal' ? '<b class="cp-warn">내 행동을 막으려 해요!</b>' : '<b class="cp-warn">나를 노리고 있어요!</b>';   // 막기는 「내 행동」, 주장은 「나를 노림」
+      btns = `<p class="cp-q">${what} ${warn} 도전할까요?</p>
         <div class="cp-btns"><button class="btn bad" data-act="cpResp" data-t="chal">${icon('swords')} 도전!</button><button class="btn ghost" data-act="cpResp" data-t="allow">허용</button></div>
         <small class="muted">도전했는데 진짜면 내가 카드를 잃고, 거짓말이면 상대가 잃어요.</small>`;
     } else if (ask && ask.k === 'block') {

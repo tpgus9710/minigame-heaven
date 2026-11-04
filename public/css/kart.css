@@ -29,11 +29,6 @@ body.gaming #scr-kart.active{display:flow-root}
 .kt-go .ic{width:24px;height:24px}
 .kt-keys{margin:12px 2px 0;font-size:12.5px;line-height:1.65;color:#aab2dd;text-align:center}
 .kt-keys b{color:#fff;background:rgba(255,255,255,.1);border-radius:6px;padding:1px 6px;font-weight:700}
-/* 터치 패드 버튼 (아이콘 + 짧은 글자) */
-.kt-pad{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1}
-.kt-pad .ic{width:22px;height:22px}
-.kt-pad small{font-family:'Noto Sans KR',sans-serif;font-size:10px;font-weight:700;letter-spacing:-.3px}
-body:has(#scr-kart.active) #vpad button{width:60px;height:60px}
 @media (max-width:640px){
   .kt-setup{padding:10px;align-items:flex-start}
   .kt-card{padding:14px 13px 12px;border-radius:18px}
@@ -75,18 +70,75 @@ body:has(#scr-kart.active) #vpad button{width:60px;height:60px}
 /* 넓고 낮은 무대 (노트북 · 태블릿 가로 · 휴대폰 가로): 트랙 3개는 왼쪽, 모드 · 바퀴 수 · 출발은 오른쪽 */
 @container ktsetup (min-width:600px) and (max-height:720px){
   .kt-card{width:min(860px,100%);display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);column-gap:18px;align-items:start;
-    grid-template-areas:"h h" "tr mode" "tr laps" "tr go";grid-template-rows:auto auto auto 1fr}
+    grid-template-areas:"h h" "tr mode" "tr laps" "tr stick" "tr go";grid-template-rows:auto auto auto auto 1fr}
   .kt-card > h3{grid-area:h}
   .kt-card > .kt-sec:nth-of-type(1){grid-area:mode}
   .kt-card > .kt-sec:nth-of-type(2){grid-area:tr}
   .kt-card > .kt-sec:nth-of-type(3){grid-area:laps}
+  .kt-card > .kt-sec:nth-of-type(4){grid-area:stick}                 /* 휴대폰 · 태블릿: 조이스틱 방식 */
+  .kt-opt.sm{min-width:0;padding-left:4px;padding-right:4px}          /* 바퀴 수 4개를 한 줄에 */
+  .kt-opt b{white-space:nowrap} .kt-seg{gap:6px}
   .kt-card > .kt-go{grid-area:go;align-self:end}
   .kt-card > .kt-keys{display:none}
   .kt-opt{min-width:0}
 }
 @container ktsetup (min-width:600px) and (max-height:360px){
   .kt-card > h3{display:none}
-  .kt-card{grid-template-areas:"tr mode" "tr laps" "tr go";grid-template-rows:auto auto 1fr}
+  .kt-card{grid-template-areas:"tr mode" "tr laps" "tr stick" "tr go";grid-template-rows:auto auto auto 1fr}
   .kt-card > .kt-sec:first-of-type{margin-top:0}
+  .kt-card > .kt-sec:not(:nth-of-type(2)) > small{display:none}      /* 아주 낮은 무대: 모드 · 바퀴 수 · 조이스틱 이름표는 빼요 (버튼 글자로 충분) */
+  .kt-opt b{font-size:14px}
   .kt-card > .kt-sec:nth-of-type(2){margin-top:0}
 }
+
+/* ── 휴대폰 · 태블릿 조작 (kart.js KTouch): 왼손 엄지 조이스틱 + 오른손 엄지 버튼 ──
+   세로 화면 = 화면 아래 띠(--strip) · 가로 화면 = 길 위에 떠 있어요. 버튼 자리는 오른쪽 아래 모서리에서 엄지가 닿는 둥근 자리 */
+#kt-touch{position:fixed;left:0;right:0;bottom:0;z-index:45;pointer-events:none;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  --s:1;--jr:52px;--kr:25px;--sr:env(safe-area-inset-right,0px);--sl:env(safe-area-inset-left,0px);--sb:env(safe-area-inset-bottom,0px)}
+#kt-touch.hidden{display:none}
+#kt-touch.port{height:calc(var(--strip,160px) + var(--sb))}
+#kt-touch.land{top:0}
+.kt-zone{position:absolute;left:0;bottom:0;pointer-events:auto;touch-action:none;overflow:visible}
+#kt-touch.port .kt-zone{top:0;width:54%}
+#kt-touch.land .kt-zone{width:46%;height:78%}
+.kt-joy{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;transition:opacity .2s}
+.kt-joy.idle{opacity:.6}
+.kt-base{position:absolute;left:calc(var(--jr) * -1);top:calc(var(--jr) * -1);width:calc(var(--jr) * 2);height:calc(var(--jr) * 2);box-sizing:border-box;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.06) 0,rgba(255,255,255,.17) 100%);border:2px solid rgba(255,255,255,.42);box-shadow:0 8px 22px rgba(0,0,0,.35),inset 0 0 20px rgba(0,0,0,.28)}
+.kt-base s{position:absolute;width:0;height:0;border:7px solid transparent;opacity:.75}
+.kt-base .l{left:7px;top:50%;margin-top:-7px;border-right:9px solid #fff;border-left:0}
+.kt-base .r{right:7px;top:50%;margin-top:-7px;border-left:9px solid #fff;border-right:0}
+.kt-base .u{top:7px;left:50%;margin-left:-7px;border-bottom:9px solid #fff;border-top:0}
+.kt-base .d{bottom:7px;left:50%;margin-left:-7px;border-top:9px solid #fff;border-bottom:0}
+#kt-touch.wheel .kt-base .u,#kt-touch.wheel .kt-base .d{display:none}
+#kt-touch.wheel .kt-base{border-radius:999px}
+.kt-knob{position:absolute;left:calc(var(--kr) * -1);top:calc(var(--kr) * -1);width:calc(var(--kr) * 2);height:calc(var(--kr) * 2);border-radius:50%;
+  background:radial-gradient(circle at 36% 30%,#ffffff 0,#dfe2fb 55%,#b8bde6 100%);box-shadow:0 6px 16px rgba(0,0,0,.45),inset 0 -3px 6px rgba(0,0,0,.12);display:grid;place-items:center;color:#4b4f86}
+.kt-kic{display:grid;place-items:center;transition:transform .05s linear}
+.kt-kic .ic{width:calc(var(--kr) * .95);height:calc(var(--kr) * .95)}
+#kt-touch.wheel .kt-kic{transition:none}
+.kt-zhint{position:absolute;left:0;top:calc(var(--jr) + 8px);transform:translateX(-50%);white-space:nowrap;font:800 calc(12px * var(--s))/1.2 'Noto Sans KR',sans-serif;color:#fff;
+  text-shadow:0 1px 4px rgba(0,0,0,.8);transition:opacity .5s}
+#kt-touch.land .kt-zhint{top:auto;bottom:calc(var(--jr) + 8px)}
+#kt-touch.nohint .kt-zhint{opacity:0}
+.kt-b{position:absolute;pointer-events:auto;touch-action:none;border-radius:50%;box-sizing:border-box;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff;background:rgba(18,22,46,.6);border:2px solid rgba(255,255,255,.45);
+  box-shadow:0 8px 20px rgba(0,0,0,.35);font:800 calc(10.5px * var(--s))/1 'Noto Sans KR',sans-serif;letter-spacing:-.3px;transition:transform .06s,background .12s,box-shadow .2s,border-color .2s}
+.kt-b .ic{width:calc(23px * var(--s));height:calc(23px * var(--s))}
+.kt-b.on{transform:scale(.93);background:rgba(124,108,255,.82);border-color:#fff}
+/* 자리: 오른쪽 아래 모서리를 축으로 엄지가 그리는 원 위 — 드리프트(가장 자주) · 아이템(위) · 브레이크(왼쪽) */
+.kt-drift{width:calc(88px * var(--s));height:calc(88px * var(--s));right:calc(28px * var(--s) + var(--sr));bottom:calc(30px * var(--s) + var(--sb))}
+.kt-drift .ic{width:calc(30px * var(--s));height:calc(30px * var(--s))}
+.kt-item{width:calc(66px * var(--s));height:calc(66px * var(--s));right:calc(134px * var(--s) + var(--sr));bottom:calc(84px * var(--s) + var(--sb))}
+.kt-brake{width:calc(58px * var(--s));height:calc(58px * var(--s));right:calc(146px * var(--s) + var(--sr));bottom:calc(12px * var(--s) + var(--sb))}
+#kt-touch.land .kt-drift{right:calc(30px * var(--s) + var(--sr));bottom:calc(44px * var(--s) + var(--sb))}
+#kt-touch.land .kt-item{right:calc(128px * var(--s) + var(--sr));bottom:calc(118px * var(--s) + var(--sb))}
+#kt-touch.land .kt-brake{right:calc(150px * var(--s) + var(--sr));bottom:calc(26px * var(--s) + var(--sb))}
+/* 드리프트 중: 모인 대시 색 (불꽃 색과 같아요: 흰색 → 파랑 → 주황) */
+.kt-drift[data-lv="0"]{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.35),0 8px 20px rgba(0,0,0,.35)}
+.kt-drift[data-lv="1"]{border-color:#6cc6ff;box-shadow:0 0 0 4px rgba(108,198,255,.55),0 0 22px rgba(108,198,255,.7)}
+.kt-drift[data-lv="2"]{border-color:#ffa62b;box-shadow:0 0 0 5px rgba(255,166,43,.6),0 0 26px rgba(255,166,43,.8)}
+/* 아이템이 있으면 반짝 */
+.kt-item.has{border-color:#ffd23f;animation:ktHas 1.1s ease-in-out infinite}
+@keyframes ktHas{50%{box-shadow:0 0 0 5px rgba(255,210,63,.45),0 0 20px rgba(255,210,63,.6)}}
+#kt-touch.fin .kt-zone,#kt-touch.fin .kt-b{opacity:.3;pointer-events:none}

@@ -148,7 +148,7 @@ function ktLocate(T, x, y, hint) {
 /* ─── 화면 ─── */
 makeScreen('kart', {
   title: '🏎️ 드리프트 카트',
-  status: TOUCH ? '◀ ▶ 핸들 · 드리프트 버튼을 누른 채 꺾기 · 자동으로 달려요' : '방향키/WASD 운전 · Shift 누른 채 꺾으면 드리프트 · Ctrl/E 아이템 · R 트랙 복귀',
+  status: TOUCH ? '왼손 엄지 조이스틱으로 조종 · 오른손 엄지 드리프트 · 아이템 · 가속은 자동' : '방향키/WASD 운전 · Shift 누른 채 꺾으면 드리프트 · Ctrl/E 아이템 · R 트랙 복귀',
   stats: [['best', '최고 기록']],
   body: `<div class="kt-stage" id="kt-stage"><canvas id="kt-cv"></canvas><div class="kt-setup hidden" id="kt-setup"></div></div>`,
 });
@@ -163,7 +163,7 @@ const ktGuard = e => { e.preventDefault(); e.returnValue = ''; };   // 레이스
 const Kart = {
   R: null, cv: null, c: null, W: 0, H: 0, dpr: 1, pat: {}, debug: { autopilot: false },
   q: 2, ft: null, qT: 0,                                            // 그림 품질: 느린 컴퓨터면 자동으로 낮춰요 (2 → 1 → 0)
-  cfg: { mode: 'speed', track: 0, laps: 3 },
+  cfg: { mode: 'speed', track: 0, laps: 3, stick: 'dir' },        // stick: 휴대폰 조이스틱 — dir 가고 싶은 방향 · wheel 좌우 핸들
 
   /* ═════════ 레이스 준비 ═════════ */
   newRace({ track, mode, laps, multi = false, attract = false }) {
@@ -222,8 +222,10 @@ const Kart = {
         `<button class="kt-track ${s.track === i ? 'on' : ''}" data-act="ktCfg" data-k="track" data-v="${i}"><canvas width="240" height="150" data-kt-prev="${i}"></canvas><b>${t.name}</b><small>${t.desc}</small><em>${this.bestText(i, s.laps, s.mode)}</em></button>`).join('')}</div></div>
       <div class="kt-sec"><small>바퀴 수</small><div class="kt-seg">${[1, 2, 3, 5].map(n =>
         `<button class="kt-opt sm ${+s.laps === n ? 'on' : ''}" data-act="ktCfg" data-k="laps" data-v="${n}"><b>${n}바퀴</b></button>`).join('')}</div></div>
+      ${TOUCH ? `<div class="kt-sec kt-stick"><small>조이스틱 (왼손 엄지)</small><div class="kt-seg">${[['dir', '방향 조종', '가고 싶은 쪽으로 밀어요'], ['wheel', '핸들 조종', '좌우로 밀면 핸들처럼']].map(([v, n, d]) =>
+        `<button class="kt-opt ${(s.stick === 'wheel' ? 'wheel' : 'dir') === v ? 'on' : ''}" data-act="ktCfg" data-k="stick" data-v="${v}"><b>${n}</b><small>${d}</small></button>`).join('')}</div></div>` : ''}
       <button class="btn good kt-go" data-act="ktGo">${icon('flag-3')}<span>출발!</span></button>
-      <p class="kt-keys">${TOUCH ? '◀ ▶ 로 핸들 · <b>드리프트</b> 버튼을 누른 채 꺾기 · 가속은 자동' : '<b>↑</b> 가속 · <b>↓</b> 브레이크 · <b>← →</b> 핸들 · <b>Shift</b> 누른 채 꺾으면 드리프트 · <b>Ctrl / E</b> 아이템 · <b>R</b> 트랙 복귀'}<br>드리프트를 길게 하고 놓으면 순간 대시! 출발 신호 직전에 가속을 누르면 출발 부스터!</p>
+      <p class="kt-keys">${TOUCH ? '<b>왼손 엄지</b> 조이스틱(아무 데나 대고 밀기) · <b>오른손 엄지</b> 드리프트 · 아이템 · 브레이크 · 가속은 자동<br>드리프트 버튼을 누른 채 꺾고, 색이 바뀌면 놓아서 순간 대시! 출발 신호 직전에 조이스틱을 잡으면 출발 부스터!' : '<b>↑</b> 가속 · <b>↓</b> 브레이크 · <b>← →</b> 핸들 · <b>Shift</b> 누른 채 꺾으면 드리프트 · <b>Ctrl / E</b> 아이템 · <b>R</b> 트랙 복귀<br>드리프트를 길게 하고 놓으면 순간 대시! 출발 신호 직전에 가속을 누르면 출발 부스터!'}</p>
     </div>`;
     $$('#kt-setup [data-kt-prev]').forEach(cv => this.drawPreview(cv, ktTrack(+cv.dataset.ktPrev)));
     setStat('kart', 'best', this.bestText(s.track, s.laps, s.mode, true));
@@ -279,6 +281,7 @@ const Kart = {
   stop() {
     this.R = null;
     window.removeEventListener('beforeunload', ktGuard);
+    if (TOUCH) KTouch.sync();                                     // 조작 버튼 숨기고 누르던 것 모두 놓기
   },
   loop() {
     gameLoop((dt, now) => {
@@ -290,6 +293,7 @@ const Kart = {
       if (R.multi) this.interp(now, dt);
       this.effects(dt);
       this.render(now);
+      if (TOUCH) KTouch.sync();
       const w = performance.now() - t0;
       this.ft = this.ft == null ? w : this.ft * 0.93 + w * 0.07;
       if (this.ft > 19 && this.q > 0 && now - this.qT > 2000) { this.q--; this.qT = now; this.ft = null; if (this.q === 0) this.fitted = false; }
@@ -302,7 +306,7 @@ const Kart = {
     if (!R.go) {
       R.cd -= dt;
       const me = R.me;
-      if (me.local && !me.ai) { const th = this.input(me).throttle > 0 && !(TOUCH && R.cd > 0.45); if (th && me.th0 == null) me.th0 = R.cd; if (!th) me.th0 = null; }
+      if (me.local && !me.ai) { const th = TOUCH ? !!KTouch.stick || held('ArrowUp', 'KeyW') : this.input(me).throttle > 0; if (TOUCH) this.input(me); if (th && me.th0 == null) me.th0 = R.cd; if (!th) me.th0 = null; }
       if (R.cd <= 0) {
         R.go = true; R.t = 0;
         for (const k of R.karts) {
@@ -325,7 +329,7 @@ const Kart = {
       if (sp < (auto ? 30 : 25) && k.stun <= 0 && k.trap <= 0) {
         k.stuckT += dt;
         if (auto && k.stuckT > 1.6) this.respawn(k);
-        else if (!auto && k.stuckT > 2.4) { k.stuckT = -4; if (TOUCH) this.respawn(k); else this.flash('R 키를 누르면 트랙으로 돌아가요', '#ffffff'); }
+        else if (!auto && k.stuckT > 2.4) { k.stuckT = -4; if (TOUCH) { this.respawn(k); if (k === R.me) this.flash('트랙으로 돌아왔어요', '#ffffff'); } else this.flash('R 키를 누르면 트랙으로 돌아가요', '#ffffff'); }
       } else if (k.stuckT > 0) k.stuckT = 0;
     }
     this.bump();
@@ -351,7 +355,8 @@ const Kart = {
   },
   input(k) {
     const brake = held('ArrowDown', 'KeyS'), acc = held('ArrowUp', 'KeyW') || (TOUCH && !brake);
-    const dir = (held('ArrowRight', 'KeyD') ? 1 : 0) - (held('ArrowLeft', 'KeyA') ? 1 : 0);
+    let dir = (held('ArrowRight', 'KeyD') ? 1 : 0) - (held('ArrowLeft', 'KeyA') ? 1 : 0);
+    if (TOUCH && k === this.R.me) { const js = KTouch.steer(k, this.viewRot); if (js != null) dir = js; }      // 휴대폰: 조이스틱 (아날로그)
     k.steer += (dir - k.steer) * Math.min(1, KT.STEP * (dir === 0 ? 16 : 10));
     return { throttle: brake ? -1 : acc ? 1 : 0, steer: k.steer, drift: held('ShiftLeft', 'ShiftRight', 'Space') };
   },
@@ -774,15 +779,13 @@ const Kart = {
     const w = st.clientWidth || 800, mob = w < 640;
     // 캔버스 높이 = core.js Fit 이 쓰는 남는 높이(창 높이 - 화면 위치 - 아래 여백 - 가상 패드) - 제목 줄 → 화면 전체를 줄이지 않고 딱 맞아요
     // (Fit 이 화면을 줄여 둔 상태여도 줄이기 전 크기로 계산해요 — 그래야 다시 맞출 때 원래 크기로 돌아와요)
-    const pad = $('#vpad'), padH = pad && !pad.classList.contains('hidden') ? pad.getBoundingClientRect().height + 18 : 0;
+    const padH = TOUCH && KTouch.on && KTouch.port ? KTouch.strip + 6 : 0;   // 휴대폰 · 태블릿 세로: 아래 조작 띠(엄지 자리)만큼 비워요 · 가로는 조작이 화면 위에 떠 있어요
     const shellB = parseFloat(getComputedStyle(sec.parentElement.parentElement).paddingBottom) || 0;
     const sr = sec.getBoundingClientRect(), z = +sec.dataset.z || 1;
     this.above = Math.round((cv.getBoundingClientRect().top - sr.top) / z);
-    const land = padH > 0 && window.innerHeight <= 520;            // 휴대폰 가로: 패드는 화면 위에 떠 있으니 캔버스는 바닥 가까이까지 (패드 사이로 길이 보여요)
-    const room = window.innerHeight - (sr.top + window.scrollY) - shellB - padH - this.above - 2 + (land ? padH - 6 : 0);
+    const room = window.innerHeight - (sr.top + window.scrollY) - shellB - padH - this.above - 2;
     const tall = window.innerHeight > window.innerWidth;           // 세로로 긴 태블릿 · 폴드: 화면을 더 길게 써요
     const h = Math.round(clamp(Math.min(room, mob ? w * 1.6 : w * (tall ? 1 : 0.62)), 200, mob ? 760 : 860));
-    st.style.marginBottom = land ? -(padH - 6) + 'px' : '';          // 패드 자리만큼은 화면 높이 계산에서 빼요 (kart.css: 화면 display:flow-root)
     this.dpr = Math.min(this.q === 0 ? 1 : 2, window.devicePixelRatio || 1);
     this.W = w; this.H = h;
     cv.style.height = h + 'px';
@@ -896,11 +899,22 @@ const Kart = {
     const onScr = h => h.x > x0 - 80 && h.x < x1 + 80 && h.y > y0 - 80 && h.y < y1 + 80;
     for (const h of R.hz) if ((h.k === 'splash' || h.k === 'banana') && onScr(h)) this.drawHazard(c, h, now);
     for (const k of R.karts) this.drawKart(c, k, now);
+    if (TOUCH && !R.attract) this.drawAim(c);
     for (const h of R.hz) if ((h.k === 'balloon' || h.k === 'missile') && onScr(h)) this.drawHazard(c, h, now);
     this.drawFx(c);
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (!R.attract) this.drawNames(c, z);
     if (!R.attract) this.hud(c, W, H, now);
+  },
+  /** 방향 조종: 조이스틱이 가리키는 쪽(차가 돌아갈 방향)을 내 카트 앞에 작은 화살표로 */
+  drawAim(c) {
+    const v = KTouch.vec(), me = this.R.me;
+    if (!v || v.m < KTouch.DEAD || KTouch.mode !== 'dir' || !me || me.fin != null) return;
+    const wa = v.a - (this.viewRot || 0), d = 50;
+    c.save(); c.translate(me.x + Math.cos(wa) * d, me.y + Math.sin(wa) * d); c.rotate(wa);
+    c.globalAlpha = 0.35 + 0.35 * v.m; c.fillStyle = '#ffffff'; c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(13, 0); c.lineTo(-7, -10); c.lineTo(-2, 0); c.lineTo(-7, 10); c.closePath(); c.stroke(); c.fill();
+    c.restore();
   },
   drawStart(c, T) {
     const p = ktAt(T, 0), sq = T.w / 10;
@@ -1104,7 +1118,7 @@ const Kart = {
   panel(c, x, y, w, h, r = 14) { c.fillStyle = 'rgba(12,14,30,.62)'; ktRR(c, x, y, w, h, r); c.fill(); c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 1; c.stroke(); },
   hud(c, W, H, now) {
     // 낮은 화면(휴대폰 가로)은 휴대폰 배치: 속도 · 아이템 칸을 위쪽에 (아래 모서리는 가상 패드 자리)
-    const R = this.R, me = R.me, mob = W < 640 || H < 400, u = mob ? clamp(W / 420, 0.72, 0.95) : clamp(W / 1100, 0.85, 1.2);
+    const R = this.R, me = R.me, mob = W < 640 || H < 400 || (TOUCH && KTouch.on && !KTouch.port), u = mob ? clamp(W / 420, 0.72, 0.95) : clamp(W / 1100, 0.85, 1.2);
     const F = (px, fam = '"Black Han Sans", sans-serif') => `${Math.round(px * u)}px ${fam}`;
     const BH = '"Black Han Sans", sans-serif', NS = '"Noto Sans KR", sans-serif';
     c.textBaseline = 'alphabetic';
@@ -1190,6 +1204,11 @@ const Kart = {
       c.lineWidth = 6; c.strokeStyle = 'rgba(0,0,0,.35)';
       const txt = n > 3 ? '준비' : String(n);
       c.strokeText(txt, W / 2, H * 0.45); c.fillText(txt, W / 2, H * 0.45);
+      if (TOUCH && !R.attract && me.local) {                                       // 휴대폰: 출발 부스터 타이밍 안내
+        c.font = F(15, BH); c.lineWidth = 4; c.strokeStyle = 'rgba(0,0,0,.5)'; c.fillStyle = me.th0 != null && me.th0 > 0.6 ? '#ffb4a2' : '#7cf2ff';
+        const tip = me.th0 != null && me.th0 > 0.6 ? '너무 빨라요! 손을 뗐다가 출발 직전에 다시' : '출발 직전에 조이스틱을 잡으면 출발 부스터!';
+        c.strokeText(tip, W / 2, H * 0.45 + 62 * u); c.fillText(tip, W / 2, H * 0.45 + 62 * u);
+      }
     } else if (R.t < 0.9 && !R.attract) {
       c.globalAlpha = 1 - R.t / 0.9; c.fillStyle = '#2ed573'; c.font = F(84 + R.t * 40, BH);
       c.lineWidth = 6; c.strokeStyle = 'rgba(0,0,0,.35)'; c.strokeText('출발!', W / 2, H * 0.45); c.fillText('출발!', W / 2, H * 0.45); c.globalAlpha = 1;
@@ -1254,22 +1273,163 @@ const Kart = {
   },
 };
 
+/* ═════════ 휴대폰 · 태블릿 조작: 왼손 엄지 조이스틱(밀어서 조종) + 오른손 엄지 버튼 ═════════
+ *  - 조이스틱은 왼쪽 아무 데나 엄지를 대면 그 자리에 생겨요(떠 있는 조이스틱). 멀리 밀면 받침이 따라와요.
+ *    방향 조종(기본): 화면에서 가고 싶은 쪽으로 밀면 차가 그쪽으로 돌아요 (가로 화면처럼 화면이 안 돌아도 헷갈리지 않게)
+ *    핸들 조종: 좌우로 민 만큼 핸들을 꺾어요 (키보드 ← → 와 같은 방식, 아날로그)
+ *  - 오른쪽: 드리프트(가장 크게 · 엄지가 쉬는 자리) · 아이템 · 브레이크. 드리프트 버튼 색 = 모인 대시(흰색 → 파랑 → 주황)
+ *  - 세로 화면은 화면 아래 띠(엄지 자리)에, 가로 화면은 길 위에 떠 있어요. 앱을 내리면 누르던 것은 모두 놓아요. */
+const KTouch = {
+  el: null, zone: null, joy: null, knob: null, stick: null, on: false, port: true, s: 1, R: 54, strip: 160, home: { x: 80, y: 600 },
+  mode: 'dir', DEAD: 0.2, lv: null, has: null, hintT: 0,
+  init() {
+    if (!TOUCH || this.el) return;
+    const el = this.el = document.createElement('div');
+    el.id = 'kt-touch'; el.className = 'hidden'; el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = `<div class="kt-zone" id="kt-zone"><div class="kt-joy idle" id="kt-joy"><i class="kt-base"><s class="l"></s><s class="r"></s><s class="u"></s><s class="d"></s></i>
+        <i class="kt-knob" id="kt-knob"><b class="kt-kic" id="kt-kic">${icon('arrow-up')}</b></i><span class="kt-zhint" id="kt-zhint">엄지로 밀어서 조종</span></div></div>
+      <button class="kt-b kt-drift" data-code="ShiftLeft" tabindex="-1">${icon('route')}<small>드리프트</small></button>
+      <button class="kt-b kt-item" data-code="KeyE" tabindex="-1">${icon('sparkles')}<small>아이템</small></button>
+      <button class="kt-b kt-brake" data-code="ArrowDown" tabindex="-1">${icon('hand-stop')}<small>브레이크</small></button>`;
+    document.body.append(el);
+    this.zone = el.querySelector('#kt-zone'); this.joy = el.querySelector('#kt-joy'); this.knob = el.querySelector('#kt-knob'); this.kic = el.querySelector('#kt-kic');
+    this.drift = el.querySelector('.kt-drift'); this.item = el.querySelector('.kt-item');
+    const z = this.zone;
+    z.addEventListener('pointerdown', e => this.down(e));
+    z.addEventListener('pointermove', e => this.move(e));
+    for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) z.addEventListener(t, e => this.up(e));
+    for (const b of el.querySelectorAll('.kt-b')) {
+      b.addEventListener('pointerdown', e => this.press(e, b));
+      for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(t, e => this.release(e, b));
+    }
+    el.addEventListener('contextmenu', e => e.preventDefault());                 // 길게 눌러도 메뉴 · 글자 고르기가 뜨지 않게
+    addEventListener('resize', () => { if (this.on) this.layout(); });
+    addEventListener('blur', () => this.reset());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.reset(); });
+  },
+  /** 화면 방향 · 크기에 맞춰 엄지 자리 다시 정하기 */
+  layout() {
+    const el = this.el; if (!el) return;
+    const W = innerWidth, H = innerHeight;
+    this.port = H >= W;
+    this.s = clamp(Math.min(W, H) / 390, 1, 1.32);                               // 태블릿은 조금 크게
+    this.strip = Math.round(clamp(H * 0.19, 138, 200));
+    this.R = Math.round(52 * this.s);
+    el.classList.toggle('port', this.port); el.classList.toggle('land', !this.port);
+    el.style.setProperty('--s', this.s.toFixed(3)); el.style.setProperty('--strip', this.strip + 'px');
+    el.style.setProperty('--jr', this.R + 'px'); el.style.setProperty('--kr', Math.round(this.R * 0.48) + 'px');
+    el.classList.toggle('wheel', this.mode === 'wheel');
+    // 조이스틱 자리는 버튼 왼쪽까지만 (세로 화면은 한 줄 띠라서 버튼과 겹치지 않게)
+    const bl = Math.min(...[...el.querySelectorAll('.kt-b')].map(b => b.getBoundingClientRect().left));
+    this.zone.style.width = this.port && isFinite(bl) ? Math.max(120, Math.round(bl - 14)) + 'px' : '';
+    const r = this.zone.getBoundingClientRect();
+    this.home = this.port
+      ? { x: r.left + clamp(r.width * 0.42, this.R + 16, r.width - this.R - 8), y: r.top + r.height / 2 }
+      : { x: r.left + clamp(r.width * 0.34, this.R + 26, r.width - this.R), y: r.top + r.height * 0.66 };
+    this.draw();
+  },
+  /* ── 조이스틱 ── */
+  down(e) {
+    if (this.stick || !this.on) return;
+    e.preventDefault();
+    const m = this.R + 4, x = clamp(e.clientX, m, innerWidth - m), y = clamp(e.clientY, m, innerHeight - m);
+    this.stick = { id: e.pointerId, bx: x, by: y, x: e.clientX, y: e.clientY };
+    try { this.zone.setPointerCapture(e.pointerId); } catch { /* 무시 */ }
+    this.hintT = 0; this.el.classList.add('nohint');
+    this.draw();
+  },
+  move(e) {
+    const s = this.stick; if (!s || e.pointerId !== s.id) return;
+    e.preventDefault();
+    s.x = e.clientX; s.y = e.clientY;
+    const dx = s.x - s.bx, dy = s.y - s.by, d = Math.hypot(dx, dy), R = this.R;
+    if (d > R) { const k = (d - R) / d; s.bx += dx * k; s.by += dy * k; }        // 손가락이 받침 밖으로 나가면 받침이 따라와요
+    this.draw();
+  },
+  up(e) { const s = this.stick; if (!s || e.pointerId !== s.id) return; this.stick = null; this.draw(); },
+  /** 조이스틱 방향 · 세기 (안 잡았으면 null) */
+  vec() {
+    const s = this.stick; if (!s) return null;
+    const dx = s.x - s.bx, dy = s.y - s.by;
+    return { dx, dy, m: Math.min(1, Math.hypot(dx, dy) / this.R), a: Math.atan2(dy, dx) };
+  },
+  /** 카트 핸들 값 (-1 ~ 1) · viewRot = 화면이 돌아간 만큼 (세로 화면) */
+  steer(k, viewRot) {
+    const v = this.vec(); if (!v) return null;
+    if (this.mode === 'wheel') {
+      const x = clamp(v.dx / this.R, -1, 1), dz = 0.1, ax = Math.abs(x);
+      return ax < dz ? 0 : Math.sign(x) * Math.pow((ax - dz) / (1 - dz), 1.25);   // 가운데는 섬세하게, 끝까지 밀면 최대
+    }
+    if (v.m < this.DEAD) return 0;
+    const want = v.a - (viewRot || 0);                                           // 화면 방향 → 트랙(세상) 방향
+    return clamp(ktWrap(want - k.a) * 2.3, -1, 1);
+  },
+  draw() {
+    if (!this.joy) return;
+    const s = this.stick, r = this.zone.getBoundingClientRect();
+    const bx = s ? s.bx : this.home.x, by = s ? s.by : this.home.y;
+    this.joy.style.transform = `translate(${Math.round(bx - r.left)}px, ${Math.round(by - r.top)}px)`;
+    let kx = 0, ky = 0;
+    if (s) { const dx = s.x - s.bx, dy = s.y - s.by, d = Math.hypot(dx, dy), f = d > this.R ? this.R / d : 1; kx = dx * f; ky = dy * f; }
+    if (this.mode === 'wheel') ky = 0;
+    this.knob.style.transform = `translate(${Math.round(kx)}px, ${Math.round(ky)}px)`;
+    this.kic.style.transform = this.mode === 'wheel' ? `rotate(${Math.round(clamp(kx / this.R, -1, 1) * 100)}deg)`
+      : s && Math.hypot(kx, ky) > this.R * this.DEAD ? `rotate(${(Math.atan2(ky, kx) + Math.PI / 2).toFixed(3)}rad)` : '';
+    this.joy.classList.toggle('idle', !s);
+  },
+  /* ── 오른쪽 버튼 ── */
+  press(e, b) {
+    e.preventDefault();
+    if (!this.on || b.classList.contains('on')) return;
+    try { b.setPointerCapture(e.pointerId); } catch { /* 무시 */ }
+    const code = b.dataset.code;
+    b.classList.add('on'); Keys.add(code);
+    if (code === 'KeyE') Kart.key({ code, repeat: false, ctrlKey: false, metaKey: false, preventDefault() {} });
+    if (code !== 'ArrowDown' && navigator.vibrate) { try { navigator.vibrate(8); } catch { /* 무시 */ } }   // 안드로이드: 살짝 떨림
+  },
+  release(e, b) { if (!b.classList.contains('on')) return; b.classList.remove('on'); Keys.delete(b.dataset.code); },
+  /** 누르던 것 모두 놓기 (앱을 내리거나 게임이 끝날 때 — 드리프트 · 브레이크가 눌린 채로 남지 않게) */
+  reset() {
+    this.stick = null;
+    if (this.el) for (const b of this.el.querySelectorAll('.kt-b.on')) { b.classList.remove('on'); Keys.delete(b.dataset.code); }
+    this.draw();
+  },
+  /** 매 화면: 보일 때인지 · 드리프트 단계 · 아이템 준비 */
+  sync() {
+    if (!this.el) return;
+    const R = Kart.R, ov = $('#overlay');
+    const on = !!(R && !R.attract && R.me && R.me.local && S.screen === 'kart' && !(ov && ov.classList.contains('show')));   // 구경할 때는 안 보여요
+    if (on !== this.on) {
+      this.on = on;
+      this.el.classList.toggle('hidden', !on);
+      if (on) { this.mode = Kart.cfg.stick === 'wheel' ? 'wheel' : 'dir'; this.layout(); this.hintT = 6; this.el.classList.remove('nohint'); } else this.reset();
+      Kart.fitted = false;                                                       // 세로 화면은 조작 띠만큼 길이 짧아져요
+    }
+    if (!on) return;
+    const me = R.me;
+    const lv = me && me.drift ? (me.driftT >= KT.DRIFT_LV[1] ? 2 : me.driftT >= KT.DRIFT_LV[0] ? 1 : 0) : -1;
+    if (lv !== this.lv) { this.lv = lv; this.drift.dataset.lv = lv; }
+    const has = !!(me && me.items.length && me.itemSpin <= 0 && me.fin == null);
+    if (has !== this.has) { this.has = has; this.item.classList.toggle('has', has); }
+    if (this.hintT > 0 && R.go) { this.hintT -= 1 / 60; if (this.hintT <= 0) this.el.classList.add('nohint'); }
+    const fin = !!(me && me.fin != null);
+    if (fin !== this.fin) { this.fin = fin; this.el.classList.toggle('fin', fin); if (fin) this.reset(); }   // 골인하면 흐리게 (자동으로 달려요)
+  },
+};
+try { const st = store.get('kt_cfg', ''); if (st) Object.assign(Kart.cfg, JSON.parse(st)); } catch { /* 저장된 설정이 깨졌으면 기본값 */ }   // 멀티로 바로 들어와도 고른 조이스틱 방식을 써요
+KTouch.init();
+
 register('kart', {
   solo: () => Kart.solo(),
   stop: () => Kart.stop(),
   key: e => Kart.key(e),
-  padSide: false,                                   // 가로 화면에서도 패드는 화면 위에 떠 있어요 (넓은 길이 패드 사이로 보이게)
-  pad: ['ArrowLeft', 'ArrowRight', '|', 'ArrowDown', 'ShiftLeft', 'KeyE'],
-  padLabel: {
-    ArrowDown: `<span class="kt-pad">${icon('hand-stop')}<small>브레이크</small></span>`,
-    ShiftLeft: `<span class="kt-pad">${icon('route')}<small>드리프트</small></span>`,
-    KeyE: `<span class="kt-pad">${icon('sparkles')}<small>아이템</small></span>`,
-  },
+  // 휴대폰 · 태블릿은 공용 가상 패드 대신 전용 조작(KTouch: 왼손 조이스틱 + 오른손 버튼)을 써요
 });
 Object.assign(ACT, {
   ktCfg: el => {
     const k = el.dataset.k, v = el.dataset.v, prevTrack = Kart.cfg.track;
-    Kart.cfg[k] = k === 'mode' ? v : +v;
+    Kart.cfg[k] = k === 'mode' || k === 'stick' ? v : +v;
+    if (k === 'stick') KTouch.mode = v === 'wheel' ? 'wheel' : 'dir';
     store.set('kt_cfg', JSON.stringify(Kart.cfg));
     Kart.renderSetup();
     if ((k === 'track' && prevTrack !== Kart.cfg.track) || k === 'mode') { stopLocal(); S.solo = null; Kart.attract(); }

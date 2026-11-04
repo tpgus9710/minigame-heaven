@@ -4,7 +4,7 @@
 const TableKit = require('../public/js/shared/table');
 const CORES = {};
 for (const name of ['marble', 'life', 'mafia', 'thief', 'yut', 'yacht', 'blackjack', 'liardice', 'davinci', 'reversi',
-  'rummi', 'bang', 'coup', 'dalmuti', 'relay']) {
+  'rummi', 'bang', 'coup', 'dalmuti', 'relay', 'chess', 'gostop']) {
   try { CORES[name] = require(`../public/js/shared/${name}-core`); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
 }
 const BOT_NAMES = ['봇 알파', '봇 브라보', '봇 찰리', '봇 델타', '봇 에코', '봇 폭스', '봇 골프', '봇 호텔'];

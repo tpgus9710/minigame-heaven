@@ -1,0 +1,149 @@
+/* v11 게임 설명서 (public/js/manual.js) · 따라 하기 튜토리얼 (public/js/tutorial.js) */
+.man-modal{width:min(720px,100%);text-align:left;padding:22px 24px 20px;position:relative}
+.man-modal h2{font-size:26px;margin:0;line-height:1.2}
+.man-x{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
+.man-x:hover{color:var(--text)}
+.man-x .ic{width:18px;height:18px}
+.man-head{display:flex;align-items:center;gap:12px;padding-right:40px;margin-bottom:6px}
+.man-head .gi{width:46px;height:46px;border-radius:14px;flex:none}
+.man-head .gi .ic{width:26px;height:26px}
+.man-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px;font-size:13px;color:var(--muted)}
+.man-lv{display:inline-block;font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:99px;line-height:1.4}
+.man-lv.lv1{background:color-mix(in srgb,var(--good) 22%,transparent);color:var(--good)}
+.man-lv.lv2{background:color-mix(in srgb,var(--warn) 24%,transparent);color:var(--warn)}
+.man-lv.lv3{background:color-mix(in srgb,var(--bad) 22%,transparent);color:var(--bad)}
+.man-modes{margin:4px 0 10px;font-size:13.5px;color:var(--muted);line-height:1.5}
+.man-modes b{color:var(--text)}
+.man-modes .ic{display:inline-block;width:16px;height:16px;vertical-align:-3px;margin:0 2px;color:var(--good)}
+.man-goal{display:flex;gap:10px;align-items:flex-start;margin:10px 0 12px;padding:12px 14px;border-radius:14px;font-size:15.5px;line-height:1.5;color:var(--text)!important;
+  background:color-mix(in srgb,var(--accent) 12%,var(--panel2));border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line))}
+.man-goal .ic{width:22px;height:22px;flex:none;color:var(--accent);margin-top:1px}
+.man-modal h4{margin:14px 0 6px;font-size:13px;letter-spacing:.02em;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-weight:800}
+.man-modal ul{margin:0;padding-left:20px;line-height:1.6;font-size:15px}
+.man-modal li{margin:3px 0}
+.man-modal li::marker{color:var(--accent)}
+.man-core li{font-size:15.5px}
+.man-acts{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+.man-acts .btn .ic{width:18px;height:18px}
+.man-room-tut{margin:0;font-size:13.5px;line-height:1.5;color:var(--muted)} .man-room-tut .ic{display:inline-block;width:17px;height:17px;vertical-align:-3px;margin-right:5px;color:var(--good)} .man-room-tut b{color:var(--text)}
+.man-more{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;padding:12px;border-radius:14px;border:1px dashed var(--line);background:transparent;color:var(--text);
+  cursor:pointer;font:700 15px 'Noto Sans KR',sans-serif}
+.man-more:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.man-more .ic{width:18px;height:18px}
+.man-more.open .man-chev{transform:rotate(180deg)}
+.man-more.up{margin-top:18px}
+.man-detail{margin-top:6px;animation:pop .25s}
+.man-detail.hidden{display:none}
+.man-detail section{margin-top:18px}
+.man-detail h3{display:flex;align-items:center;gap:8px;font-size:18px;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.man-detail h3 .ic{width:20px;height:20px;color:var(--accent)}
+.man-detail p{margin:6px 0;line-height:1.65;font-size:15px;color:var(--text)!important}
+.man-tips h3 .ic{color:#f6a623!important}
+.man-miss h3 .ic{color:var(--bad)!important}
+.man-tbl{overflow-x:auto;margin:6px 0;border:1px solid var(--line);border-radius:12px}
+.man-tbl table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.45}
+.man-tbl th,.man-tbl td{padding:7px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.man-tbl th{background:var(--panel2);font-weight:800;white-space:nowrap}
+.man-tbl tr:last-child td{border-bottom:none}
+.man-wait{padding:30px 0}
+/* 설명서 모음 */
+.man-cats{margin:10px 0 12px}
+.man-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.man-item{position:relative;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;text-align:left}
+.man-item:hover{border-color:var(--accent)}
+.man-item > span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.man-item b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.man-item small{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);min-height:18px}
+.man-item .gi.sm{width:34px;height:34px;border-radius:10px;flex:none}
+.man-tut{position:absolute;top:6px;right:8px;color:var(--good)} .man-tut .ic{width:16px;height:16px}
+.man-read{position:absolute;bottom:6px;right:9px;font-style:normal;font-weight:900;font-size:12px;color:var(--good)}
+/* 메뉴 카드의 ? · 게임 화면 설명서 버튼 · 대기실 · 처음 화면 */
+.game-card{position:relative}
+.gc-help{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:900 14px/1 'Noto Sans KR',sans-serif;font-style:normal;
+  background:var(--panel);border:1px solid var(--line);color:var(--muted);z-index:2}
+.gc-help:hover{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--panel))}
+.game-card.hq .new-badge{right:42px}                     /* NEW · UP 배지는 ? 왼쪽에 */
+.gh-man{display:inline-flex;align-items:center;gap:6px}
+.gh-man .ic{width:17px;height:17px}
+body.gaming .game-head .gh-man{padding:6px 10px;font-size:14px;border-radius:11px}
+@media (max-width:560px){ .gh-man .gh-mt{display:none} body.gaming .game-head .gh-man{padding:6px 8px} }
+.lobby-man{display:flex;align-items:center;gap:6px;margin-top:10px}
+.lobby-man .ic{width:16px;height:16px}
+.home-man{display:flex;align-items:center;gap:12px;width:min(560px,100%);margin:14px auto 0;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;text-align:left}
+.home-man:hover{border-color:var(--accent)}
+.home-man > i:first-child{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#f6a623,#e8590c);color:#fff;flex:none}
+.home-man > i:first-child .ic{width:22px;height:22px}
+.home-man > i:last-child{margin-left:auto;color:var(--muted)} .home-man > i:last-child .ic{width:18px;height:18px}
+.home-man span{display:flex;flex-direction:column;gap:2px} .home-man b{font-size:16px} .home-man small{color:var(--muted);font-size:12.5px}
+/* 처음 하는 게임 안내 */
+.man-hint{position:fixed;z-index:140;left:50%;bottom:18px;transform:translateX(-50%);width:min(560px,calc(100vw - 24px));display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:10px 40px 10px 14px;border-radius:16px;background:var(--panel);border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:0 14px 40px rgba(0,0,0,.45);
+  font-size:14px;line-height:1.45;animation:pop .3s;transition:opacity .5s,transform .5s}
+.man-hint.out{opacity:0;transform:translate(-50%,12px)}
+@media (pointer:coarse){                                   /* 휴대폰 · 태블릿: 아래쪽은 게임 버튼 · 조이스틱 자리라서 안내는 위에 */
+  .man-hint{top:calc(env(safe-area-inset-top,0px) + 58px);bottom:auto}
+  .man-hint.out{transform:translate(-50%,-12px)}
+}
+.man-hint > .ic{width:20px;height:20px;color:var(--accent);flex:none}
+.man-hint > span{flex:1;min-width:180px}
+.man-hx{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:8px;border:none;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
+.man-hx .ic{width:16px;height:16px}
+@media (max-width:560px){
+  .overlay:has(.man-modal){padding:0}
+  .man-modal{width:100%;max-height:100dvh!important;height:100dvh;border-radius:0;padding:16px 14px 18px}
+  .man-modal h2{font-size:22px}
+  .man-modal ul{font-size:14.5px}
+  .man-grid{grid-template-columns:1fr 1fr}
+  .man-item{padding:8px 9px;gap:8px}
+  .man-item .gi.sm{width:30px;height:30px}
+  .man-item b{font-size:14px}
+}
+/* ─── 따라 하기 (public/js/tutorial.js) ─── */
+body.tut-on .screen.active .mode-row,body.tut-cont .screen.active .mode-row{display:none!important}
+.tut-ring{position:fixed;z-index:120;pointer-events:none;border-radius:14px;
+  box-shadow:0 0 0 3px #ffd43b,0 0 0 9999px rgba(6,8,22,var(--tut-dim,.4));transition:left .22s ease,top .22s ease,width .22s ease,height .22s ease;animation:tutPulse 1.5s ease-in-out infinite}
+.tut-ring.hidden{display:none}
+@keyframes tutPulse{50%{box-shadow:0 0 0 6px #ffd43b,0 0 0 9999px rgba(6,8,22,var(--tut-dim,.4))}}
+.tut-box{position:fixed;z-index:130;left:8px;top:8px;width:min(440px,calc(100vw - 16px));box-sizing:border-box;padding:10px 14px 12px;border-radius:18px;
+  background:var(--panel);color:var(--text);border:2px solid #ffd43b;box-shadow:0 18px 50px rgba(0,0,0,.5);overflow:hidden}
+.tut-box.mid{width:min(560px,calc(100vw - 16px))}
+.tut-box.pop{animation:tutPop .28s ease}
+.tut-box.nudge{animation:tutNudge .45s ease}
+@keyframes tutPop{from{opacity:.4;transform:translateY(6px)}}
+@keyframes tutNudge{20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+.tut-hd{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none;margin:0 -4px 4px}
+.tut-hd b{color:var(--text);font-size:13.5px}
+.tut-ic{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;background:#ffd43b;color:#3b2f00;flex:none}
+.tut-ic .ic{width:16px;height:16px}
+.tut-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.tut-n{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tut-b{width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0;flex:none}
+.tut-b:hover{background:var(--panel2);color:var(--text)}
+.tut-b .ic{width:17px;height:17px}
+.tut-say{font-size:15.5px;line-height:1.6}
+.tut-say b{color:var(--accent)}
+.tut-say .tut-done{font-size:18px;color:var(--good)}
+.tut-ft{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;margin-top:8px}
+.tut-ft .btn .ic{width:16px;height:16px}
+.tut-do{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:800;color:#e8a400}
+.tut-do .ic{width:17px;height:17px;animation:tutTap 1.2s ease-in-out infinite}
+@keyframes tutTap{50%{transform:translateY(3px) scale(.92)}}
+.tut-wait{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--muted)}
+.tut-wait i{width:6px;height:6px;border-radius:50%;background:currentColor;animation:tutDot 1s ease-in-out infinite}
+.tut-wait i:nth-child(2){animation-delay:.15s} .tut-wait i:nth-child(3){animation-delay:.3s;margin-right:4px}
+@keyframes tutDot{50%{opacity:.25;transform:translateY(-3px)}}
+.tut-pg{position:absolute;left:0;right:0;bottom:0;height:3px;background:color-mix(in srgb,#ffd43b 25%,transparent)}
+.tut-pg i{display:block;height:100%;background:#ffd43b;transition:width .3s}
+.tut-box.min .tut-say,.tut-box.min .tut-ft{display:none}
+.tut-box.min .tut-hd{margin-bottom:0}
+@media (max-width:560px){
+  .tut-box{padding:8px 11px 10px;border-radius:15px}
+  .tut-say{font-size:14.5px;line-height:1.55}
+  .tut-ft{margin-top:6px}
+}
+.gc-tut{display:inline-flex;align-items:center;gap:4px;align-self:flex-start;margin-top:2px;padding:3px 10px 3px 7px;border-radius:99px;font:800 12px/1.3 'Noto Sans KR',sans-serif;
+  color:#b78300;background:color-mix(in srgb,#ffd43b 22%,transparent);border:1px solid color-mix(in srgb,#ffd43b 50%,transparent)}
+:root[data-theme=dark] .gc-tut{color:#ffd43b}
+.gc-tut .ic{width:14px;height:14px}
+.gc-tut:hover{background:color-mix(in srgb,#ffd43b 35%,transparent)}
+.gc-tut.done{opacity:.8}

@@ -2,7 +2,7 @@
  *  🂡 블랙잭 화면 (규칙: shared/blackjack-core.js) — 카지노 테이블 · 칩 · 딜링 애니메이션
  * ===================================================================== */
 makeScreen('blackjack', {
-  title: '🂡 블랙잭', status: '딜러보다 21에 가깝게! 21을 넘으면 버스트. 블랙잭은 1.5배!',
+  title: '🂡 블랙잭', status: '딜러보다 21에 가깝게! 21을 넘으면 버스트. 블랙잭은 건 칩의 2.5배로 돌려받아요!',
   stats: [['round', '라운드'], ['chips', '내 칩'], ['time', '남은 시간']],
   body: `<div class="mode-row" id="bj-solo"><span class="muted small">함께할 AI</span>
       <button class="seg-btn" data-act="bjSolo" data-bots="0">없음</button><button class="seg-btn on" data-act="bjSolo" data-bots="2">2명</button><button class="seg-btn" data-act="bjSolo" data-bots="4">4명</button></div>

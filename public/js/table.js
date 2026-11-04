@@ -30,14 +30,14 @@ const Table = {
     const d = this.defs[key], so = Object.assign({}, d.solo || {}, soloOpts || {});
     const players = [{ id: 'me', name: nick() }];
     for (let i = 0; i < (so.bots ?? 1); i++) players.push({ id: 'bot' + i, name: BOT_NAMES[i % BOT_NAMES.length], bot: true });
-    const c = this.cur = { key, mode: 'solo', me: 'me', view: null, prev: null, so, players };
+    const c = this.cur = { key, mode: 'solo', me: 'me', view: null, prev: null, so, players, tut: !!so.tut };
     S.solo = key;
-    c.T = TableKit.createTable(d.core, players, {
+    c.T = TableKit.createTable(so.core || d.core, players, {
       rnd: Math.random, opts: so.opts || {}, timeouts: false,
       setTimer: (fn, ms) => after(ms, fn), clearTimer: t => clearTimeout(t),
       onUpdate: () => { if (this.cur === c) this.refresh(); },
       onEnd: res => { if (this.cur === c) this.endSolo(c, res); },
-      log: m => console.warn(m),
+      log: m => { if (!(c.tut && /no-move/.test(m))) console.warn(m); },
     });
     show(key);
     this.refresh();
@@ -49,6 +49,7 @@ const Table = {
     const d = this.defs[c.key];
     try { d.render(c.view, this.ctx(), c.prev); } catch (e) { console.error(e); }
     c.prev = c.view;
+    if (c.tut && typeof Tutorial !== 'undefined') Tutorial.painted(c);       // 따라 하기: 다음 단계로 갈 때인지
     if (c.mode === 'multi' && typeof Sound !== 'undefined') Sound.turn(c.key, c.view.myTurn);    // 멀티: 내 차례가 오면 '띵동'
   },
   send(a) {
@@ -69,8 +70,8 @@ const Table = {
     const rk = res.ranking || [], mine = rk.find(r => r.id === 'me');
     const top = rk.filter(r => rk.length && r.value === rk[0].value);
     const win = c.players.length > 1 && (Array.isArray(res.winners) ? res.winners.includes('me') : !/무승부/.test(res.title || '') && top.some(r => r.id === 'me'));
-    const rec = mine && typeof mine.score === 'number' ? { v: mine.score } : undefined;
-    after(1500, () => showResult({ title: res.title, subtitle: res.subtitle || '', lines: res.lines || [], ranking: rk.map(r => ({ name: name(r.id), value: r.value })), solo: c.key, win, rec }));
+    const rec = mine && typeof mine.score === 'number' && !c.tut ? { v: mine.score } : undefined;      // 따라 하기 판(정해 둔 패)은 기록 X
+    after(1500, () => showResult({ title: res.title, subtitle: res.subtitle || '', lines: res.lines || [], ranking: rk.map(r => ({ name: name(r.id), value: r.value })), solo: c.key, win: win && !c.tut, rec, tut: c.tut }));
   },
   stop(key) { const c = this.cur; if (c && (!key || c.key === key)) { if (c.T) c.T.stop(); this.cur = null; } },
   startMulti(key) {

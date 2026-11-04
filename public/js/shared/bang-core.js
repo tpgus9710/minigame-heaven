@@ -77,6 +77,12 @@
   const SUIT = { S: '♠', H: '♥', D: '♦', C: '♣' };
   const RANK = r => ({ 1: 'A', 11: 'J', 12: 'Q', 13: 'K' }[r] || String(r));
   const cardLabel = c => `${CARDS[c.k].name}(${SUIT[c.s]}${RANK(c.r)})`;
+  /** 받침에 맞는 조사: jo('리볼버', '을', '를') → 리볼버를 · jo('레버 소총', '을', '를') → 레버 소총을 (카드 표시 끝의 (♠3) 같은 괄호는 빼고 봐요) */
+  const jo = (w, a, b) => {
+    const t = String(w).replace(/\([^)]*\)\s*$/, '').replace(/[^가-힣0-9A-Za-z]+$/, ''), ch = t.slice(-1), k = ch.charCodeAt(0) - 0xAC00;
+    const bat = k >= 0 && k <= 11171 ? k % 28 !== 0 : /[013678]$/.test(ch);
+    return w + (bat ? a : b);
+  };
 
   const P = (s, id) => s.players.find(p => p.id === id);
   const cur = s => s.players[s.turn];
@@ -229,7 +235,7 @@
   }
   function drawPhase(s, p, from) {
     let first = null;
-    if (from === 'discard' && p.char === 'pepe' && s.discard.length) { first = s.discard.pop(); note(s, `${nm(p)} 님이 버린 카드 더미에서 ${cardLabel(first)}을(를) 가져왔어요.`, 'info'); }
+    if (from === 'discard' && p.char === 'pepe' && s.discard.length) { first = s.discard.pop(); note(s, `${nm(p)} 님이 버린 카드 더미에서 ${jo(cardLabel(first), '을', '를')} 가져왔어요.`, 'info'); }
     else if (p.char === 'finn' && from && from !== 'deck') {
       const t = P(s, from);
       if (t && t.alive && t !== p && t.hand.length) { first = takeRandom(s, t); hostile(s, p, t, 0.5); note(s, `${nm(p)} 님이 ${nm(t)} 님 손에서 카드 한 장을 슬쩍했어요!`, 'info'); }
@@ -392,13 +398,13 @@
         const old = gun(p);
         if (old) { p.inPlay.splice(p.inPlay.indexOf(old), 1); toDiscard(s, old); }
         p.inPlay.push(c);
-        note(s, `${nm(p)} 님이 ${info.name}을(를) 들었어요. (사정거리 ${info.range})`, 'info', { fx: 'equip', id: p.id });
+        note(s, `${nm(p)} 님이 ${jo(info.name, '을', '를')} 들었어요. (사정거리 ${info.range})`, 'info', { fx: 'equip', id: p.id });
       } else if (k === 'jail') {
         t.inPlay.push(c); hostile(s, p, t, 1.5);
         note(s, t === p ? `${nm(p)} 님이 스스로 감옥에 들어갔어요!` : `${nm(p)} 님이 ${nm(t)} 님을 감옥에 넣었어요!`, 'bad', { fx: 'jail', from: p.id, to: t.id });
       } else {
         p.inPlay.push(c);
-        note(s, `${nm(p)} 님이 ${info.name}을(를) 내려놓았어요.`, 'info', { fx: 'equip', id: p.id });
+        note(s, `${nm(p)} 님이 ${jo(info.name, '을', '를')} 내려놓았어요.`, 'info', { fx: 'equip', id: p.id });
       }
       return;
     }
@@ -423,8 +429,8 @@
         const bad = got && (got.k === 'jail' || got.k === 'dynamite');
         if (!bad) hostile(s, p, t, 1);
         const what = a.pick != null && a.pick !== 'hand' ? CARDS[got.k].name : '손에 든 카드';
-        if (k === 'panic') { p.hand.push(got); note(s, t === p ? `${nm(p)} 님이 앞에 놓인 ${what}을(를) 손으로 다시 가져왔어요.` : `${nm(p)} 님이 ${nm(t)} 님의 ${what}을(를) 빼앗았어요!`, 'info', { fx: 'steal', from: t.id, to: p.id }); }
-        else { toDiscard(s, got); note(s, `${nm(p)} 님 훼방! ${nm(t)} 님의 ${what === '손에 든 카드' ? cardLabel(got) : what}이(가) 버려졌어요.`, 'info', { fx: 'trash', id: t.id }); }
+        if (k === 'panic') { p.hand.push(got); note(s, t === p ? `${nm(p)} 님이 앞에 놓인 ${jo(what, '을', '를')} 손으로 다시 가져왔어요.` : `${nm(p)} 님이 ${nm(t)} 님의 ${jo(what, '을', '를')} 빼앗았어요!`, 'info', { fx: 'steal', from: t.id, to: p.id }); }
+        else { toDiscard(s, got); note(s, `${nm(p)} 님 훼방! ${nm(t)} 님의 ${jo(what === '손에 든 카드' ? cardLabel(got) : what, '이', '가')} 버려졌어요.`, 'info', { fx: 'trash', id: t.id }); }
         return;
       }
       case 'duel':
@@ -492,7 +498,7 @@
       if (i < 0) return '가져갈 카드를 골라 주세요.';
       const c = s.store.cards.splice(i, 1)[0];
       p.hand.push(c); s.store.order.shift();
-      note(s, `${nm(p)} 님이 잡화점에서 ${CARDS[c.k].name}을(를) 골랐어요.`, 'info');
+      note(s, `${nm(p)} 님이 잡화점에서 ${jo(CARDS[c.k].name, '을', '를')} 골랐어요.`, 'info');
       storeNext(s);
     } else if (w.kind === 'discard') {
       const ids = Array.isArray(a.ids) ? [...new Set(a.ids)] : [];

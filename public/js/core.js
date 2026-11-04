@@ -65,6 +65,7 @@ function show(id) {
   document.body.classList.toggle('in-room', !!S.code);
   window.scrollTo({ top: 0 });
   if (typeof RoomList !== 'undefined') { if (id === 'multi') RoomList.start(); else RoomList.stop(); }
+  if (typeof Manual !== 'undefined') Manual.seen(id);                 // 처음 하는 게임이면 설명서 안내
   if (typeof Fit !== 'undefined') {
     const gaming = !MENU_IDS.has(id);                // 게임 화면 스타일은 바로 걸어요 (게임이 처음 그릴 때부터 맞는 크기로)
     document.body.classList.toggle('gaming', gaming);
@@ -194,6 +195,21 @@ var Fit = {
   },
 };
 window.addEventListener('resize', () => { if (!Fit.kbd()) Fit.schedule(); });
+/** 정사각형 판(체스 · 스도쿠)을 남은 높이 · 너비에 딱 맞게: 판 크기(name, px)를 이분 탐색으로 정해요.
+ *  (CSS 에서 min(100%, …) 로 정하면 글자 크기 · 그림자처럼 %가 다르게 풀리는 곳에서 틀어져서, 숫자로 넣어요) */
+function fitSquare(sec, wrap, name, lo = 220, hi = 720) {
+  if (!sec || !wrap || !sec.classList.contains('active')) return 0;
+  const z = +(sec.dataset.z || 1) || 1;
+  const room = typeof Fit !== 'undefined' && Fit.room ? Fit.room(sec) : window.innerHeight - sec.getBoundingClientRect().top;
+  const H = Math.floor(room - (wrap.getBoundingClientRect().top - sec.getBoundingClientRect().top) / z - 3);
+  const fits = v => { sec.style.setProperty(name, v + 'px'); return wrap.offsetHeight <= H && wrap.scrollWidth <= wrap.clientWidth + 1; };
+  if (fits(hi)) return hi;
+  if (!fits(lo)) return lo;                                  // 아주 작은 화면: 가장 작게 (나머지는 Fit 이 줄여요)
+  let a = lo, b = hi;
+  while (b - a > 1) { const m = (a + b) >> 1; if (fits(m)) a = m; else b = m; }
+  sec.style.setProperty(name, a + 'px');
+  return a;
+}
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => Fit.schedule());
 window.addEventListener('orientationchange', () => setTimeout(() => Fit.schedule(), 200));
 
@@ -314,6 +330,14 @@ const GAME_INFO = {
     rules: '흑과 백이 번갈아 돌을 놓아요. 놓을 때 <b>상대 돌을 내 돌 사이에 끼우면</b>(가로 · 세로 · 대각선) 그 돌들이 모두 내 색으로 뒤집혀요. 하나라도 뒤집을 수 있는 칸에만 둘 수 있고, 둘 곳이 없으면 자동으로 넘어가요. 둘 다 더 이상 둘 곳이 없으면 돌이 많은 쪽이 승리! 모서리는 절대 뒤집히지 않아요.' },
   shisen: { icon: '🀄', name: '사천성 대결', desc: '같은 판으로 3분 점수 대결', cat: '퍼즐', players: '1~8명',
     rules: '모두 똑같은 판으로 시작해요. 같은 그림 두 장을 <b>두 번 이하로 꺾인 선</b>으로 이을 수 있으면 사라져요. 선은 빈칸이나 판 바깥으로만 지나갈 수 있어요. 3초 안에 계속 맞히면 콤보 점수! 힌트(-30점)와 섞기도 있어요. 3분 뒤 점수가 가장 높은 사람이 우승!' },
+  sudoku: { icon: '🔢', name: '스도쿠 대결', desc: '같은 퍼즐을 누가 먼저 푸나', cat: '퍼즐', players: '1~8명', isNew: true,
+    rules: '모두 같은 스도쿠를 받아요. 가로줄 · 세로줄 · 3×3 칸마다 1~9가 한 번씩 들어가게 채워서 <b>가장 먼저 다 맞게 채운 사람이 우승</b>! 위쪽 점수는 채운 칸 %예요(맞았는지는 끝날 때까지 비밀). 시간이 다 되면 맞은 칸이 많은 순서로 순위가 정해져요. 메모 · 되돌리기 가능, 힌트는 없어요.' },
+  nonogram: { icon: '🖼️', name: '노노그램 대결', desc: '같은 그림 퍼즐 먼저 칠하기', cat: '퍼즐', players: '1~8명', isNew: true,
+    rules: '모두 같은 노노그램을 받아요. 줄 옆 숫자만큼 이어서 칸을 칠해서(숫자가 여러 개면 덩어리 사이에 빈칸) <b>가장 먼저 모든 줄을 맞힌 사람이 우승</b>! 위쪽 점수는 칠한 칸 %예요. 시간이 다 되면 맞은 칸이 많은 순서. X 표시 · 끌어서 칠하기 · 되돌리기 가능, 힌트는 없어요.' },
+  chess: { icon: '♞', name: '체스', desc: '세계 공통 규칙 체스 · 체스 시계', cat: '보드·카드', players: '2명 · 봇 가능', isNew: true,
+    rules: '백이 먼저 두고 번갈아 말을 한 번씩 움직여요. 상대 <b>킹을 잡을 수밖에 없게(체크메이트)</b> 만들면 승리! 말을 누르면 갈 수 있는 칸이 점으로 보여요(끌어서 옮겨도 돼요). <b>캐슬링</b>(킹 · 룩이 안 움직였고 사이가 비었을 때) · <b>앙파상</b>(바로 전에 두 칸 온 폰을 옆에서 잡기) · <b>프로모션</b>(끝줄에 간 폰은 퀸 · 룩 · 비숍 · 나이트로)도 다 돼요. 스테일메이트 · 같은 국면 3번 · 50수 동안 폰 이동과 잡기 없음 · 서로 체크메이트할 말이 없으면 무승부. 멀티는 <b>체스 시계</b>(정한 시간 + 한 수마다 추가 시간)가 있어서 시간이 다 되면 져요. 무승부 제안 · 기권도 할 수 있어요.' },
+  gostop: { icon: '🎴', name: '고스톱', desc: '2명은 맞고 · 3명은 고스톱 (피망 규칙)', cat: '보드·카드', players: '2~3명 · 봇 가능', isNew: true,
+    rules: '화투 48장 + 보너스피 2장. <b>2명은 맞고</b>(손패 10장 · 7점 나기), <b>3명은 고스톱</b>(손패 7장 · 3점 나기). 내 차례엔 손패 한 장을 내서 바닥의 같은 달 패를 먹고, 더미에서 한 장 뒤집어 또 맞춰요. 점수: <b>광</b> 3장 3점(비광 끼면 2점) · 4장 4점 · 5장 15점 / <b>열끗</b> 5장 1점 · 고도리 5점 / <b>띠</b> 5장 1점 · 홍단 · 청단 · 초단 3점 / <b>피</b> 10장 1점(쌍피 2장). 점수가 나면 <b>고</b>(계속, 1고 +1 · 2고 +2 · 3고부터 두 배씩) 또는 <b>스톱</b>! 흔들기 · 폭탄 · 멍따(열끗 7장)는 두 배, 진 사람은 피박 · 광박 · 고박이면 두 배. 쪽 · 따닥 · 뻑 먹기 · 판쓸 · 폭탄이면 상대 피를 한 장씩 뺏어요. 뻑 3번 · 총통은 바로 승리, 아무도 못 나면 나가리(다음 판 두 배).' },
   rummi: { icon: '🀫', name: '러미 타일', desc: '숫자 타일로 런 · 그룹 만들기 (루미큐브 방식)', cat: '보드·카드', players: '2~4명 · 봇 가능', isNew: true,
     rules: '1~13 숫자 타일 4색 × 2벌과 조커 2개(106개) 중 14개씩 받아요. 같은 색 연속 숫자 3개 이상(<b>런</b>)이나 같은 숫자 다른 색 3~4개(<b>그룹</b>)를 내려놓아요. 첫 등록은 <b>내 타일만으로 합 30 이상</b>! 등록한 뒤에는 바닥의 세트를 떼고 붙여 마음대로 다시 짤 수 있어요(차례가 끝날 때 모든 세트가 맞아야 해요). 낼 게 없으면 타일을 한 장 가져와요. 가장 먼저 타일을 다 내면 승리! 남은 타일 합(조커 30점)이 벌점이에요.' },
   bang: { icon: '⭐', name: '황야의 총잡이', desc: '정체를 숨긴 서부 총격전 (뱅! 방식)', cat: '보드·카드', players: '4~7명 · 봇 가능', isNew: true,
@@ -328,6 +352,10 @@ const GAME_INFO = {
     rules: '방향키(또는 WASD)로 달리고 <b>Shift를 누른 채 꺾으면 드리프트</b>! 드리프트를 길게 하고 놓으면 순간 대시, 스피드전에서는 드리프트로 <b>부스터 게이지</b>가 차서 부스터를 얻어요(Ctrl 또는 E로 사용). 아이템전에서는 아이템 상자를 지나 바나나 · 물풍선 · 미사일 · 실드 · 부스터를 얻어요. 출발 신호 직전에 가속하면 출발 부스터! 벽에 끼면 R 키로 트랙 복귀. 정한 바퀴 수를 가장 먼저 도는 사람이 우승!' },
 };
 const SOLO_GAMES = [   // [키, 아이콘, 이름, 설명, NEW 표시, 분류]
+  ['sudoku', '🔢', '스도쿠', '쉬움 · 보통 · 어려움 · 이유를 알려 주는 힌트', true, '퍼즐'],
+  ['nonogram', '🖼️', '노노그램', '숫자만큼 칠해서 그림 완성 · 5×5~15×15', true, '퍼즐'],
+  ['gostop', '🎴', '고스톱 vs AI', '맞고(AI 1명) · 3인 고스톱(AI 2명)', true, '보드·카드'],
+  ['chess', '♞', '체스 vs AI', '쉬움/보통/어려움 · 무르기 가능', true, '보드·카드'],
   ['kart', '🏎️', '드리프트 카트', '카트 레이싱 · AI와 3바퀴', true, '액션'],
   ['dalmuti', '🤴', '계급 전쟁 vs AI', '달무티 방식 · AI 3~7명', true, '보드·카드'],
   ['coup', '👑', '궁정 음모 vs AI', '쿠 방식 블러핑 · AI 1~5명', true, '보드·카드'],
@@ -385,7 +413,7 @@ function fillGrid(sel, list) {
     const n = c === '전체' ? list.length : list.filter(g => g.cat === c).length;
     return `<button class="cat-chip ${c === '전체' ? 'on' : ''}" data-act="cat" data-cat="${c}">${c} <small>${n}</small></button>`;
   }).join('');
-  grid.innerHTML = list.map(g => `<button class="game-card" data-act="${g.act}" data-game="${g.k}" data-cat="${g.cat}">${g.isNew ? '<span class="new-badge">NEW</span>' : UPDATED.has(g.k) ? '<span class="new-badge up">UP</span>' : ''}${gameIcon(g.k, g.cat)}<b>${g.n}</b><small>${g.d}</small>${g.pill ? `<span class="pill">${g.pill}</span>` : ''}</button>`).join('');
+  grid.innerHTML = list.map(g => `<button class="game-card${g.act !== 'pickGame' ? ' hq' : ''}" data-act="${g.act}" data-game="${g.k}" data-cat="${g.cat}">${g.isNew ? '<span class="new-badge">NEW</span>' : UPDATED.has(g.k) ? '<span class="new-badge up">UP</span>' : ''}${gameIcon(g.k, g.cat)}<b>${g.n}</b><small>${g.d}</small>${g.pill ? `<span class="pill">${g.pill}</span>` : ''}${g.act !== 'pickGame' ? `<i class="gc-help" data-act="manual" data-game="${g.k}" title="설명서" role="button" tabindex="0">?</i>` : ''}</button>`).join('');
 }
 fillGrid('#single-grid', SOLO_GAMES.map(([k, i, n, d, isNew, cat]) => ({ k, i, n, d, isNew, cat, act: 'solo' })));
 fillGrid('#create-grid', Object.entries(GAME_INFO).map(([k, g]) => ({ k, i: g.icon, n: g.name, d: g.desc, isNew: g.isNew, cat: g.cat, act: 'create', pill: g.players })));
@@ -741,7 +769,7 @@ function renderLobby() {
   $('#lobby-privacy').innerHTML = m.isHost && !r.isStarted
     ? `<button class="btn sm ghost privacy-btn ${r.private ? 'on' : ''}" data-act="togglePrivate" title="${r.private ? '열린 방 목록에 보이게 하기' : '열린 방 목록에서 숨기기 (방 코드로만 입장)'}">${icon(r.private ? 'lock' : 'world')}${r.private ? '비공개 방' : '공개 방'}</button>`
     : `<span class="privacy-tag">${icon(r.private ? 'lock' : 'world')}${r.private ? '비공개' : '공개'}</span>`;
-  $('#lobby-rules').innerHTML = info.rules;
+  $('#lobby-rules').innerHTML = `${info.rules}<button class="btn sm ghost lobby-man" data-act="manual" data-game="${r.gameType}">${icon('book')}자세한 설명서 · 머리 쓰는 법</button>`;
 
   // 게임 방식 선택 (섯다 2장/3장, 포커 5장/7장)
   let opt = '';
@@ -843,7 +871,7 @@ $('#chat-input').addEventListener('keydown', e => {
 });
 
 const outSet = new Set();
-const SCORE_UNIT = { mine: '%', snake: '칸', bingo: '줄', race: '/50', dodge: '초', plat: '%', halli: '장', word: '단어' };
+const SCORE_UNIT = { sudoku: '%', nonogram: '%', mine: '%', snake: '칸', bingo: '줄', race: '/50', dodge: '초', plat: '%', halli: '장', word: '단어' };
 function renderScores() {
   const unit = (S.room && SCORE_UNIT[S.room.gameType]) || '';
   const html = S.scores.slice().sort((a, b) => b.score - a.score).map((p, i) =>

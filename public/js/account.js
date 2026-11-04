@@ -861,6 +861,7 @@ const Acct = {
     const box = $('#ov-xp'); if (!box) return;
     box.innerHTML = ''; box.className = 'ov-xp';
     if (d.solo) {
+      if (d.tut) return;                                                    // 따라 하기 판은 기록하지 않아요
       if (!this.me) { box.innerHTML = `<button class="ac-hint-btn" data-act="acLogin">${icon('face-id')}로그인하면 기록 · 레벨이 남아요</button>`; return; }
       ask('acct:solo', { g: d.solo, win: d.win === true, rec: d.rec }).then(r => { if (r.ok) { this.showGain(r); this.setMe(r.me); } });
       return;
