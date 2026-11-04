@@ -59,9 +59,10 @@ const Yacht = {
       return '<td></td>';
     }).join('')}</tr>`;
     const upper = C.slice(0, 6).map(row).join(''), lower = C.slice(6).map(row).join('');
-    const bonus = `<tr class="sub"><td><b>보너스</b><small>위쪽 합 63점 이상이면 +35</small></td>${v.players.map(p => `<td class="${p.bonus ? 'ok' : ''}">${p.bonus ? '+35' : `${p.upper}/63`}</td>`).join('')}</tr>`;
+    const bonus = `<tr class="sub"><td><b>보너스</b><small>위쪽 합 63점 이상이면 +35</small></td>${v.players.map(p => `<td class="${p.bonus ? 'ok' : ''}">${p.bonus ? '+35' : `${p.upper}<small>/63</small>`}</td>`).join('')}</tr>`;
     const total = `<tr class="total"><td><b>총점</b></td>${v.players.map(p => `<td>${p.total}</td>`).join('')}</tr>`;
-    $('#yc-table').innerHTML = head + upper + bonus + lower + total;
+    // 위쪽 · 아래쪽 두 묶음: 큰 화면에선 한 표, 낮은 화면에선 나란히 두 칸 (두 번째 머리줄은 그때만 보여요 — fit-a.css)
+    $('#yc-table').innerHTML = `<tbody class="yc-up">${head}${upper}${bonus}</tbody><tbody class="yc-lo">${head.replace('<tr>', '<tr class="yc-head2">')}${lower}${total}</tbody>`;
   },
 };
 Object.assign(ACT, {

@@ -48,6 +48,7 @@ const Cards = {
     this.turnEnd = Date.now() + v.turnLeft;
 
     const act = $('#card-actions'), wait = $('#card-waiting');
+    Sound.turn('card', !!m && v.phase === 'betting' && v.turnId === S.myId);
     if (m && v.phase === 'betting' && v.turnId === S.myId) {
       const call = Math.max(0, v.currentBet - m.roundBet), chips = m.chips;
       const q = call + Math.max(v.ante, Math.floor((v.pot + call) / 4));

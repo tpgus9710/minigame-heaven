@@ -49,6 +49,7 @@ const Table = {
     const d = this.defs[c.key];
     try { d.render(c.view, this.ctx(), c.prev); } catch (e) { console.error(e); }
     c.prev = c.view;
+    if (c.mode === 'multi' && typeof Sound !== 'undefined') Sound.turn(c.key, c.view.myTurn);    // 멀티: 내 차례가 오면 '띵동'
   },
   send(a) {
     const c = this.cur; if (!c) return;

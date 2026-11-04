@@ -5,8 +5,11 @@
 makeScreen('coup', {
   title: '👑 궁정 음모', status: '인물 카드를 가진 척해도 돼요. 의심되면 도전! 거짓말이 들키면 카드를 잃어요.',
   stats: [['deck', '궁정 덱'], ['coins', '내 코인'], ['time', '남은 시간']],
-  body: `<div class="mode-row" id="cp-solo"><span class="muted small">AI 상대</span>
+  body: `<div class="cp-top"><div class="mode-row" id="cp-solo"><span class="muted small">AI 상대</span>
       ${[1, 2, 3, 4, 5].map(n => `<button class="seg-btn ${n === 3 ? 'on' : ''}" data-act="cpSolo" data-bots="${n}">${n}명</button>`).join('')}</div>
+    <details class="cp-guide" id="cp-guide"><summary>${icon('cards')}<span class="cp-gt">인물 카드<span class="cp-gl"> 한눈에 보기</span></span></summary>
+      <div class="cp-guide-pop" data-act="cpGuide"><div class="cp-guide-row" id="cp-guide-row"></div>
+      <p>기본 행동: <b>소득</b> +1 · <b>해외 원조</b> +2(공작이 막음) · <b>쿠데타</b> 7코인(못 막음, 10코인 이상이면 필수). 각 인물은 3장씩, 모두 15장이에요.</p><small class="cp-gx">누르면 닫혀요</small></div></details></div>
     <div class="cp-table" id="cp-table">
       <div class="cp-opps" id="cp-opps"></div>
       <div class="cp-mid">
@@ -17,9 +20,7 @@ makeScreen('coup', {
       <div class="cp-acts" id="cp-acts"></div>
       <div class="cp-flash" id="cp-flash"></div>
       <div class="cp-fx" id="cp-fx"></div>
-    </div>
-    <details class="cp-guide" id="cp-guide" open><summary>인물 카드 한눈에 보기</summary><div class="cp-guide-row" id="cp-guide-row"></div>
-      <p>기본 행동: <b>소득</b> +1 · <b>해외 원조</b> +2(공작이 막음) · <b>쿠데타</b> 7코인(못 막음, 10코인 이상이면 필수). 각 인물은 3장씩, 모두 15장이에요.</p></details>`,
+    </div>`,
 });
 
 const CP_CARD = {
@@ -253,6 +254,7 @@ Object.assign(ACT, {
     CP.render(v, CP.ctx, v);
   },
   cpKeepGo: () => { const c = CP.ctx, v = CP.v; if (c && v && v.ask && CP.keep.length === v.ask.need) c.send({ t: 'keep', idx: CP.keep.slice() }); },
+  cpGuide: () => { $('#cp-guide').open = false; },
   cpSolo: el => {
     CP.bots = +el.dataset.bots;
     Table.solo('coup', { bots: CP.bots });

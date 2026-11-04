@@ -64,8 +64,138 @@ function show(id) {
   if (typeof updatePad === 'function') updatePad();
   document.body.classList.toggle('in-room', !!S.code);
   window.scrollTo({ top: 0 });
+  if (typeof RoomList !== 'undefined') { if (id === 'multi') RoomList.start(); else RoomList.stop(); }
+  if (typeof Fit !== 'undefined') {
+    const gaming = !MENU_IDS.has(id);                // 게임 화면 스타일은 바로 걸어요 (게임이 처음 그릴 때부터 맞는 크기로)
+    document.body.classList.toggle('gaming', gaming);
+    if (!gaming) document.body.classList.remove('chat-open', 'pad-side');
+    Fit.schedule(); setTimeout(() => Fit.schedule(), 160); setTimeout(() => Fit.schedule(), 700);   // 게임이 화면을 그린 다음에 맞춰요
+  }
 }
 const isScreen = id => S.screen === id;
+
+/* ─── 게임 화면을 한 화면에 맞추기 (휴대폰 · 갤럭시 폴드 · 태블릿 · 노트북) ───
+ *  1) 게임 화면에서는 위쪽 막대 · 제목 줄을 작게 (style.css 의 body.gaming)
+ *  2) 그림판(캔버스)이 있으면 남는 높이에 맞게 줄이고
+ *  3) 그래도 넘치면 화면 전체를 비율대로 줄여요 (너비는 넓혀서 다시 배치하니 글자가 덜 작아져요)
+ *  게임 내용이 바뀌어 넘치게 되면 0.4초 안에 다시 맞춰요. */
+const MENU_IDS = new Set(['home', 'single', 'multi', 'lobby']);
+var Fit = {
+  ZMIN: 0.5, cur: null, raf: 0, last: null, timer: null,
+  now() { cancelAnimationFrame(this.raf); this.raf = 0; this.fit(); },
+  schedule() { if (!this.raf) this.raf = requestAnimationFrame(() => { this.raf = 0; this.fit(); }); },
+  reset(sec) { sec.style.zoom = ''; sec.style.width = ''; sec.style.margin = ''; sec.style.removeProperty('--cv-h'); sec.style.removeProperty('--avail-h'); sec.style.removeProperty('--pad-side'); delete sec.dataset.z; },
+  fit() {
+    const sec = document.querySelector('.screen.active');
+    const gaming = !!sec && !MENU_IDS.has(sec.id.replace(/^scr-/, ''));
+    document.body.classList.toggle('gaming', gaming);
+    if (!gaming) document.body.classList.remove('chat-open', 'pad-side');
+    if (this.cur && this.cur !== sec) { this.reset(this.cur); this.cur = null; }
+    if (!gaming) { clearInterval(this.timer); this.timer = null; this.watch(null); return; }
+    this.cur = sec;
+    this.apply(sec);
+    this.watch(sec);
+    if (!this.timer) this.timer = setInterval(() => this.check(), 400);
+  },
+  /** 게임 화면의 글 · 요소가 바뀌면 다음 프레임에 바로 확인 (0.4초 간격 확인을 기다리지 않게) */
+  watch(sec) {
+    if (typeof MutationObserver === 'undefined') return;
+    if (!this.mo) this.mo = new MutationObserver(() => {      // 다음 프레임 · 0.15초 · 0.35초 뒤에 (나타나는 효과가 끝난 뒤까지)
+      if (!this.mraf) this.mraf = requestAnimationFrame(() => { this.mraf = 0; this.check(); });
+      clearTimeout(this.mt1); clearTimeout(this.mt2);
+      this.mt1 = setTimeout(() => this.check(), 150); this.mt2 = setTimeout(() => this.check(), 350);
+    });
+    if (this.moSec === sec) return;
+    this.mo.disconnect(); this.moSec = sec;
+    if (sec) this.mo.observe(sec, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
+  },
+  /** 남는 높이 (위쪽 막대 · 여백 · 휴대폰 가상 패드 빼고) */
+  room(sec) {
+    const top = sec.getBoundingClientRect().top + window.scrollY - (sec.dataset.z ? 0 : 0);
+    const pad = document.getElementById('vpad');
+    const padH = pad && !pad.classList.contains('hidden') && !document.body.classList.contains('pad-side') ? pad.getBoundingClientRect().height + 18 : 0;
+    const shellB = parseFloat(getComputedStyle(sec.parentElement.parentElement).paddingBottom) || 0;
+    return Math.max(200, Math.floor(window.innerHeight - top - shellB - padH) - 1);   // 1px 여유 (소수점 반올림으로 1px 넘치지 않게)
+  },
+  /** 가로로 긴 터치 화면 (휴대폰 가로 · 태블릿 가로): 가상 패드는 양옆 아래에 두고, 게임은 그 사이에서 세로를 다 써요 → 양옆 여백(px) */
+  side() {
+    const pad = document.getElementById('vpad'), g = Games[S.screen];
+    const on = !!pad && !pad.classList.contains('hidden') && !(g && g.padSide === false) && window.innerWidth >= window.innerHeight * 1.25;
+    document.body.classList.toggle('pad-side', on);
+    if (!on) return 0;
+    return Math.ceil([...pad.children].reduce((m, c) => Math.max(m, c.getBoundingClientRect().width), 0)) + 22;
+  },
+  apply(sec) {
+    this.reset(sec);
+    const side = this.side();
+    if (side) sec.style.setProperty('--pad-side', side + 'px');
+    const W = sec.parentElement.clientWidth, H = this.room(sec);
+    sec.style.setProperty('--avail-h', Math.floor(H) + 'px');
+    // 화면 높이 · 너비 안에 들어오는지 (높이를 정해 둔 화면은 안에서 넘친 내용까지: visH)
+    const fits = () => this.visH(sec) <= H + 1 && sec.scrollWidth <= sec.clientWidth + 1;
+    let ok = fits();
+    if (!ok) {                                                   // 1) 그림판은 높이에 맞게
+      const cvs = [...sec.querySelectorAll('canvas')].filter(c => c.offsetHeight >= 120 && c.offsetParent && !c.closest('.no-fit'));
+      if (cvs.length) {
+        const span = this.span(cvs), total = sec.getBoundingClientRect().height;
+        const cvH = Math.max(H * 0.42, H - (total - span) - 2);
+        if (cvH < span) sec.style.setProperty('--cv-h', Math.floor(cvH) + 'px');
+        ok = fits();
+      }
+    }
+    if (!ok) {
+      // 2-가) 배치는 그대로 두고 비율만 줄이기 — 한 번만 재면 돼서 빨라요 (조금만 넘칠 때는 이걸로)
+      sec.style.zoom = ''; sec.style.width = W + 'px';
+      const zb = Math.max(this.ZMIN, Math.floor(Math.min(1, H / Math.max(1, sec.offsetHeight, sec.scrollHeight), W / Math.max(1, sec.scrollWidth)) * 100) / 100);
+      // 2-나) 많이 줄여야 하면 너비를 넓혀 다시 배치하는 쪽도 재 봐요 (글 · 버튼이 많은 화면은 덜 작아져요)
+      let za = 0;
+      if (zb < 0.9) {
+        let lo = this.ZMIN, hi = 1;
+        for (let i = 0; i < 7; i++) { const z = (lo + hi) / 2; this.zoom(sec, z, W / z); if (fits()) lo = z; else hi = z; }
+        lo = Math.floor(lo * 100) / 100;
+        this.zoom(sec, lo, W / lo);
+        za = fits() ? lo : 0;
+      }
+      if (za && za >= zb) this.zoom(sec, za, W / za);
+      else { this.zoom(sec, zb, W); sec.style.margin = '0 auto'; }
+    }
+    this.last = { sec, h: sec.offsetHeight, w: sec.scrollWidth, vis: this.visH(sec), H, W, iw: window.innerWidth, ih: window.innerHeight };
+  },
+  /** 화면에 보이는 높이 — 화면 상자보다 내용이 넘쳤으면 내용까지 (zoom 비율 반영) */
+  visH(sec) {
+    const r = sec.getBoundingClientRect(), k = r.height / Math.max(1, sec.offsetHeight);
+    if (sec.dataset.fitOverflow === 'ok') return r.height;                 // 일부러 넘치게 둔 화면 (카트)
+    return Math.max(r.height, sec.scrollHeight * k);
+  },
+  zoom(sec, z, w) { sec.style.zoom = z; sec.style.width = w + 'px'; sec.dataset.z = z; },
+  /** 캔버스들이 차지하는 세로 길이 (나란히 있으면 한 번만) */
+  span(cvs) {
+    const iv = cvs.map(c => { const r = c.getBoundingClientRect(); return [r.top, r.bottom]; }).sort((a, b) => a[0] - b[0]);
+    let sum = 0, [a, b] = iv[0];
+    for (const [x, y] of iv.slice(1)) { if (x > b) { sum += b - a; a = x; b = y; } else b = Math.max(b, y); }
+    return sum + (b - a);
+  },
+  /** 게임 내용이 바뀌어서 넘치거나 · 많이 줄었으면 다시 맞추기 */
+  check() {
+    const L = this.last, sec = this.cur;
+    if (!sec || !L || L.sec !== sec || document.hidden) return;
+    if (window.innerWidth !== L.iw || window.innerHeight !== L.ih) return this.kbd() ? undefined : this.schedule();
+    const vis = this.visH(sec);
+    if (vis > L.H + 2 || sec.scrollWidth > sec.clientWidth + 1) return this.schedule();
+    // 줄여 둔 상태에서 내용이 줄었으면 (글꼴 로드 · 안내 문구 변화 등) 다시 맞춰서 크게 — 맞춘 뒤 높이와 비교하니 같은 결과로 되풀이되지 않아요
+    if ((sec.dataset.z || sec.style.getPropertyValue('--cv-h')) && L.vis - vis > Math.max(6, L.H * 0.015)) this.schedule();
+  },
+  /** 휴대폰에서 글자 칸을 눌러 키보드가 올라온 것 (높이만 줄었음) → 화면을 다시 줄이지 않아요 */
+  kbd() {
+    const L = this.last, a = document.activeElement;
+    if (!L || !a || !matchMedia('(pointer:coarse)').matches) return false;
+    const typing = a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && !/^(checkbox|radio|range|button|submit|color|file)$/i.test(a.type || ''));
+    return typing && window.innerWidth === L.iw && window.innerHeight < L.ih - 100;
+  },
+};
+window.addEventListener('resize', () => { if (!Fit.kbd()) Fit.schedule(); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => Fit.schedule());
+window.addEventListener('orientationchange', () => setTimeout(() => Fit.schedule(), 200));
 
 /** 게임 화면 만들기: 새 게임 파일은 index.html 대신 이 함수로 자기 화면을 만듭니다.
  *  stats: [['score', '점수'], ...] → #게임-score 에 값 표시 (setStat) */
@@ -315,6 +445,7 @@ socket.on('joined', d => {
   renderInvite();
   $('#chat-log').innerHTML = '';
   $('#chat-room').textContent = '방 ' + d.code;
+  outSet.clear(); S.scores = []; renderScores();   // 전에 있던 방의 점수가 남지 않게
   stopLocal(); hideOverlay(); show('lobby');
 });
 socket.on('room', r => { S.room = r; renderLobby(); });
@@ -327,9 +458,48 @@ socket.on('game:out', d => { outSet.add(d.id); renderScores(); });
 /* 같은 시드로 각자 플레이하는 점수 대결 (보석 맞추기 · 과일 합치기) */
 socket.on('sr:start', d => { const g = Games[d.game]; if (g && g.multi) g.multi(d); });
 socket.on('chat', addChat);
-socket.on('gameOver', d => after(900, () => showResult(d)));
+socket.on('gameOver', d => { S.rematch = null; after(900, () => showResult(d)); });
+socket.on('rematch', d => { S.rematch = d; if (ovDraw) ovDraw(); });
+socket.on('rematch:go', () => { if (typeof Sound !== 'undefined') Sound.play('invite'); });
+/** 방장이 나를 내보냈어요 */
+socket.on('kicked', () => {
+  S.code = null; S.room = null; stopLocal(); hideOverlay(); show('multi'); renderInvite();
+  toast('방장이 방에서 내보냈어요.', 'error');
+});
 
 function me() { return S.room ? S.room.players.find(p => p.id === S.myId) : null; }
+
+/* ─── 열린 방 목록 · 빠른 참가 (멀티 메뉴) ─── */
+const emitAck = (ev, d, ms = 6000) => new Promise(res => socket.timeout(ms).emit(ev, d, (err, r) => res(err ? null : r)));
+var RoomList = {         // var: 화면 전환(show)이 이 파일을 다 읽기 전에 불려도 괜찮게
+  timer: null, last: null,
+  start() { this.load(); clearInterval(this.timer); this.timer = setInterval(() => { if (!document.hidden) this.load(); }, 5000); },
+  stop() { clearInterval(this.timer); this.timer = null; },
+  async load(manual) {
+    const r = await emitAck('rooms:list', null);
+    if (!isScreen('multi')) return;
+    this.last = r; this.render(r);
+    if (manual) toast('방 목록을 새로 고쳤어요.');
+  },
+  render(r) {
+    const box = $('#open-rooms'); if (!box) return;
+    const head = `<div class="or-head"><h3>${icon('door-enter')}열린 방 <small>${r ? `${r.open.length}개${r.playing ? ` · 게임 중 ${r.playing}개` : ''}` : ''}</small></h3>
+      <button class="btn sm good" data-act="quickJoin">${icon('bolt')}빠른 참가</button>
+      <button class="btn sm ghost icon-only" data-act="roomsRefresh" title="새로 고침" aria-label="새로 고침">${icon('refresh')}</button></div>`;
+    if (!r) { box.innerHTML = head + '<p class="muted small or-empty">방 목록을 불러오지 못했어요.</p>'; return; }
+    const rows = r.open.map(x => {
+      const info = GAME_INFO[x.game] || {}, ready = x.n >= x.min;
+      return `<button class="or-room ${x.mine ? 'mine' : ''}" data-act="joinOpen" data-code="${esc(x.code)}" ${x.mine ? 'disabled' : ''}>${gameIcon(x.game, info.cat, 'sm')}
+        <span class="or-t"><b>${esc(stripEmoji(info.name || x.game))}</b><small>${esc(x.host)}님의 방${x.lv ? ` · Lv.${x.lv}` : ''}</small></span>
+        <span class="or-n ${ready ? 'ok' : ''}">${x.n}/${x.max}</span><span class="or-go">${x.mine ? '내 방' : '참가'}</span></button>`;
+    }).join('');
+    box.innerHTML = head + (rows ? `<div class="or-list">${rows}</div>` : '<p class="muted small or-empty">지금 사람을 기다리는 방이 없어요. 아래에서 방을 만들고 친구를 불러 보세요!</p>');
+  },
+  async quick() {
+    const r = await emitAck('rooms:quick', { playerName: nick() });
+    if (!r || !r.ok) toast('지금 바로 들어갈 수 있는 방이 없어요. 방을 만들어 보세요!');
+  },
+};
 
 /* ─── 친구 초대: 인터넷 주소 · 같은 와이파이 주소 · 방 바로가기 링크 ─── */
 const isPrivateHost = h => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/.test(h) || h.endsWith('.local');
@@ -424,6 +594,12 @@ const ACT = {
   setOption: el => socket.emit('setOption', { key: el.dataset.key, value: el.dataset.value }),
   setRole: el => socket.emit('setRole', el.dataset.role),
   ready: () => socket.emit('toggleReady'),
+  rematch: () => { const rm = S.rematch, mine = !!rm && rm.ids.includes(S.myId); socket.emit('rematch', !mine); },
+  togglePrivate: () => { if (S.room) socket.emit('setPrivate', !S.room.private); },
+  kick: el => { if (confirm(`${el.dataset.name} 님을 방에서 내보낼까요? (이 방에는 다시 못 들어와요)`)) socket.emit('kick', el.dataset.id); },
+  quickJoin: () => RoomList.quick(),
+  joinOpen: el => socket.emit('joinRoom', { roomCode: el.dataset.code, playerName: nick() }),
+  roomsRefresh: () => RoomList.load(true),
   start: () => socket.emit('startGame'),
   stopGame: () => { if (confirm('게임을 그만하고 모두 대기실로 돌아갈까요?')) socket.emit('returnToLobby'); },
   resultLobby: () => socket.emit('returnToLobby'),
@@ -452,6 +628,13 @@ document.addEventListener('click', e => {
   const fn = ACT[el.dataset.act];
   if (fn) fn(el);
 });
+// 버튼이 아닌 곳(프로필 보기 등 role="button")도 키보드 Enter · 스페이스로 누를 수 있게
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target;
+  if (!el || el.tagName === 'BUTTON' || el.getAttribute('role') !== 'button' || !el.dataset.act) return;
+  e.preventDefault(); const fn = ACT[el.dataset.act]; if (fn) fn(el);
+});
 $('#join-code').addEventListener('keydown', e => { if (e.key === 'Enter') ACT.join(); });
 $('#liar-guess-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) ACT.liarGuess(); });
 
@@ -472,6 +655,9 @@ function renderLobby() {
   $('#lobby-title').innerHTML = `${gameIcon(r.gameType, info.cat, 'sm')}<span class="tt">${esc(info.name)} 대기실</span>`;
   $('#lobby-code').textContent = r.code;
   $('#lobby-count').textContent = `${r.players.length}명`;
+  $('#lobby-privacy').innerHTML = m.isHost && !r.isStarted
+    ? `<button class="btn sm ghost privacy-btn ${r.private ? 'on' : ''}" data-act="togglePrivate" title="${r.private ? '열린 방 목록에 보이게 하기' : '열린 방 목록에서 숨기기 (방 코드로만 입장)'}">${icon(r.private ? 'lock' : 'world')}${r.private ? '비공개 방' : '공개 방'}</button>`
+    : `<span class="privacy-tag">${icon(r.private ? 'lock' : 'world')}${r.private ? '비공개' : '공개'}</span>`;
   $('#lobby-rules').innerHTML = info.rules;
 
   // 게임 방식 선택 (섯다 2장/3장, 포커 5장/7장)
@@ -509,8 +695,10 @@ function renderLobby() {
       card ? `<span class="tag chips">💰 ${won(p.chips)}</span>` : '',
     ].join('');
     const av = (typeof Acct !== 'undefined' && Acct.lobbyAvatar(p)) || `<div class="avatar" style="background:${avColor(p.id)}">${esc(p.name[0] || '?')}</div>`;
-    return `<div class="pcard ${p.id === S.myId ? 'me' : ''}">${av}
-      <div class="pinfo"><div class="pname">${esc(p.name)}${p.id === S.myId ? ' (나)' : ''}</div>${tags}${typeof Acct !== 'undefined' ? Acct.lobbyTags(p) : ''}</div></div>`;
+    const kick = m.isHost && !r.isStarted && p.id !== S.myId ? `<button class="pc-kick" data-act="kick" data-id="${esc(p.id)}" data-name="${esc(p.name)}" title="내보내기" aria-label="${esc(p.name)} 내보내기">${icon('x')}</button>` : '';
+    const prof = p.uid ? ` data-act="acCard" data-uid="${esc(p.uid)}" role="button" tabindex="0" title="프로필 보기"` : '';
+    return `<div class="pcard ${p.id === S.myId ? 'me' : ''}">${p.uid ? `<span class="pc-who"${prof}>${av}</span>` : av}
+      <div class="pinfo"><div class="pname ${p.uid ? 'link' : ''}"${prof}>${esc(p.name)}${p.id === S.myId ? ' (나)' : ''}</div>${tags}${typeof Acct !== 'undefined' ? Acct.lobbyTags(p) : ''}</div>${kick}</div>`;
   }).join('');
 
   // 버튼
@@ -534,8 +722,22 @@ function addChat(d) {
   box.append(div);
   while (box.children.length > 200) box.firstChild.remove();
   box.scrollTop = box.scrollHeight;
+  // 게임 중 좁은 화면에서는 채팅창이 접혀 있어요 → 💬 버튼에 새 메시지 표시
+  if (!d.system && d.id !== S.myId && document.body.classList.contains('gaming') && !document.body.classList.contains('chat-open') && window.innerWidth <= 1100) {
+    chatUnread++;
+    $$('.chat-tgl').forEach(b => { b.classList.add('unread'); const i = b.querySelector('.dot'); if (i) i.textContent = chatUnread > 9 ? '9+' : chatUnread; });
+  }
   if (d.emoji && !d.system) floatEmoji(d.msg, d.name);
 }
+let chatUnread = 0;
+ACT.chatToggle = () => {
+  const open = document.body.classList.toggle('chat-open');
+  if (open) { chatUnread = 0; $$('.chat-tgl').forEach(b => b.classList.remove('unread')); const i = $('#chat-input'); if (i && !TOUCH) i.focus(); $('#chat-log').scrollTop = 1e9; }
+};
+// 모든 게임 화면 제목 줄에 💬 버튼 (방에서 게임할 때 · 좁은 화면에서만 보여요)
+document.addEventListener('DOMContentLoaded', () => {
+  $$('.game-head [data-act=leaveGame]').forEach(b => b.insertAdjacentHTML('beforebegin', `<button class="btn ghost chat-tgl" data-act="chatToggle" aria-label="채팅" title="채팅">${icon('message-circle')}<i class="dot"></i></button>`));
+});
 function floatEmoji(e, name) {
   const el = document.createElement('div');
   el.className = 'float-emo';
@@ -565,7 +767,7 @@ function renderScores() {
   $$('[data-scores]').forEach(el => { el.innerHTML = S.solo ? '' : html; });
 }
 
-let ovTimer = null;
+let ovTimer = null, ovDraw = null;
 function showResult(d) {
   stopLocal();
   $('#ov-title').textContent = d.title;
@@ -577,8 +779,14 @@ function showResult(d) {
     $('#ov-actions').innerHTML = `<button class="btn good" data-act="retrySolo" data-game="${d.solo}">다시 하기</button><button class="btn ghost" data-act="soloMenu">메뉴로</button>`;
   } else {
     let n = d.returnIn || 10;
-    const isHost = me() && me().isHost;
-    const draw = () => { $('#ov-actions').innerHTML = `<span class="muted">${n}초 뒤 대기실로 이동합니다</span>${isHost ? '<button class="btn good" data-act="resultLobby">지금 대기실로</button>' : ''}`; };
+    const isHost = me() && me().isHost, watch = me() && me().role === 'spectator';
+    const draw = () => {
+      const rm = S.rematch || { ids: [], have: 0, need: 0 }, mine = rm.ids.includes(S.myId);
+      $('#ov-actions').innerHTML = `<span class="muted ov-left">${n}초 뒤 대기실로 이동합니다</span>
+        ${watch ? '' : `<button class="btn ${mine ? 'ghost' : 'good'}" data-act="rematch">${icon('repeat')}${mine ? '한 판 더 취소' : '한 판 더'}${rm.have ? ` <small class="rm-n">${rm.have}/${rm.need}</small>` : ''}</button>`}
+        ${isHost ? '<button class="btn ghost" data-act="resultLobby">지금 대기실로</button>' : ''}`;
+    };
+    ovDraw = draw;
     draw();
     clearInterval(ovTimer);
     ovTimer = setInterval(() => { n = Math.max(0, n - 1); draw(); if (!n) clearInterval(ovTimer); }, 1000);
@@ -586,7 +794,7 @@ function showResult(d) {
   $('#overlay').classList.add('show');
   if (typeof Acct !== 'undefined') Acct.onResult(d);                      // 로그인했으면 기록 저장 · 경험치 표시 (account.js)
 }
-function hideOverlay() { clearInterval(ovTimer); $('#overlay').classList.remove('show'); }
+function hideOverlay() { clearInterval(ovTimer); ovDraw = null; $('#overlay').classList.remove('show'); }
 
 function startSolo(game) {
   stopLocal(); hideOverlay();
@@ -619,18 +827,27 @@ function updatePad() {
   if (!TOUCH || !g || !g.pad) { padEl.classList.add('hidden'); return; }
   const cut = g.pad.indexOf('|'), L = cut < 0 ? g.pad : g.pad.slice(0, cut), R = cut < 0 ? [] : g.pad.slice(cut + 1);
   const btn = c => `<button data-code="${c}">${(g.padLabel && g.padLabel[c]) || PAD_LABEL[c] || c}</button>`;
-  padEl.innerHTML = `<div class="pad-l">${L.map(btn).join('')}</div><div class="pad-r">${R.map(btn).join('')}</div>`;
+  const cross = l => ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].every(c => l.includes(c)) ? ' cross'   // 4방향 → 가로 화면에서 십자 모양
+    : l.length === 3 && ['ArrowLeft', 'ArrowRight', 'ArrowDown'].every(c => l.includes(c)) ? ' tee' : '';               // ◀ ▶ 위 · ▼ 아래 (테트리스)
+  padEl.innerHTML = `<div class="pad-l${cross(L)}">${L.map(btn).join('')}</div><div class="pad-r${cross(R)}">${R.map(btn).join('')}</div>`;
   padEl.classList.remove('hidden');
 }
-const fakeKey = code => ({ code, key: code === 'Space' ? ' ' : code, repeat: false, preventDefault() {} });
+const fakeKey = (code, repeat = false) => ({ code, key: code === 'Space' ? ' ' : code, repeat, preventDefault() {} });
+let padRep = null, padRepCode = null;               // 누르고 있으면 되풀이 (register 의 padRepeat: 테트리스 옆으로 · 아래로)
+const padRepStop = () => { clearTimeout(padRep); clearInterval(padRep); padRep = null; padRepCode = null; };
 padEl.addEventListener('pointerdown', e => {
   const b = e.target.closest('[data-code]'); if (!b) return;
   e.preventDefault(); b.setPointerCapture(e.pointerId); b.classList.add('on');
-  Keys.add(b.dataset.code);
-  const g = Games[S.screen]; if (g && g.key) g.key(fakeKey(b.dataset.code));
+  const code = b.dataset.code; Keys.add(code);
+  const g = Games[S.screen]; if (g && g.key) g.key(fakeKey(code));
+  if (g && g.key && g.padRepeat && g.padRepeat.includes(code)) {
+    padRepStop(); padRepCode = code;
+    padRep = setTimeout(() => { padRep = setInterval(() => { if (Games[S.screen] === g && Keys.has(code)) g.key(fakeKey(code, true)); else padRepStop(); }, 60); }, 190);
+  }
 });
 ['pointerup', 'pointercancel'].forEach(t => padEl.addEventListener(t, e => {
   const b = e.target.closest('[data-code]'); if (!b) return;
+  if (padRepCode === b.dataset.code) padRepStop();
   b.classList.remove('on'); Keys.delete(b.dataset.code);
   const g = Games[S.screen]; if (g && g.keyup) g.keyup(fakeKey(b.dataset.code));
 }));

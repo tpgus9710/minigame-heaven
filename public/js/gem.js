@@ -38,7 +38,7 @@ const Gem = {
     this.rnd = this.multi ? seeded(opt.seed) : Math.random;
     Object.assign(this, { score: 0, busy: false, over: false, sel: null, seq: 0, endAt: performance.now() + opt.seconds * 1000, lastSent: -1 });
     const el = $('#gem-board');
-    el.innerHTML = ''; el.style.width = el.style.height = GEM.N * GEM.SIZE + 'px';
+    el.innerHTML = ''; el.style.width = el.style.height = `calc(${GEM.N} * var(--gs, ${GEM.SIZE}px))`;   // 칸 크기 --gs 는 화면에 맞춰 CSS 가 정해요
     this.cells = [];
     for (let i = 0; i < GEM.N * GEM.N; i++) {
       let t;
@@ -64,8 +64,8 @@ const Gem = {
   },
   place(g, i, fromRow) {
     const r = Math.floor(i / GEM.N), c = i % GEM.N;
-    if (fromRow != null && fromRow !== 0) { g.el.style.transition = 'none'; g.el.style.transform = `translate(${c * GEM.SIZE}px, ${fromRow * GEM.SIZE}px)`; void g.el.offsetWidth; g.el.style.transition = ''; }
-    g.el.style.transform = `translate(${c * GEM.SIZE}px, ${r * GEM.SIZE}px)`;
+    if (fromRow != null && fromRow !== 0) { g.el.style.transition = 'none'; g.el.style.transform = `translate(calc(${c} * var(--gs, ${GEM.SIZE}px)), calc(${fromRow} * var(--gs, ${GEM.SIZE}px)))`; void g.el.offsetWidth; g.el.style.transition = ''; }
+    g.el.style.transform = `translate(calc(${c} * var(--gs, ${GEM.SIZE}px)), calc(${r} * var(--gs, ${GEM.SIZE}px)))`;
   },
   hud() {
     setStat('gem', 'score', this.score.toLocaleString());

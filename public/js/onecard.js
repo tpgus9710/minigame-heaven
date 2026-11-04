@@ -31,6 +31,7 @@ const OneCard = {
   render(v) {
     this.v = v;
     const myTurn = v.turnId === S.myId;
+    Sound.turn('onecard', myTurn);
     $('#oc-players').innerHTML = v.players.map(p => `<div class="oc-p ${p.id === v.turnId ? 'turn' : ''} ${p.out ? 'out' : ''}">
       <b>${esc(p.name)}${p.id === S.myId ? ' (나)' : ''}</b><span>${p.out ? '파산' : '카드 ' + p.n + '장'}</span>${p.id === v.one ? '<em>☝️ 1장!</em>' : ''}</div>`).join('');
     $('#oc-top').innerHTML = this.card(v.top, 'big');

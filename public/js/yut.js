@@ -153,7 +153,7 @@ const Yut = {
     });
   },
   side(v) {
-    $('#yt-players').innerHTML = v.players.map(p => `<div class="yt-p ${p.id === v.turnId && !v.over ? 'turn' : ''} ${p.id === v.winner ? 'win' : ''}" style="--pc:${p.color}">
+    $('#yt-players').innerHTML = v.players.map(p => `<div class="yt-p ${p.id === v.turnId && !v.over ? 'turn' : ''} ${p.id === v.winner ? 'win' : ''} ${p.id === this.ctx.me ? 'me' : ''}" style="--pc:${p.color}">
       <div class="yt-p-top"><i class="dot"></i><b>${esc(p.name)}${p.id === this.ctx.me ? ' (나)' : ''}</b><em>골인 ${p.done}/${v.N}</em></div>
       <div class="yt-home" data-id="${esc(p.id)}" data-act="ytHome"></div></div>`).join('');
     this.homes();

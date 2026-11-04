@@ -98,6 +98,29 @@ $('#rain-input').addEventListener('keydown', e => {
   e.preventDefault(); Rain.submit();
 });
 register('rain', { solo: () => Rain.start(true), stop: () => { Rain.over = true; } });
+// 판 높이가 바뀌면(화면 맞춤 · 키보드) 떨어지고 있는 단어의 거리도 다시 맞춰요 — 바닥에 닿는 시간은 그대로
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => {
+  if (!Rain.words) return;
+  const fall = $('#rain-field').clientHeight - 34;
+  for (const w of Rain.words.values()) if (w.anim && w.anim.effect && w.anim.effect.setKeyframes) w.anim.effect.setKeyframes([{ transform: 'translateY(-36px)' }, { transform: `translateY(${fall}px)` }]);
+}).observe($('#rain-field'));
+// 휴대폰 키보드가 판을 가리면 가린 높이(--kb)만큼 판을 줄여 바닥까지 보이게 (fit-d.css)
+if (window.visualViewport) {
+  const kb = () => {
+    const vv = window.visualViewport, inp = $('#rain-input');
+    let v = 0;
+    if (isScreen('rain') && document.activeElement === inp && Math.abs((vv.scale || 1) - 1) < 0.01) {
+      const base = (typeof Fit !== 'undefined' && Fit.last && Fit.last.ih) || window.innerHeight;
+      v = Math.round(base - vv.height - vv.offsetTop);
+      if (v < 80) v = 0;                                       // 주소창이 줄어드는 정도는 무시
+    }
+    $('#scr-rain').style.setProperty('--kb', v + 'px');
+  };
+  visualViewport.addEventListener('resize', kb);
+  visualViewport.addEventListener('scroll', kb);
+  $('#rain-input').addEventListener('focus', () => setTimeout(kb, 350));
+  $('#rain-input').addEventListener('blur', () => setTimeout(kb, 100));
+}
 socket.on('rain:start', d => Rain.start(false, d.seconds));
 socket.on('rain:word', d => { if (isScreen('rain') && !Rain.solo) Rain.add(d.id, d.text, d.x, d.dur); });
 socket.on('rain:hit', d => {

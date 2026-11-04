@@ -1,0 +1,874 @@
+/* v9 화면 맞춤 (b 묶음): 휴대폰 · 폴드 · 태블릿 · 노트북에서 스크롤 없이
+ *  궁정 음모 · 계급 전쟁 · 황야의 총잡이 · 러미 타일 · 라이어 다이스 · 리버시 · 암호 해독 · 마피아
+ *  크기 구분: 휴대폰 세로(≤560) · 중간(561~960, 높이 521 이상: 폴드 펼침 · 태블릿 세로) · 넓은 화면(961 이상 또는 휴대폰 가로) */
+
+/* ═══════════════ 👑 궁정 음모 ═══════════════ */
+/* 위쪽 줄: AI 상대 + 인물 카드 보기 (펼치면 표 위에 떠요 — 화면 높이를 밀지 않게) */
+body.gaming #scr-coup .cp-top{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;max-width:1100px;margin:0 auto 12px}
+body.gaming #scr-coup .cp-top .mode-row{margin:0;align-items:center}
+body.gaming #scr-coup .cp-guide{flex:none;max-width:none;margin:0;padding:0;border:0;background:none}
+body.gaming #scr-coup .cp-guide summary{list-style:none;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:2px solid var(--line);background:var(--panel2);color:var(--text);font-size:14.5px;font-weight:700;white-space:nowrap;user-select:none}
+body.gaming #scr-coup .cp-guide summary::-webkit-details-marker{display:none}
+body.gaming #scr-coup .cp-guide summary .ic{width:17px;height:17px;color:#d6b25e}
+body.gaming #scr-coup .cp-guide[open] summary{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--panel2))}
+body.gaming #scr-coup .cp-guide-pop{position:absolute;z-index:45;top:calc(100% + 8px);left:50%;transform:translateX(-50%);width:min(100%,620px);padding:12px 14px 8px;border-radius:16px;
+  background:var(--panel);border:1px solid var(--line);box-shadow:0 22px 50px rgba(0,0,0,.55);cursor:pointer}
+body.gaming #scr-coup .cp-guide:not([open]) .cp-guide-pop{display:none}
+body.gaming #scr-coup .cp-guide-row{justify-content:center;padding:2px 0 6px}
+body.gaming #scr-coup .cp-gx{display:block;text-align:center;font-size:11px;color:var(--muted)}
+/* 상대 자리: 이름 / 카드 · 코인, 상태 표시(차례 · 대상 …)는 위쪽 모서리 배지로 */
+body.gaming #scr-coup .cp-seat{position:relative;display:grid;grid-template-columns:auto auto;grid-template-areas:"who who" "inf coin";justify-content:center;align-items:center;gap:6px 8px}
+body.gaming #scr-coup .cp-who{grid-area:who;justify-content:center;min-width:0}
+body.gaming #scr-coup .cp-inf{grid-area:inf}
+body.gaming #scr-coup .cp-seat>.cp-coin{grid-area:coin}
+body.gaming #scr-coup .cp-tags{position:absolute;left:0;right:0;top:-9px;min-height:0;gap:3px;pointer-events:none;z-index:2}
+body.gaming #scr-coup .cp-tags em{background:#3a2431;color:#ffe6b0;box-shadow:0 2px 5px rgba(0,0,0,.45)}
+body.gaming #scr-coup .cp-tags em.turn{background:#f3c969;color:#3b2a00} body.gaming #scr-coup .cp-tags em.tgt{background:#ff6b6b;color:#fff}
+body.gaming #scr-coup .cp-tags em.ok{background:#1e5a40;color:#b6f5d2} body.gaming #scr-coup .cp-tags em.bad{background:#c0392b;color:#fff}
+body.gaming #scr-coup .cp-tags em.out{background:#2a1418;color:#ffb3a8} body.gaming #scr-coup .cp-tags em.win{background:#ffd166;color:#3b2a00}
+body.gaming #scr-coup .cp-tags:empty{display:none}
+
+/* ── 휴대폰 세로 ── */
+@media (max-width:560px){
+  body.gaming #scr-coup .cp-top{margin-bottom:6px;gap:6px;justify-content:space-between}
+  body.gaming #scr-coup .cp-top .mode-row{gap:4px;flex-wrap:nowrap}
+  body.gaming #scr-coup .cp-top .mode-row .small{font-size:11px;white-space:nowrap}
+  body.gaming #scr-coup .cp-top .seg-btn{padding:5px 8px;font-size:13px;border-radius:9px}
+  body.gaming #scr-coup .cp-guide{margin-left:auto}
+  body.gaming #scr-coup .cp-guide summary{padding:5px 9px;font-size:12.5px;border-radius:9px;gap:4px}
+  body.gaming #scr-coup .cp-guide summary .ic{width:15px;height:15px}
+  body.gaming #scr-coup .cp-gl{display:none}
+  body.gaming #scr-coup .cp-guide-pop{width:100%;padding:10px 9px 6px}
+  body.gaming #scr-coup .cp-guide-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  body.gaming #scr-coup .cp-guide p{font-size:12px;margin:2px 0}
+
+  body.gaming #scr-coup .cp-table{padding:8px 7px 9px;border-radius:18px}
+  body.gaming #scr-coup .cp-table::before{inset:4px;border-radius:15px}
+  body.gaming #scr-coup .cp-opps{flex-wrap:nowrap;justify-content:flex-start;gap:5px;overflow-x:auto;scrollbar-width:none;padding:8px 2px 3px;margin:-6px -2px 0}
+  body.gaming #scr-coup .cp-opps::-webkit-scrollbar{display:none}
+  body.gaming #scr-coup .cp-seat{flex:1 1 0;width:auto;min-width:66px;padding:5px 3px;gap:3px 4px;border-radius:12px}
+  body.gaming #scr-coup .cp-seat.turn{box-shadow:0 0 0 2px #f3c969,0 0 10px rgba(243,201,105,.35)}
+  body.gaming #scr-coup .cp-seat.tgt{box-shadow:0 0 0 2px #ff6b6b,0 0 10px rgba(255,107,107,.35)}
+  body.gaming #scr-coup .cp-who{gap:4px;max-width:100%}
+  body.gaming #scr-coup .cp-who b{font-size:11.5px}
+  body.gaming #scr-coup .cp-av{width:19px;height:19px;font-size:10.5px}
+  body.gaming #scr-coup .cp-inf{gap:2px}
+  body.gaming #scr-coup .cp-mini{width:20px;height:28px;border-radius:4px}
+  body.gaming #scr-coup .cp-mini .ic{width:12px;height:12px}
+  body.gaming #scr-coup .cp-mini.back .ic{width:11px;height:11px}
+  body.gaming #scr-coup .cp-mini.dead::after{inset:3px}
+  body.gaming #scr-coup .cp-seat>.cp-coin{padding:1px 6px 1px 3px;gap:2px}
+  body.gaming #scr-coup .cp-seat>.cp-coin .ic{width:12px;height:12px}
+  body.gaming #scr-coup .cp-seat>.cp-coin b{font-size:13px}
+  body.gaming #scr-coup .cp-tags{top:-8px;gap:2px}
+  body.gaming #scr-coup .cp-tags em{font-size:9.5px;padding:0 5px;line-height:14px}
+
+  body.gaming #scr-coup .cp-mid{gap:6px;margin:7px 0}
+  body.gaming #scr-coup .cp-stage{min-height:112px;padding:7px 10px;border-radius:14px}
+  body.gaming #scr-coup .cp-stage-in{gap:10px}
+  body.gaming #scr-coup .cp-stage-in .cp-card.md{width:50px;height:70px;padding:5px 3px;border-radius:9px}
+  body.gaming #scr-coup .cp-stage-in .cp-card.md::before{inset:3px;border-radius:6px}
+  body.gaming #scr-coup .cp-stage-in .cp-card.md .cp-ic{width:28px;height:28px;margin:2px 0 3px}
+  body.gaming #scr-coup .cp-stage-in .cp-card.md .cp-ic .ic{width:16px;height:16px}
+  body.gaming #scr-coup .cp-stage-in .cp-card.md b{font-size:12px;letter-spacing:0}
+  body.gaming #scr-coup .cp-big{font-size:17px;margin:0 0 2px}
+  body.gaming #scr-coup .cp-stage p{font-size:12.5px;margin:2px 0;line-height:1.38}
+  body.gaming #scr-coup .cp-claimline{font-size:14.5px}
+  body.gaming #scr-coup .cp-kind{font-size:16px}
+  body.gaming #scr-coup .cp-q{font-size:13px!important;margin:4px 0 6px!important;line-height:1.38}
+  body.gaming #scr-coup .cp-btns{gap:6px}
+  body.gaming #scr-coup .cp-btns .btn{font-size:14px;padding:7px 12px;border-radius:11px}
+  body.gaming #scr-coup .cp-btns .btn .ic{width:16px;height:16px}
+  body.gaming #scr-coup .cp-stage-txt>small.muted{display:none}
+  body.gaming #scr-coup .cp-timer{margin-top:6px;height:5px}
+  body.gaming #scr-coup .cp-exrow{gap:6px;margin:4px 0 6px}
+  body.gaming #scr-coup .cp-exrow .cp-card.md{width:58px;height:80px;padding:6px 3px}
+  body.gaming #scr-coup .cp-exrow .cp-card.md small{display:none}
+  body.gaming #scr-coup .cp-exrow .cp-card.md .cp-ic{width:32px;height:32px;margin:2px 0 4px}
+  body.gaming #scr-coup .cp-exrow .cp-card.md .cp-ic .ic{width:18px;height:18px}
+  body.gaming #scr-coup .cp-exrow .cp-card.md b{font-size:13px;letter-spacing:0}
+  body.gaming #scr-coup .cp-logbox{max-height:none;height:48px;padding:3px 8px;border-radius:12px}
+  body.gaming #scr-coup .cp-logt{display:none}
+  body.gaming #scr-coup .cp-log{margin:0}
+  body.gaming #scr-coup .cp-log li{font-size:11.5px;padding:3px 2px;gap:5px;line-height:1.3}
+  body.gaming #scr-coup .cp-log li .ic{width:12px;height:12px;margin-top:1px}
+
+  /* 내 카드 · 인물 안내: 가로로 누운 카드 (그림 왼쪽, 이름 · 능력 오른쪽) */
+  body.gaming #scr-coup .cp-me{gap:5px}
+  body.gaming #scr-coup .cp-mycards{width:100%;gap:7px}
+  body.gaming #scr-coup .cp-me .cp-card,body.gaming #scr-coup .cp-guide-row .cp-card{flex:1 1 0;min-width:0;width:auto;height:62px;padding:5px 8px 5px 6px;border-radius:12px;
+    display:grid;grid-template-columns:38px minmax(0,1fr);column-gap:7px;align-content:center;justify-items:start;text-align:left}
+  body.gaming #scr-coup .cp-me .cp-card::before,body.gaming #scr-coup .cp-guide-row .cp-card::before{inset:4px;border-radius:8px}
+  body.gaming #scr-coup .cp-me .cp-card .cp-ic,body.gaming #scr-coup .cp-guide-row .cp-card .cp-ic{grid-row:1 / span 3;grid-column:1;width:38px;height:38px;margin:0;align-self:center}
+  body.gaming #scr-coup .cp-me .cp-card .cp-ic .ic,body.gaming #scr-coup .cp-guide-row .cp-card .cp-ic .ic{width:21px;height:21px}
+  body.gaming #scr-coup .cp-me .cp-card b,body.gaming #scr-coup .cp-guide-row .cp-card b{grid-column:2;font-size:17px;line-height:1.1;letter-spacing:.5px}
+  body.gaming #scr-coup .cp-me .cp-card small,body.gaming #scr-coup .cp-guide-row .cp-card small{grid-column:2;font-size:10.5px;margin-top:1px;line-height:1.2}
+  body.gaming #scr-coup .cp-me .cp-card.dead::after{top:30%;left:-4%;right:-4%;transform:rotate(-7deg);font-size:13px;padding:2px 0;text-align:center}
+  body.gaming #scr-coup .cp-guide-row .cp-card{height:56px}
+  body.gaming #scr-coup .cp-mybar{padding:2px 12px 2px 3px;gap:7px}
+  body.gaming #scr-coup .cp-mybar .cp-av{width:22px;height:22px;font-size:11px}
+  body.gaming #scr-coup .cp-mybar>b{font-size:12.5px}
+  body.gaming #scr-coup .cp-coin.big{padding:1px 9px 1px 5px} body.gaming #scr-coup .cp-coin.big b{font-size:15px} body.gaming #scr-coup .cp-coin.big .ic{width:14px;height:14px}
+  body.gaming #scr-coup .cp-mybar em{font-size:10.5px}
+
+  /* 행동 버튼: 기본 행동 3개 한 줄 · 인물 행동 4개 한 줄 */
+  body.gaming #scr-coup .cp-acts{grid-template-columns:repeat(12,minmax(0,1fr));gap:5px;margin-top:7px}
+  body.gaming #scr-coup .cp-act{grid-column:span 3;display:grid;grid-template-columns:auto auto;justify-content:center;align-items:center;gap:1px 3px;padding:6px 2px 5px;border-radius:11px}
+  body.gaming #scr-coup .cp-act.basic{grid-column:span 4}
+  body.gaming #scr-coup .cp-act .cp-ic{display:grid}
+  body.gaming #scr-coup .cp-act .cp-ic .ic{width:15px;height:15px}
+  body.gaming #scr-coup .cp-act b{font-size:14px}
+  body.gaming #scr-coup .cp-act small{grid-column:1 / -1;font-size:9.5px}
+}
+@media (max-width:370px){
+  body.gaming #scr-coup .cp-gt{display:none}
+  body.gaming #scr-coup .cp-top .seg-btn{padding:5px 7px}
+}
+
+/* ── 중간 (폴드 펼침 · 태블릿 세로) ── */
+@media (min-width:561px) and (max-width:960px) and (min-height:521px){
+  body.gaming #scr-coup .cp-table{padding:14px 14px 16px}
+  body.gaming #scr-coup .cp-opps{gap:8px;padding-top:4px}
+  body.gaming #scr-coup .cp-seat{width:auto;flex:0 1 150px;min-width:110px;padding:8px 6px 7px;gap:5px 8px}
+  body.gaming #scr-coup .cp-mini{width:27px;height:38px} body.gaming #scr-coup .cp-mini .ic{width:15px;height:15px}
+  body.gaming #scr-coup .cp-mid{grid-template-columns:minmax(0,1fr) minmax(200px,32%);gap:10px;margin:14px 0 12px}
+  body.gaming #scr-coup .cp-stage{min-height:150px}
+  body.gaming #scr-coup .cp-logbox{max-height:none;contain:size}
+  body.gaming #scr-coup .cp-me{gap:8px}
+  body.gaming #scr-coup .cp-card.lg{width:116px;height:164px} body.gaming #scr-coup .cp-card.lg b{font-size:20px} body.gaming #scr-coup .cp-card.lg small{font-size:11px}
+  body.gaming #scr-coup .cp-acts{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:12px}
+  body.gaming #scr-coup .cp-act{padding:8px 3px 7px} body.gaming #scr-coup .cp-act b{font-size:15px} body.gaming #scr-coup .cp-act small{font-size:10px}
+}
+
+/* ── 넓은 화면 (태블릿 가로 · 노트북) · 휴대폰 가로: 내 카드 | 무대 | 기록, 아래에 행동 버튼 한 줄 ── */
+@media (min-width:961px),(min-width:561px) and (max-height:520px){
+  body.gaming #scr-coup .cp-top{margin-bottom:10px}
+  body.gaming #scr-coup .cp-top .seg-btn{padding:6px 14px}
+  body.gaming #scr-coup .cp-table{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(200px,280px);grid-template-areas:"opps opps opps" "me stage log" "acts acts acts";gap:12px 14px;padding:16px 18px 16px}
+  body.gaming #scr-coup .cp-mid{display:contents}
+  body.gaming #scr-coup .cp-opps{grid-area:opps;padding-top:4px}
+  body.gaming #scr-coup .cp-stage{grid-area:stage;min-height:150px}
+  body.gaming #scr-coup .cp-logbox{grid-area:log;max-height:none;contain:size}
+  body.gaming #scr-coup .cp-me{grid-area:me;justify-content:center;gap:8px}
+  body.gaming #scr-coup .cp-mycards{gap:10px}
+  body.gaming #scr-coup .cp-acts{grid-area:acts;margin:0}
+  body.gaming #scr-coup .cp-act{padding:8px 6px 7px}
+  body.gaming #scr-coup .cp-seat{width:auto;flex:0 1 auto;min-width:170px;grid-template-columns:minmax(0,auto) auto auto;grid-template-areas:"who inf coin";padding:9px 14px;gap:10px}
+  body.gaming #scr-coup .cp-who{justify-content:flex-start}
+  body.gaming #scr-coup .cp-who b{max-width:120px}
+  body.gaming #scr-coup .cp-mini{width:28px;height:40px} body.gaming #scr-coup .cp-mini .ic{width:16px;height:16px}
+  body.gaming #scr-coup .cp-card.lg{width:118px;height:166px} body.gaming #scr-coup .cp-card.lg .cp-ic{width:56px;height:56px;margin:2px 0 7px} body.gaming #scr-coup .cp-card.lg b{font-size:21px} body.gaming #scr-coup .cp-card.lg small{font-size:11.5px}
+}
+/* 노트북 낮은 화면 */
+@media (min-width:961px) and (max-height:640px){
+  body.gaming #scr-coup .cp-top{margin-bottom:8px}
+  body.gaming #scr-coup .cp-top .seg-btn,body.gaming #scr-coup .cp-guide summary{padding:5px 13px}
+  body.gaming #scr-coup .cp-table{gap:10px 14px;padding:12px 16px 14px}
+  body.gaming #scr-coup .cp-card.lg{width:106px;height:150px;padding:9px 6px 8px} body.gaming #scr-coup .cp-card.lg .cp-ic{width:48px;height:48px;margin:2px 0 5px} body.gaming #scr-coup .cp-card.lg .cp-ic .ic{width:28px;height:28px} body.gaming #scr-coup .cp-card.lg b{font-size:19px}
+  body.gaming #scr-coup .cp-mybar{padding:4px 14px 4px 6px}
+}
+/* 휴대폰 가로: 아주 낮아요 — 카드 · 자리 · 버튼을 작게 */
+@media (min-width:561px) and (max-height:520px){
+  body.gaming #scr-coup .cp-top{margin-bottom:5px}
+  body.gaming #scr-coup .cp-top .seg-btn,body.gaming #scr-coup .cp-guide summary{padding:4px 11px;font-size:13px}
+  body.gaming #scr-coup .cp-table{gap:7px 10px;padding:9px 12px 10px;border-radius:20px}
+  body.gaming #scr-coup .cp-table::before{inset:5px;border-radius:16px}
+  body.gaming #scr-coup .cp-opps{gap:6px}
+  body.gaming #scr-coup .cp-seat{padding:4px 10px;flex-basis:200px;min-width:140px}
+  body.gaming #scr-coup .cp-av{width:22px;height:22px;font-size:11px}
+  body.gaming #scr-coup .cp-mini{width:22px;height:30px} body.gaming #scr-coup .cp-mini .ic{width:13px;height:13px}
+  body.gaming #scr-coup .cp-stage{min-height:0;padding:8px 12px}
+  body.gaming #scr-coup .cp-big{font-size:18px} body.gaming #scr-coup .cp-stage p{font-size:13px;margin:2px 0}
+  body.gaming #scr-coup .cp-stage-in .cp-card.md{width:62px;height:88px;padding:6px 4px} body.gaming #scr-coup .cp-stage-in .cp-card.md small{display:none}
+  body.gaming #scr-coup .cp-stage-in .cp-card.md .cp-ic{width:34px;height:34px}
+  body.gaming #scr-coup .cp-q{margin:4px 0 6px!important}
+  body.gaming #scr-coup .cp-btns .btn{font-size:14px;padding:7px 13px}
+  body.gaming #scr-coup .cp-card.lg{width:84px;height:118px;padding:7px 4px 6px;border-radius:11px} body.gaming #scr-coup .cp-card.lg::before{inset:4px}
+  body.gaming #scr-coup .cp-card.lg .cp-ic{width:36px;height:36px;margin:0 0 4px} body.gaming #scr-coup .cp-card.lg .cp-ic .ic{width:20px;height:20px}
+  body.gaming #scr-coup .cp-card.lg b{font-size:16px;letter-spacing:0} body.gaming #scr-coup .cp-card.lg small{font-size:9.5px;margin-top:2px}
+  body.gaming #scr-coup .cp-me{gap:5px} body.gaming #scr-coup .cp-mycards{gap:7px}
+  body.gaming #scr-coup .cp-mybar{padding:2px 12px 2px 3px;gap:7px} body.gaming #scr-coup .cp-mybar .cp-av{width:22px;height:22px}
+  body.gaming #scr-coup .cp-coin.big{padding:1px 9px 1px 5px} body.gaming #scr-coup .cp-coin.big b{font-size:15px}
+  body.gaming #scr-coup .cp-logbox{padding:6px 10px}
+  body.gaming #scr-coup .cp-log li{font-size:11.5px;padding:3px 2px}
+  body.gaming #scr-coup .cp-act{padding:5px 4px;display:grid;grid-template-columns:auto auto;justify-content:center;align-items:center;gap:0 4px}
+  body.gaming #scr-coup .cp-act .cp-ic{display:grid} body.gaming #scr-coup .cp-act .cp-ic .ic{width:16px;height:16px}
+  body.gaming #scr-coup .cp-act b{font-size:14px} body.gaming #scr-coup .cp-act small{grid-column:1 / -1;font-size:10px}
+}
+
+/* ═══════════════ 🤴 계급 전쟁 ═══════════════ */
+/* 계급 사다리: 한 줄로 (계급 표시는 자리 위쪽 배지), 카드 묶음은 장 수가 많으면 더 겹쳐요 (--n = 묶음 장 수) */
+body.gaming #scr-dalmuti .dm-ladder{flex-wrap:nowrap;padding-top:8px}
+body.gaming #scr-dalmuti .dm-seat{position:relative;flex:0 1 128px;width:auto;min-width:0;padding:12px 6px 6px;gap:3px}
+body.gaming #scr-dalmuti .dm-seat>.dm-title{position:absolute;top:-9px;left:50%;transform:translateX(-50%);box-shadow:0 2px 5px rgba(0,0,0,.45),inset 0 -1px 0 rgba(0,0,0,.2)}
+body.gaming #scr-dalmuti .dm-arrow{flex:none}
+body.gaming #scr-dalmuti .dm-group{--ch:86px;--st:22px;--sx:66px}
+body.gaming #scr-dalmuti .dm-group .dm-card+.dm-card{margin-top:calc(min(var(--st), var(--sx) / (var(--n) - 1)) - var(--ch))}
+body.gaming #scr-dalmuti .dm-taxnote{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.gaming #scr-dalmuti .dm-taxnote .ic{flex:none}
+
+/* ── 휴대폰 세로 ── */
+@media (max-width:560px){
+  body.gaming #scr-dalmuti .mode-row{margin-bottom:6px;gap:4px;flex-wrap:nowrap;align-items:center}
+  body.gaming #scr-dalmuti .mode-row .small{font-size:11px;white-space:nowrap}
+  body.gaming #scr-dalmuti .mode-row .seg-btn{padding:5px 9px;font-size:13px;border-radius:9px}
+  body.gaming #scr-dalmuti .dm-table{padding:6px 6px 8px;border-radius:18px}
+  body.gaming #scr-dalmuti .dm-table::before{inset:4px;border-radius:15px}
+  body.gaming #scr-dalmuti .dm-ladder{justify-content:flex-start;gap:4px;overflow-x:auto;scrollbar-width:none;padding:10px 1px 2px}
+  body.gaming #scr-dalmuti .dm-ladder::-webkit-scrollbar{display:none}
+  body.gaming #scr-dalmuti .dm-seat{flex:1 1 0;min-width:50px;padding:9px 2px 3px;gap:1px;border-radius:10px}
+  body.gaming #scr-dalmuti .dm-seat>.dm-title{top:-8px;font-size:9.5px;padding:0 5px;line-height:15px}
+  body.gaming #scr-dalmuti .dm-seat.turn{box-shadow:0 0 0 2px #ffd166,0 0 10px rgba(255,209,102,.35)}
+  body.gaming #scr-dalmuti .dm-who{gap:3px}
+  body.gaming #scr-dalmuti .dm-who .dm-av{display:none}
+  body.gaming #scr-dalmuti .dm-who b{font-size:10.5px}
+  body.gaming #scr-dalmuti .dm-backs{padding-left:6px;min-height:14px}
+  body.gaming #scr-dalmuti .dm-backs i{width:7px;height:11px;margin-left:-4px}
+  body.gaming #scr-dalmuti .dm-backs i:nth-child(n+4){display:none}
+  body.gaming #scr-dalmuti .dm-backs span{font-size:12px;margin-left:4px}
+  body.gaming #scr-dalmuti .dm-meta{gap:2px;min-height:13px;flex-wrap:nowrap}
+  body.gaming #scr-dalmuti .dm-meta small{font-size:9.5px}
+  body.gaming #scr-dalmuti .dm-meta em{font-size:9px;padding:0 4px;line-height:13px}
+  body.gaming #scr-dalmuti .dm-meta em.turn{display:none}
+
+  body.gaming #scr-dalmuti .dm-mid{gap:5px;margin:6px 0}
+  body.gaming #scr-dalmuti .dm-center{min-height:100px;padding:6px 8px;gap:3px;border-radius:14px}
+  body.gaming #scr-dalmuti .dm-pile{min-height:0}
+  body.gaming #scr-dalmuti .dm-card.md{width:46px;height:66px;border-radius:8px} body.gaming #scr-dalmuti .dm-card.md .dm-num{font-size:18px;left:4px}
+  body.gaming #scr-dalmuti .dm-card.md .dm-ic{margin-top:9px} body.gaming #scr-dalmuti .dm-card.md .dm-ic .ic{width:20px;height:20px} body.gaming #scr-dalmuti .dm-card.md b{font-size:8.5px}
+  body.gaming #scr-dalmuti .dm-card.md.jester .dm-ic{width:28px;height:28px;margin-top:6px} body.gaming #scr-dalmuti .dm-card.md.jester .dm-ic .ic{width:17px;height:17px}
+  body.gaming #scr-dalmuti .dm-fan .dm-card.md+.dm-card.md{margin-left:-26px}
+  body.gaming #scr-dalmuti .dm-card.sm{width:34px;height:48px;border-radius:6px} body.gaming #scr-dalmuti .dm-card.sm .dm-num{font-size:13px;left:3px} body.gaming #scr-dalmuti .dm-card.sm .dm-ic{margin-top:8px} body.gaming #scr-dalmuti .dm-card.sm .dm-ic .ic{width:14px;height:14px}
+  body.gaming #scr-dalmuti .dm-fan .dm-card.sm+.dm-card.sm{margin-left:-22px}
+  body.gaming #scr-dalmuti .dm-play small{font-size:11px;margin-top:2px}
+  body.gaming #scr-dalmuti .dm-rule{font-size:12.5px;margin:0;line-height:1.35}
+  body.gaming #scr-dalmuti .dm-emptypile .ic{width:30px;height:30px} body.gaming #scr-dalmuti .dm-emptypile span{font-size:14px}
+  body.gaming #scr-dalmuti .dm-revolt{flex-direction:row;gap:10px;text-align:left}
+  body.gaming #scr-dalmuti .dm-revolt h3,body.gaming #scr-dalmuti .dm-taxbox h3,body.gaming #scr-dalmuti .dm-summary h3{font-size:17px;margin:0 0 4px}
+  body.gaming #scr-dalmuti .dm-revolt p,body.gaming #scr-dalmuti .dm-taxbox p{font-size:12.5px;margin:2px 0 6px}
+  body.gaming #scr-dalmuti .dm-revolt .dm-btns{justify-content:flex-start}
+  body.gaming #scr-dalmuti .dm-btns .btn,body.gaming #scr-dalmuti .dm-summary .btn{font-size:14px;padding:7px 12px}
+  body.gaming #scr-dalmuti .dm-taxbox ul{margin:0 0 4px;gap:2px;font-size:12.5px}
+  body.gaming #scr-dalmuti .dm-summary table{font-size:12px;margin-bottom:6px}
+  body.gaming #scr-dalmuti .dm-summary td{padding:3px 4px} body.gaming #scr-dalmuti .dm-summary th{padding:2px 4px}
+  body.gaming #scr-dalmuti .dm-final{font-size:17px}
+  body.gaming #scr-dalmuti .dm-logbox{max-height:none;height:44px;padding:3px 8px;border-radius:12px}
+  body.gaming #scr-dalmuti .dm-logt{display:none}
+  body.gaming #scr-dalmuti .dm-log{margin:0}
+  body.gaming #scr-dalmuti .dm-log li{font-size:11.5px;padding:3px 2px;line-height:1.3}
+
+  body.gaming #scr-dalmuti .dm-me{padding:4px 3px 6px;border-radius:14px}
+  body.gaming #scr-dalmuti .dm-note{min-height:0}
+  body.gaming #scr-dalmuti .dm-taxnote{font-size:10.5px;padding:2px 8px}
+  body.gaming #scr-dalmuti .dm-hand{min-height:0;padding:12px 2px 4px;gap:10px 4px}
+  body.gaming #scr-dalmuti .dm-hand .dm-card{width:42px;height:60px;border-radius:7px}
+  body.gaming #scr-dalmuti .dm-hand .dm-card .dm-num{font-size:15px;left:4px} body.gaming #scr-dalmuti .dm-hand .dm-card .dm-ic{margin-top:13px} body.gaming #scr-dalmuti .dm-hand .dm-card .dm-ic .ic{width:19px;height:19px}
+  body.gaming #scr-dalmuti .dm-hand .dm-card b{display:none}
+  body.gaming #scr-dalmuti .dm-hand .dm-card.jester .dm-ic{width:26px;height:26px;margin-top:12px} body.gaming #scr-dalmuti .dm-hand .dm-card.jester .dm-ic .ic{width:16px;height:16px}
+  body.gaming #scr-dalmuti .dm-group{--ch:60px;--st:15px;--sx:45px;padding-top:4px}
+  body.gaming #scr-dalmuti .dm-card.hand.sel{transform:translateY(-6px)}
+  body.gaming #scr-dalmuti .dm-cnt{font-size:10px;padding:0 5px;bottom:-7px;right:-5px}
+  body.gaming #scr-dalmuti .dm-empty{font-size:16px;margin:12px 0}
+  body.gaming #scr-dalmuti .dm-bar{margin-top:6px;gap:6px}
+  body.gaming #scr-dalmuti .dm-bar .btn{font-size:14px;padding:8px 13px}
+  body.gaming #scr-dalmuti .dm-bar .btn.sm{font-size:13px;padding:7px 10px}
+  body.gaming #scr-dalmuti .dm-bar small{font-size:10.5px;line-height:1.3}
+}
+
+/* ── 중간 (폴드 펼침 · 태블릿 세로) ── */
+@media (min-width:561px) and (max-width:960px) and (min-height:521px){
+  body.gaming #scr-dalmuti .dm-ladder{gap:4px}
+  body.gaming #scr-dalmuti .dm-seat{flex:1 1 0;width:auto;min-width:0}
+  body.gaming #scr-dalmuti .dm-arrow .ic{width:12px;height:12px}
+  body.gaming #scr-dalmuti .dm-mid{grid-template-columns:minmax(0,1fr) minmax(190px,30%);margin:12px 0 10px}
+  body.gaming #scr-dalmuti .dm-center{min-height:170px}
+  body.gaming #scr-dalmuti .dm-logbox{max-height:none;contain:size}
+}
+
+/* ── 넓은 화면 · 휴대폰 가로: 내 패 오른쪽에 버튼 ── */
+@media (min-width:961px),(min-width:561px) and (max-height:520px){
+  body.gaming #scr-dalmuti .dm-table{padding:14px 16px 16px}
+  body.gaming #scr-dalmuti .dm-seat{display:grid;grid-template-columns:auto auto;grid-template-areas:"who backs" "meta meta";justify-content:center;align-items:center;gap:3px 8px;flex-basis:150px;padding:13px 8px 5px}
+  body.gaming #scr-dalmuti .dm-who{grid-area:who} body.gaming #scr-dalmuti .dm-backs{grid-area:backs} body.gaming #scr-dalmuti .dm-meta{grid-area:meta;min-height:16px}
+  body.gaming #scr-dalmuti .dm-backs i:nth-child(n+6){display:none}
+  body.gaming #scr-dalmuti .dm-mid{margin:10px 0}
+  body.gaming #scr-dalmuti .dm-center{min-height:160px}
+  body.gaming #scr-dalmuti .dm-logbox{max-height:none;contain:size}
+  body.gaming #scr-dalmuti .dm-me{display:grid;grid-template-columns:minmax(0,1fr) 250px;grid-template-rows:auto auto;grid-template-areas:"hand note" "hand bar";align-content:center;align-items:center;gap:6px 14px;padding:8px 12px 10px}
+  body.gaming #scr-dalmuti .dm-note{grid-area:note;align-self:end;flex-direction:column;align-items:stretch}
+  body.gaming #scr-dalmuti .dm-taxnote{white-space:normal;border-radius:10px;align-items:flex-start;line-height:1.35}
+  body.gaming #scr-dalmuti .dm-hand{grid-area:hand;min-height:118px;align-self:center}
+  body.gaming #scr-dalmuti .dm-bar{grid-area:bar;margin:0;align-self:start}
+  body.gaming #scr-dalmuti .dm-bar .btn[data-act=dmPlay],body.gaming #scr-dalmuti .dm-bar .btn[data-act=dmGive]{flex:1 1 100%}
+}
+@media (min-width:561px) and (max-height:520px){
+  body.gaming #scr-dalmuti .mode-row{margin-bottom:5px} body.gaming #scr-dalmuti .mode-row .seg-btn{padding:4px 12px;font-size:13px}
+  body.gaming #scr-dalmuti .dm-table{padding:8px 12px 10px;border-radius:20px}
+  body.gaming #scr-dalmuti .dm-mid{margin:6px 0} body.gaming #scr-dalmuti .dm-center{min-height:0;padding:6px 10px}
+  body.gaming #scr-dalmuti .dm-pile{min-height:0}
+  body.gaming #scr-dalmuti .dm-card.md{width:52px;height:74px} body.gaming #scr-dalmuti .dm-card.md .dm-num{font-size:19px} body.gaming #scr-dalmuti .dm-card.md .dm-ic .ic{width:22px;height:22px} body.gaming #scr-dalmuti .dm-card.md b{font-size:9px}
+  body.gaming #scr-dalmuti .dm-fan .dm-card.md+.dm-card.md{margin-left:-28px}
+  body.gaming #scr-dalmuti .dm-me{padding:4px 10px 6px}
+  body.gaming #scr-dalmuti .dm-hand{padding:8px 4px 2px;min-height:0}
+  body.gaming #scr-dalmuti .dm-hand .dm-card{width:44px;height:62px} body.gaming #scr-dalmuti .dm-hand .dm-card b{display:none}
+  body.gaming #scr-dalmuti .dm-hand .dm-card .dm-num{font-size:16px} body.gaming #scr-dalmuti .dm-hand .dm-card .dm-ic{margin-top:13px} body.gaming #scr-dalmuti .dm-hand .dm-card .dm-ic .ic{width:19px;height:19px}
+  body.gaming #scr-dalmuti .dm-group{--ch:62px;--st:14px;--sx:36px}
+  body.gaming #scr-dalmuti .dm-bar .btn{font-size:14px;padding:7px 12px} body.gaming #scr-dalmuti .dm-bar small{font-size:10.5px}
+}
+@media (min-width:961px) and (max-height:760px){
+  body.gaming #scr-dalmuti .mode-row{margin-bottom:8px} body.gaming #scr-dalmuti .mode-row .seg-btn{padding:6px 14px}
+  body.gaming #scr-dalmuti .dm-table{padding:10px 16px 12px}
+  body.gaming #scr-dalmuti .dm-ladder{padding-top:7px} body.gaming #scr-dalmuti .dm-seat{padding:12px 8px 4px}
+  body.gaming #scr-dalmuti .dm-center{min-height:0;padding:10px 14px;gap:6px}
+  body.gaming #scr-dalmuti .dm-pile{min-height:0}
+  body.gaming #scr-dalmuti .dm-card.md{width:64px;height:92px} body.gaming #scr-dalmuti .dm-card.md .dm-num{font-size:22px} body.gaming #scr-dalmuti .dm-card.md .dm-ic .ic{width:28px;height:28px} body.gaming #scr-dalmuti .dm-card.md b{font-size:11px}
+  body.gaming #scr-dalmuti .dm-fan .dm-card.md+.dm-card.md{margin-left:-30px}
+  body.gaming #scr-dalmuti .dm-hand{padding:10px 4px 4px;min-height:0}
+  body.gaming #scr-dalmuti .dm-hand .dm-card{width:54px;height:77px} body.gaming #scr-dalmuti .dm-hand .dm-card .dm-num{font-size:18px} body.gaming #scr-dalmuti .dm-hand .dm-card .dm-ic{margin-top:11px} body.gaming #scr-dalmuti .dm-hand .dm-card .dm-ic .ic{width:23px;height:23px} body.gaming #scr-dalmuti .dm-hand .dm-card b{font-size:9.5px}
+  body.gaming #scr-dalmuti .dm-group{--ch:77px;--st:18px;--sx:40px}
+}
+@media (min-width:961px) and (max-height:640px){
+  body.gaming #scr-dalmuti .dm-mid{margin:8px 0}
+  body.gaming #scr-dalmuti .dm-center{padding:6px 12px;gap:4px}
+  body.gaming #scr-dalmuti .dm-card.md{width:56px;height:80px} body.gaming #scr-dalmuti .dm-card.md .dm-num{font-size:20px} body.gaming #scr-dalmuti .dm-card.md .dm-ic{margin-top:10px} body.gaming #scr-dalmuti .dm-card.md .dm-ic .ic{width:24px;height:24px} body.gaming #scr-dalmuti .dm-card.md b{font-size:10px}
+  body.gaming #scr-dalmuti .dm-fan .dm-card.md+.dm-card.md{margin-left:-28px}
+  body.gaming #scr-dalmuti .dm-hand .dm-card{width:50px;height:70px} body.gaming #scr-dalmuti .dm-hand .dm-card b{display:none} body.gaming #scr-dalmuti .dm-hand .dm-card .dm-ic{margin-top:14px}
+  body.gaming #scr-dalmuti .dm-group{--ch:70px;--st:16px;--sx:36px}
+}
+
+/* ═══════════════ 🎲 라이어 다이스 ═══════════════ */
+/* 상대는 한 줄로, 부른 기록은 마지막 3개만, 조작 버튼은 묶음 없이 한 판에 배치 (.ld-pick · .ld-calls 는 display:contents) */
+body.gaming #scr-liardice .ld-opps{flex-wrap:nowrap;max-width:100%}
+body.gaming #scr-liardice .ld-opp{flex:0 1 130px;min-width:0}
+body.gaming #scr-liardice .ld-pname{max-width:100%;white-space:nowrap;overflow:hidden}
+body.gaming #scr-liardice .ld-pname i{flex:none}
+body.gaming #scr-liardice .ld-hist{flex-wrap:nowrap;max-width:100%;overflow:hidden}
+body.gaming #scr-liardice .ld-hist>span:nth-last-of-type(n+4),body.gaming #scr-liardice .ld-hist>i:nth-last-of-type(n+3){display:none}
+body.gaming #scr-liardice .ld-hist>span{white-space:nowrap}
+body.gaming #scr-liardice .ld-pick,body.gaming #scr-liardice .ld-calls{display:contents}
+body.gaming #scr-liardice .ld-controls{flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;column-gap:12px;row-gap:8px;min-height:70px}
+body.gaming #scr-liardice .ld-hint,body.gaming #scr-liardice .ld-note{flex:1 1 100%;text-align:center}
+
+/* ── 휴대폰 세로 ── */
+@media (max-width:560px){
+  body.gaming #scr-liardice .mode-row{margin-bottom:6px;gap:4px;align-items:center}
+  body.gaming #scr-liardice .mode-row .small{font-size:11px}
+  body.gaming #scr-liardice .mode-row .seg-btn{padding:5px 12px;font-size:13px;border-radius:9px}
+  body.gaming #scr-liardice .ld-table{padding:10px 8px;gap:7px;border-radius:20px;box-shadow:inset 0 0 0 5px #22100a,inset 0 0 0 7px #8a5a2b,0 12px 30px rgba(0,0,0,.45)}
+  body.gaming #scr-liardice .ld-opps{gap:5px;width:100%;justify-content:center}
+  body.gaming #scr-liardice .ld-opp{flex:1 1 0;max-width:118px;padding:5px 3px;gap:3px;border-radius:12px}
+  body.gaming #scr-liardice .ld-opp>small{display:none}
+  body.gaming #scr-liardice .ld-pname{font-size:11px;gap:4px}
+  body.gaming #scr-liardice .ld-pname i{width:8px;height:8px}
+  body.gaming #scr-liardice .ld-pname em{font-size:9.5px;padding:0 5px}
+  body.gaming #scr-liardice .ld-cup{width:44px;height:40px}
+  body.gaming #scr-liardice .ld-cup span{font-size:15px;margin-top:9px}
+  body.gaming #scr-liardice .ld-opp .ld-dice{gap:2px}
+  body.gaming #scr-liardice .ld-opp .ld-die .die{width:19px;height:19px;padding:3px;border-radius:5px;gap:1px}
+  body.gaming #scr-liardice .ld-opp .ld-die.match .die{box-shadow:0 0 0 2px #5ce1ff}
+  body.gaming #scr-liardice .ld-out{font-size:11px}
+  body.gaming #scr-liardice .ld-center{min-height:0;gap:5px;width:100%}
+  body.gaming #scr-liardice .ld-bid{gap:3px}
+  body.gaming #scr-liardice .ld-bid small{font-size:11px}
+  body.gaming #scr-liardice .ld-bidv{gap:8px;padding:4px 14px;border-radius:14px}
+  body.gaming #scr-liardice .ld-bidv b{font-size:30px}
+  body.gaming #scr-liardice .ld-bidv span{font-size:13px}
+  body.gaming #scr-liardice .ld-bidv .die{width:34px;height:34px;padding:5px;border-radius:8px}
+  body.gaming #scr-liardice .ld-bidv.empty{font-size:24px;padding:2px 30px}
+  body.gaming #scr-liardice .ld-count{font-size:17px;padding:1px 12px}
+  body.gaming #scr-liardice .ld-msg{font-size:12.5px;padding:4px 10px;max-width:100%}
+  body.gaming #scr-liardice .ld-hist{font-size:11px;gap:3px}
+  body.gaming #scr-liardice .ld-hist span{padding:1px 6px}
+  body.gaming #scr-liardice .ld-mine{gap:3px}
+  body.gaming #scr-liardice .ld-mylabel{font-size:11px;letter-spacing:1px}
+  body.gaming #scr-liardice .ld-die.big .die{width:44px;height:44px;padding:7px;border-radius:10px}
+  body.gaming #scr-liardice .ld-dice.mine{gap:6px}
+
+  body.gaming #scr-liardice .ld-controls{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr);grid-template-areas:"step faces faces" "bid liar exact" "hint hint hint";
+    gap:6px;margin-top:8px;min-height:124px;align-content:center;align-items:center}
+  body.gaming #scr-liardice .ld-step{grid-area:step;justify-content:center;gap:5px}
+  body.gaming #scr-liardice .ld-step .btn{padding:6px 12px;font-size:16px;border-radius:10px}
+  body.gaming #scr-liardice .ld-step b{font-size:24px;min-width:44px}
+  body.gaming #scr-liardice .ld-step b small{font-size:12px}
+  body.gaming #scr-liardice .ld-faces{grid-area:faces;justify-content:center;gap:3px}
+  body.gaming #scr-liardice .ld-face{padding:1px}
+  body.gaming #scr-liardice .ld-face .die{width:31px;height:31px;padding:5px;border-radius:7px}
+  body.gaming #scr-liardice .ld-face.on{transform:translateY(-2px)}
+  body.gaming #scr-liardice .ld-controls .btn.lg,body.gaming #scr-liardice .ld-calls .btn{padding:10px 6px;font-size:14.5px;border-radius:12px;line-height:1.25}
+  body.gaming #scr-liardice [data-act=ldBid]{grid-area:bid}
+  body.gaming #scr-liardice [data-t=liar]{grid-area:liar}
+  body.gaming #scr-liardice [data-t=exact]{grid-area:exact}
+  body.gaming #scr-liardice .ld-hint{grid-area:hint;font-size:10.5px;line-height:1.35}
+  body.gaming #scr-liardice .ld-note{grid-column:1 / -1}
+}
+
+/* ── 넓은 화면 · 중간: 조작 줄을 한 줄로 ── */
+@media (min-width:561px){
+  body.gaming #scr-liardice .ld-table{padding:16px 18px;gap:12px}
+  body.gaming #scr-liardice .ld-opp{padding:8px 10px;gap:4px}
+  body.gaming #scr-liardice .ld-cup{width:56px;height:52px}
+  body.gaming #scr-liardice .ld-center{min-height:150px;gap:8px}
+  body.gaming #scr-liardice .ld-controls{margin-top:12px}
+}
+@media (min-width:561px) and (max-height:760px){
+  body.gaming #scr-liardice .mode-row{margin-bottom:8px} body.gaming #scr-liardice .mode-row .seg-btn{padding:6px 14px}
+  body.gaming #scr-liardice .ld-table{padding:12px 18px;gap:8px}
+  body.gaming #scr-liardice .ld-center{min-height:0;gap:6px}
+  body.gaming #scr-liardice .ld-opp>small{display:none}
+  body.gaming #scr-liardice .ld-cup{width:50px;height:46px} body.gaming #scr-liardice .ld-cup span{margin-top:10px}
+  body.gaming #scr-liardice .ld-bidv.empty{font-size:30px;padding:4px 36px}
+  body.gaming #scr-liardice .ld-bidv{padding:6px 20px}
+  body.gaming #scr-liardice .ld-bidv b{font-size:38px} body.gaming #scr-liardice .ld-bidv .die{width:44px;height:44px;padding:7px}
+  body.gaming #scr-liardice .ld-mine{gap:5px}
+  body.gaming #scr-liardice .ld-die.big .die{width:52px;height:52px;padding:8px}
+  body.gaming #scr-liardice .ld-controls{margin-top:10px;row-gap:6px}
+}
+@media (min-width:961px) and (max-height:640px){
+  body.gaming #scr-liardice .ld-bidv b{font-size:34px} body.gaming #scr-liardice .ld-bidv .die{width:40px;height:40px;padding:6px}
+  body.gaming #scr-liardice .ld-die.big .die{width:48px;height:48px;padding:8px}
+  body.gaming #scr-liardice .ld-controls .btn.lg{padding:11px 26px;font-size:19px}
+}
+/* ── 휴대폰 가로: 왼쪽 판 · 오른쪽 조작 ── */
+@media (min-width:561px) and (max-height:520px){
+  body.gaming #scr-liardice.active{display:grid;grid-template-columns:minmax(0,1fr) 300px;grid-template-areas:"head head" "table mode" "table ctrl";grid-template-rows:auto auto 1fr;column-gap:12px}
+  body.gaming #scr-liardice>.game-head{grid-area:head} body.gaming #scr-liardice>.scorebar{display:none}
+  body.gaming #scr-liardice>.mode-row{grid-area:mode;margin:0 0 6px}
+  body.gaming #scr-liardice .ld-table{grid-area:table;width:100%;padding:10px 14px;gap:6px;border-radius:22px;box-shadow:inset 0 0 0 6px #22100a,inset 0 0 0 8px #8a5a2b,0 12px 30px rgba(0,0,0,.45)}
+  body.gaming #scr-liardice .ld-opp>small{display:none}
+  body.gaming #scr-liardice .ld-opp{padding:4px 8px;gap:2px}
+  body.gaming #scr-liardice .ld-cup{width:44px;height:38px} body.gaming #scr-liardice .ld-cup span{font-size:15px;margin-top:8px}
+  body.gaming #scr-liardice .ld-bid{gap:2px} body.gaming #scr-liardice .ld-bidv{padding:3px 14px}
+  body.gaming #scr-liardice .ld-bidv b{font-size:28px} body.gaming #scr-liardice .ld-bidv .die{width:32px;height:32px;padding:5px}
+  body.gaming #scr-liardice .ld-msg{font-size:12.5px;padding:3px 10px}
+  body.gaming #scr-liardice .ld-die.big .die{width:40px;height:40px;padding:6px}
+  body.gaming #scr-liardice .ld-mylabel{display:none}
+  body.gaming #scr-liardice .ld-controls{grid-area:ctrl;margin:0;align-content:center;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"step step" "faces faces" "bid bid" "liar exact" "hint hint";gap:6px}
+  body.gaming #scr-liardice .ld-step{grid-area:step;justify-content:center} body.gaming #scr-liardice .ld-faces{grid-area:faces;justify-content:center}
+  body.gaming #scr-liardice .ld-step .btn{padding:4px 12px} body.gaming #scr-liardice .ld-step b{font-size:22px}
+  body.gaming #scr-liardice .ld-face .die{width:34px;height:34px;padding:5px}
+  body.gaming #scr-liardice [data-act=ldBid]{grid-area:bid} body.gaming #scr-liardice [data-t=liar]{grid-area:liar} body.gaming #scr-liardice [data-t=exact]{grid-area:exact}
+  body.gaming #scr-liardice .ld-controls .btn.lg,body.gaming #scr-liardice .ld-calls .btn{padding:8px 10px;font-size:15px}
+  body.gaming #scr-liardice .ld-hint{grid-area:hint;font-size:10.5px}
+  body.gaming #scr-liardice .ld-note{grid-column:1 / -1}
+}
+
+/* ═══════════════ 🔪 마피아 ═══════════════ */
+body.gaming #scr-mafia .mf-wrap{min-height:0}
+body.gaming #scr-mafia .mf-log{max-height:200px}
+
+/* ── 휴대폰 세로: 사람 4명씩 한 줄, 내 직업 카드는 가로로 ── */
+@media (max-width:560px){
+  body.gaming #scr-mafia .mf-wrap{padding:10px 9px;border-radius:18px}
+  body.gaming #scr-mafia .mf-sky{gap:10px;margin-bottom:8px}
+  body.gaming #scr-mafia .mf-orb{width:40px;height:40px}
+  body.gaming #scr-mafia .mf-wrap.night .mf-orb,body.gaming #scr-mafia .mf-wrap.intro .mf-orb{box-shadow:inset -9px 4px 0 0 #b9c3ea,0 0 18px rgba(200,210,255,.45)}
+  body.gaming #scr-mafia .mf-phase small{font-size:9.5px;letter-spacing:3px}
+  body.gaming #scr-mafia .mf-phase b{font-size:21px;margin:0 0 2px}
+  body.gaming #scr-mafia .mf-phase p{font-size:12.5px;line-height:1.35}
+  body.gaming #scr-mafia .mf-main{gap:8px}
+  body.gaming #scr-mafia .mf-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  body.gaming #scr-mafia .mf-p{padding:7px 3px 6px;gap:3px;border-radius:12px;min-height:0}
+  body.gaming #scr-mafia .mf-p .av{width:34px;height:34px;font-size:15px}
+  body.gaming #scr-mafia .mf-p.dead .av::after{width:40px;height:3px}
+  body.gaming #scr-mafia .mf-p .nm{font-size:11.5px}
+  body.gaming #scr-mafia .mf-p .rl{font-size:9.5px;padding:1px 6px}
+  body.gaming #scr-mafia .mf-p .chk{font-size:9.5px;padding:0 4px}
+  body.gaming #scr-mafia .mf-p .vt{min-width:22px;height:22px;border-radius:11px;font-size:13px;top:-6px;right:-5px;padding:0 4px}
+  body.gaming #scr-mafia .mf-p .rdy{top:3px;left:3px;font-size:8.5px;padding:0 4px}
+  body.gaming #scr-mafia .mf-p .knife{top:3px;right:3px;font-size:8.5px;padding:0 4px}
+  body.gaming #scr-mafia .mf-side{gap:7px}
+  body.gaming #scr-mafia .mf-card{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;align-items:center;padding:9px 12px;border-radius:13px}
+  body.gaming #scr-mafia .mf-card small{grid-area:1 / 1;font-size:9px;letter-spacing:3px;align-self:end}
+  body.gaming #scr-mafia .mf-card b{grid-area:2 / 1;font-size:23px;margin:0;align-self:start}
+  body.gaming #scr-mafia .mf-card p{grid-column:2;font-size:12px;line-height:1.45}
+  body.gaming #scr-mafia .mf-card p:first-of-type{grid-row:1 / span 2}
+  body.gaming #scr-mafia .mf-card .mates,body.gaming #scr-mafia .mf-card .dead-note{margin-top:2px}
+  body.gaming #scr-mafia .mf-acts{gap:6px}
+  body.gaming #scr-mafia .mf-hint{font-size:12.5px;padding:7px 10px;line-height:1.4}
+  body.gaming #scr-mafia .mf-acts .btn{padding:9px 14px;font-size:15px}
+  body.gaming #scr-mafia .mf-log{max-height:72px;padding:6px 10px}
+  body.gaming #scr-mafia .mf-log h4{font-size:10.5px;margin:0 0 2px}
+  body.gaming #scr-mafia .mf-log p{font-size:12px;padding:3px 0;line-height:1.4}
+}
+/* ── 넓은 화면 낮은 높이 (노트북 · 태블릿 가로) ── */
+@media (min-width:561px) and (max-height:760px){
+  body.gaming #scr-mafia .mf-wrap{padding:14px 16px}
+  body.gaming #scr-mafia .mf-sky{gap:14px;margin-bottom:10px}
+  body.gaming #scr-mafia .mf-orb{width:50px;height:50px}
+  body.gaming #scr-mafia .mf-wrap.night .mf-orb,body.gaming #scr-mafia .mf-wrap.intro .mf-orb{box-shadow:inset -11px 5px 0 0 #b9c3ea,0 0 22px rgba(200,210,255,.45)}
+  body.gaming #scr-mafia .mf-phase b{font-size:28px}
+  body.gaming #scr-mafia .mf-phase p{font-size:14px}
+  body.gaming #scr-mafia .mf-grid{gap:10px}
+  body.gaming #scr-mafia .mf-p{padding:10px 6px 9px;gap:5px;min-height:0}
+  body.gaming #scr-mafia .mf-p .av{width:46px;height:46px;font-size:20px}
+  body.gaming #scr-mafia .mf-p.dead .av::after{width:52px}
+  body.gaming #scr-mafia .mf-side{gap:10px}
+  body.gaming #scr-mafia .mf-card{padding:12px 14px}
+  body.gaming #scr-mafia .mf-card b{font-size:26px;margin:0 0 4px}
+  body.gaming #scr-mafia .mf-hint{padding:8px 12px}
+  body.gaming #scr-mafia .mf-log{max-height:130px}
+}
+/* ── 휴대폰 가로: 사람들 | 내 직업 · 할 일 · 기록 ── */
+@media (min-width:561px) and (max-height:520px){
+  body.gaming #scr-mafia .mf-wrap{padding:9px 12px;border-radius:18px}
+  body.gaming #scr-mafia .mf-sky{gap:10px;margin-bottom:6px}
+  body.gaming #scr-mafia .mf-orb{width:34px;height:34px}
+  body.gaming #scr-mafia .mf-wrap.night .mf-orb,body.gaming #scr-mafia .mf-wrap.intro .mf-orb{box-shadow:inset -8px 4px 0 0 #b9c3ea,0 0 16px rgba(200,210,255,.45)}
+  body.gaming #scr-mafia .mf-phase small{display:none}
+  body.gaming #scr-mafia .mf-phase b{font-size:19px;margin:0}
+  body.gaming #scr-mafia .mf-phase p{font-size:12.5px;line-height:1.35}
+  body.gaming #scr-mafia .mf-main{grid-template-columns:minmax(0,1fr) 270px;gap:10px}
+  body.gaming #scr-mafia .mf-grid{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px}
+  body.gaming #scr-mafia .mf-p{padding:6px 3px 5px;gap:3px;min-height:0}
+  body.gaming #scr-mafia .mf-p .av{width:32px;height:32px;font-size:14px}
+  body.gaming #scr-mafia .mf-p.dead .av::after{width:38px;height:3px}
+  body.gaming #scr-mafia .mf-p .nm{font-size:11.5px} body.gaming #scr-mafia .mf-p .rl{font-size:9.5px;padding:1px 6px}
+  body.gaming #scr-mafia .mf-side{gap:6px}
+  body.gaming #scr-mafia .mf-card{padding:7px 10px} body.gaming #scr-mafia .mf-card small{font-size:9px}
+  body.gaming #scr-mafia .mf-card b{font-size:19px;margin:0 0 2px} body.gaming #scr-mafia .mf-card p{font-size:11.5px;line-height:1.4}
+  body.gaming #scr-mafia .mf-hint{font-size:12px;padding:6px 9px}
+  body.gaming #scr-mafia .mf-acts .btn{padding:7px 12px;font-size:14px}
+  body.gaming #scr-mafia .mf-log{max-height:64px;padding:5px 9px}
+  body.gaming #scr-mafia .mf-log h4{font-size:10px;margin:0 0 2px} body.gaming #scr-mafia .mf-log p{font-size:11.5px;padding:2px 0}
+}
+/* 사람이 많으면 (9명 이상) 한 줄에 6명 → 두 줄로 끝나요 */
+body.gaming #scr-mafia .mf-grid:has(>.mf-p:nth-child(9)){grid-template-columns:repeat(6,minmax(0,1fr))}
+@media (max-width:560px){
+  body.gaming #scr-mafia .mf-grid:has(>.mf-p:nth-child(9)){gap:5px}
+  body.gaming #scr-mafia .mf-grid:has(>.mf-p:nth-child(9)) .mf-p{padding:6px 2px 4px;gap:2px;border-radius:10px}
+  body.gaming #scr-mafia .mf-grid:has(>.mf-p:nth-child(9)) .mf-p .av{width:28px;height:28px;font-size:13px}
+  body.gaming #scr-mafia .mf-grid:has(>.mf-p:nth-child(9)) .mf-p.dead .av::after{width:32px}
+  body.gaming #scr-mafia .mf-grid:has(>.mf-p:nth-child(9)) .mf-p .nm{font-size:10.5px}
+  body.gaming #scr-mafia .mf-grid:has(>.mf-p:nth-child(9)) .mf-p .rl{font-size:9px;padding:0 5px}
+  body.gaming #scr-mafia .mf-grid:has(>.mf-p:nth-child(9)) .mf-p .chk{font-size:8.5px;padding:0 3px}
+}
+@media (min-width:561px) and (max-height:520px){
+  body.gaming #scr-mafia .mf-grid:has(>.mf-p:nth-child(9)) .mf-p .av{width:28px;height:28px;font-size:13px}
+  body.gaming #scr-mafia .mf-grid:has(>.mf-p:nth-child(9)) .mf-p .nm{font-size:10.5px}
+}
+
+/* ═══════════════ ⭐ 황야의 총잡이 ═══════════════ */
+/* 판 전체를 이름 붙인 격자로: 자리 / 더미 · 안내 · 버튼 · 기록 / 내 자리 · 손패 (.bg-mid 는 display:contents) */
+body.gaming #scr-bang .bg-wrap{display:grid;grid-template-columns:auto minmax(0,.75fr) minmax(0,1.25fr) minmax(190px,250px);
+  grid-template-areas:"seats seats seats seats" "piles center center log" "piles bar bar log" "me me hand hand";align-items:start;gap:10px 12px}
+body.gaming #scr-bang .bg-mid{display:contents}
+body.gaming #scr-bang .bg-seats{grid-area:seats;order:0}
+body.gaming #scr-bang .bg-piles{grid-area:piles;align-self:center;order:0}
+body.gaming #scr-bang .bg-center{grid-area:center;align-self:end;order:0}
+body.gaming #scr-bang .bg-bar{grid-area:bar;align-self:start;min-height:0;order:0}
+body.gaming #scr-bang .bg-bar:empty{display:none}
+body.gaming #scr-bang .bg-log{grid-area:log;align-self:stretch;contain:size;max-height:none;min-height:80px;order:0}
+body.gaming #scr-bang .bg-me{grid-area:me;align-self:stretch;order:0}
+body.gaming #scr-bang .bg-mycard{max-width:none}
+body.gaming #scr-bang .bg-hand{grid-area:hand;align-self:center;align-content:center;order:0}
+body.gaming #scr-bang .bg-prompt:empty{display:none}
+/* 손패가 많으면 카드를 조금씩 겹쳐서 한 줄로 */
+body.gaming #scr-bang .bg-hand>.bg-card+.bg-card{margin-left:var(--ov,0px)}
+body.gaming #scr-bang .bg-hand>.bg-card.sel,body.gaming #scr-bang .bg-hand>.bg-card.pick,body.gaming #scr-bang .bg-hand>.bg-card:hover{z-index:2}
+body.gaming #scr-bang .bg-hand:has(>.bg-card:nth-child(7)){--ov:-18px}
+body.gaming #scr-bang .bg-hand:has(>.bg-card:nth-child(8)){--ov:-30px}
+body.gaming #scr-bang .bg-hand:has(>.bg-card:nth-child(9)){--ov:-40px}
+body.gaming #scr-bang .bg-hand:has(>.bg-card:nth-child(11)){--ov:-50px}
+/* 상대 자리: 이름 · 역할 / 인물 · 거리 / 생명력 · 손패 / 앞에 놓인 카드 */
+body.gaming #scr-bang .bg-seat{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-areas:"top top top top" "char char char dist" "hp cnt . ." "eq eq eq eq" "left left left left";align-items:center;gap:3px 6px}
+body.gaming #scr-bang .bg-seat .bg-row{display:contents}
+body.gaming #scr-bang .bg-seat .bg-top{grid-area:top} body.gaming #scr-bang .bg-seat .bg-char{grid-area:char;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.gaming #scr-bang .bg-seat .bg-dist{grid-area:dist;margin:0;white-space:nowrap} body.gaming #scr-bang .bg-seat .bg-hp,body.gaming #scr-bang .bg-seat .bg-rip{grid-area:hp}
+body.gaming #scr-bang .bg-seat .bg-cnt{grid-area:cnt} body.gaming #scr-bang .bg-seat .bg-eq{grid-area:eq;min-height:0} body.gaming #scr-bang .bg-seat .bg-left{grid-area:left}
+body.gaming #scr-bang .bg-eq:empty{display:none}
+
+/* ── 휴대폰 세로 ── */
+@media (max-width:560px){
+  body.gaming #scr-bang .mode-row{margin-bottom:6px;gap:4px;align-items:center}
+  body.gaming #scr-bang .mode-row .small{font-size:11px}
+  body.gaming #scr-bang .mode-row .seg-btn{padding:5px 11px;font-size:13px;border-radius:9px}
+  body.gaming #scr-bang .bg-wrap{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"seats seats" "piles center" "piles bar" "hand hand" "me me" "log log";padding:8px 7px;gap:6px 8px;border-radius:18px}
+  body.gaming #scr-bang .bg-seats{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  body.gaming #scr-bang .bg-seat{padding:5px 6px;gap:2px 4px;border-radius:11px;border-width:1.5px}
+  body.gaming #scr-bang .bg-seat .bg-top{gap:4px}
+  body.gaming #scr-bang .bg-seat .bg-top b{font-size:11.5px}
+  body.gaming #scr-bang .bg-seat .bg-dot{width:8px;height:8px}
+  body.gaming #scr-bang .bg-seat .bg-role{font-size:0;padding:2px;gap:0;min-width:17px;height:17px;justify-content:center}
+  body.gaming #scr-bang .bg-seat .bg-role.unk{font-size:10px;padding:0 5px}
+  body.gaming #scr-bang .bg-seat .bg-role .ic{width:12px;height:12px}
+  body.gaming #scr-bang .bg-seat .bg-char{font-size:10.5px}
+  body.gaming #scr-bang .bg-seat .bg-dist{font-size:9px;padding:0 5px}
+  body.gaming #scr-bang .bg-hp{gap:2px} body.gaming #scr-bang .bg-hp i{width:8px;height:11px;border-radius:2px 2px 4px 4px}
+  body.gaming #scr-bang .bg-cnt{font-size:12px;gap:2px} body.gaming #scr-bang .bg-cnt .ic{width:13px;height:13px}
+  body.gaming #scr-bang .bg-rip{font-size:10.5px} body.gaming #scr-bang .bg-rip .ic{width:13px;height:13px}
+  body.gaming #scr-bang .bg-chip{font-size:9.5px;padding:1px 4px;gap:2px} body.gaming #scr-bang .bg-chip .ic{width:10px;height:10px} body.gaming #scr-bang .bg-chip b{font-size:9px;padding:0 3px}
+  body.gaming #scr-bang #bg-deck{display:none}
+  body.gaming #scr-bang .bg-pile small{font-size:10px}
+  body.gaming #scr-bang .bg-empty,body.gaming #scr-bang .bg-card.mini{width:44px;height:62px}
+  body.gaming #scr-bang .bg-card.mini .bg-ic{width:22px;height:22px;margin-top:9px} body.gaming #scr-bang .bg-card.mini b{font-size:9.5px}
+  body.gaming #scr-bang .bg-center{gap:5px}
+  body.gaming #scr-bang .bg-msg{font-size:12.5px;padding:5px 9px;border-radius:10px}
+  body.gaming #scr-bang .bg-prompt{gap:5px}
+  body.gaming #scr-bang .bg-ask{font-size:12.5px;line-height:1.4}
+  body.gaming #scr-bang .bg-ask.alert{padding:5px 9px}
+  body.gaming #scr-bang .bg-steal,body.gaming #scr-bang .bg-pick{gap:5px}
+  body.gaming #scr-bang .bg-steal .btn{font-size:13px;padding:6px 10px}
+  body.gaming #scr-bang .bg-bar{gap:6px}
+  body.gaming #scr-bang .bg-bar .btn{font-size:14px;padding:8px 12px}
+  body.gaming #scr-bang .bg-hand{gap:5px;min-height:0}
+  body.gaming #scr-bang .bg-hand .bg-card,body.gaming #scr-bang .bg-pick .bg-card{width:54px;height:76px;padding:4px 3px 3px;border-width:2px;border-radius:8px;gap:1px}
+  body.gaming #scr-bang .bg-hand .bg-card small,body.gaming #scr-bang .bg-pick .bg-card small{display:none}
+  body.gaming #scr-bang .bg-hand .bg-card .bg-corner,body.gaming #scr-bang .bg-pick .bg-card .bg-corner{font-size:9px;top:3px;left:4px}
+  body.gaming #scr-bang .bg-hand .bg-card .bg-ic,body.gaming #scr-bang .bg-pick .bg-card .bg-ic{width:26px;height:26px;margin-top:9px}
+  body.gaming #scr-bang .bg-hand .bg-card .bg-ic .ic,body.gaming #scr-bang .bg-pick .bg-card .bg-ic .ic{width:16px;height:16px}
+  body.gaming #scr-bang .bg-hand .bg-card b,body.gaming #scr-bang .bg-pick .bg-card b{font-size:11px;margin-top:2px;word-break:keep-all}
+  body.gaming #scr-bang .bg-card.sel{transform:translateY(-6px)} body.gaming #scr-bang .bg-card.pick{transform:translateY(-5px)}
+  body.gaming #scr-bang .bg-hand:has(>.bg-card:nth-child(6)){--ov:-6px}
+  body.gaming #scr-bang .bg-hand:has(>.bg-card:nth-child(7)){--ov:-14px}
+  body.gaming #scr-bang .bg-hand:has(>.bg-card:nth-child(8)){--ov:-20px}
+  body.gaming #scr-bang .bg-hand:has(>.bg-card:nth-child(9)){--ov:-25px}
+  body.gaming #scr-bang .bg-hand:has(>.bg-card:nth-child(10)){--ov:-29px}
+  body.gaming #scr-bang .bg-mycard{padding:6px 9px;gap:3px;border-radius:12px}
+  body.gaming #scr-bang .bg-mycard .bg-top b{font-size:13px}
+  body.gaming #scr-bang .bg-goal{font-size:11.5px}
+  body.gaming #scr-bang .bg-char.big{font-size:11px;line-height:1.35}
+  body.gaming #scr-bang .bg-mycard .bg-row{gap:6px}
+  body.gaming #scr-bang .bg-range{font-size:12px} body.gaming #scr-bang .bg-tag{font-size:10px;padding:1px 6px}
+  body.gaming #scr-bang .bg-mycard .bg-eq .muted{display:none}
+  body.gaming #scr-bang .bg-log{contain:none;align-self:auto;min-height:0;max-height:none;height:46px;padding:4px 9px;gap:1px;font-size:11.5px}
+  body.gaming #scr-bang .bg-l{line-height:1.3}
+}
+/* ── 중간 (폴드 펼침 · 태블릿 세로): 내 자리 · 손패는 위아래로 ── */
+@media (min-width:561px) and (max-width:960px) and (min-height:521px){
+  body.gaming #scr-bang .bg-wrap{grid-template-areas:"seats seats seats seats" "piles center center log" "piles bar bar log" "hand hand hand hand" "me me me me";padding:14px}
+  body.gaming #scr-bang .bg-seats{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  body.gaming #scr-bang .bg-hand .bg-card,body.gaming #scr-bang .bg-pick .bg-card{width:84px;height:118px;padding:6px 5px 5px} body.gaming #scr-bang .bg-hand .bg-card small,body.gaming #scr-bang .bg-pick .bg-card small{font-size:8.5px}
+  body.gaming #scr-bang .bg-hand .bg-card .bg-ic,body.gaming #scr-bang .bg-pick .bg-card .bg-ic{width:30px;height:30px;margin-top:7px} body.gaming #scr-bang .bg-hand .bg-card b,body.gaming #scr-bang .bg-pick .bg-card b{font-size:13px}
+}
+/* ── 넓은 화면 · 휴대폰 가로 ── */
+@media (min-width:961px),(min-width:561px) and (max-height:520px){
+  body.gaming #scr-bang .bg-wrap{padding:12px 14px}
+  body.gaming #scr-bang .bg-seats{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+  body.gaming #scr-bang .bg-seat{padding:7px 10px}
+}
+@media (min-width:561px) and (max-height:760px){
+  body.gaming #scr-bang .mode-row{margin-bottom:8px} body.gaming #scr-bang .mode-row .seg-btn{padding:6px 14px}
+  body.gaming #scr-bang .bg-wrap{gap:8px 12px}
+  body.gaming #scr-bang .bg-back,body.gaming #scr-bang .bg-empty,body.gaming #scr-bang .bg-card.mini{width:54px;height:76px}
+  body.gaming #scr-bang .bg-card.mini .bg-ic{margin-top:7px}
+  body.gaming #scr-bang .bg-mycard{padding:8px 11px;gap:4px}
+  body.gaming #scr-bang .bg-hand .bg-card,body.gaming #scr-bang .bg-pick .bg-card{width:86px;height:120px;padding:6px 5px 5px} body.gaming #scr-bang .bg-hand .bg-card small,body.gaming #scr-bang .bg-pick .bg-card small{font-size:8.5px}
+  body.gaming #scr-bang .bg-hand .bg-card .bg-ic,body.gaming #scr-bang .bg-pick .bg-card .bg-ic{width:30px;height:30px;margin-top:7px} body.gaming #scr-bang .bg-hand .bg-card b,body.gaming #scr-bang .bg-pick .bg-card b{font-size:13.5px}
+}
+@media (min-width:561px) and (max-height:520px){
+  body.gaming #scr-bang .mode-row{margin-bottom:5px} body.gaming #scr-bang .mode-row .seg-btn{padding:4px 12px;font-size:13px}
+  body.gaming #scr-bang .bg-wrap{padding:8px 10px;gap:6px 10px;border-radius:18px}
+  body.gaming #scr-bang .bg-seats{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+  body.gaming #scr-bang .bg-seat{padding:4px 7px;gap:2px 4px} body.gaming #scr-bang .bg-top b{font-size:12px} body.gaming #scr-bang .bg-char{font-size:10.5px}
+  body.gaming #scr-bang .bg-seat .bg-role{font-size:0;padding:2px;gap:0} body.gaming #scr-bang .bg-seat .bg-role.unk{font-size:10px;padding:0 5px}
+  body.gaming #scr-bang .bg-hp i{width:8px;height:11px}
+  body.gaming #scr-bang #bg-deck{display:none}
+  body.gaming #scr-bang .bg-empty,body.gaming #scr-bang .bg-card.mini{width:44px;height:62px} body.gaming #scr-bang .bg-card.mini .bg-ic{width:22px;height:22px}
+  body.gaming #scr-bang .bg-msg{font-size:12.5px;padding:4px 10px} body.gaming #scr-bang .bg-ask{font-size:12.5px}
+  body.gaming #scr-bang .bg-bar .btn{font-size:13.5px;padding:6px 11px}
+  body.gaming #scr-bang .bg-mycard{padding:5px 9px;gap:2px} body.gaming #scr-bang .bg-goal{font-size:11px} body.gaming #scr-bang .bg-char.big{font-size:11px;line-height:1.3}
+  body.gaming #scr-bang .bg-mycard .bg-eq .muted{display:none}
+  body.gaming #scr-bang .bg-hand{gap:5px}
+  body.gaming #scr-bang .bg-hand .bg-card,body.gaming #scr-bang .bg-pick .bg-card{width:56px;height:78px;padding:4px 3px 3px;border-width:2px} body.gaming #scr-bang .bg-hand .bg-card small,body.gaming #scr-bang .bg-pick .bg-card small{display:none}
+  body.gaming #scr-bang .bg-hand .bg-card .bg-ic,body.gaming #scr-bang .bg-pick .bg-card .bg-ic{width:26px;height:26px;margin-top:9px} body.gaming #scr-bang .bg-hand .bg-card .bg-ic .ic,body.gaming #scr-bang .bg-pick .bg-card .bg-ic .ic{width:16px;height:16px}
+  body.gaming #scr-bang .bg-hand .bg-card b,body.gaming #scr-bang .bg-pick .bg-card b{font-size:11px}
+  body.gaming #scr-bang .bg-log{font-size:11px;padding:5px 8px}
+}
+
+/* ═══════════════ 🀫 러미 타일 ═══════════════ */
+/* 바닥(세트)은 남는 높이만큼 (--avail-h 기준) · 세트가 많아지면 바닥 안에서 스크롤 — 화면 전체가 줄어들지 않게 */
+body.gaming #scr-rummi .rm-board{--rk:420px;min-height:0;height:clamp(110px,calc(var(--avail-h,800px) - var(--rk)),480px);overflow:auto;overscroll-behavior:contain}
+body.gaming #scr-rummi .rm-set .rm-why{bottom:-13px}
+
+/* ── 휴대폰 세로 ── */
+@media (max-width:560px){
+  body.gaming #scr-rummi .mode-row{margin-bottom:6px;gap:4px;flex-wrap:nowrap;align-items:center}
+  body.gaming #scr-rummi .mode-row .small{font-size:10.5px;white-space:nowrap}
+  body.gaming #scr-rummi .mode-row .rm-gap{margin-left:5px}
+  body.gaming #scr-rummi .mode-row .seg-btn{padding:5px 8px;font-size:12.5px;border-radius:9px}
+  body.gaming #scr-rummi .rm-wrap{padding:7px;gap:6px;border-radius:16px}
+  body.gaming #scr-rummi .rm-opps{gap:4px}
+  body.gaming #scr-rummi .rm-opp{font-size:10.5px;padding:2px 7px;gap:4px;white-space:nowrap}
+  body.gaming #scr-rummi .rm-opp>i{width:8px;height:8px}
+  body.gaming #scr-rummi .rm-opp em{font-size:9.5px;padding:0 5px}
+  body.gaming #scr-rummi .rm-cnt .ic{width:12px;height:12px}
+  body.gaming #scr-rummi .rm-score{font-size:13px}
+  body.gaming #scr-rummi .rm-board{--rk:400px;padding:7px;gap:7px 6px;border-radius:14px}
+  body.gaming #scr-rummi .rm-empty{padding:16px 8px;font-size:13px}
+  body.gaming #scr-rummi .rm-status{font-size:12px;padding:4px 10px;line-height:1.35;border-radius:10px}
+  body.gaming #scr-rummi .rm-bar{gap:4px;min-height:32px}
+  body.gaming #scr-rummi .rm-bar .btn.sm{padding:7px 9px;font-size:12.5px}
+  body.gaming #scr-rummi .rm-bar .btn .ic{display:none}
+  body.gaming #scr-rummi .rm-rackwrap{gap:3px}
+  body.gaming #scr-rummi .rm-rackhead{font-size:11.5px;padding:0 2px}
+  body.gaming #scr-rummi .chip-btn{padding:3px 9px;font-size:11px}
+  body.gaming #scr-rummi .rm-rack{min-height:0;padding:7px 5px 9px;gap:3px}
+}
+@media (max-width:370px){ body.gaming #scr-rummi .mode-row .seg-btn{padding:5px 6px} }
+
+/* ── 중간 · 넓은 화면: 안내와 버튼을 한 줄에 ── */
+@media (min-width:561px){
+  body.gaming #scr-rummi .rm-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"opps opps" "board board" "status bar" "rack rack";align-items:center}
+  body.gaming #scr-rummi .rm-opps{grid-area:opps} body.gaming #scr-rummi .rm-board{grid-area:board;--rk:450px}
+  body.gaming #scr-rummi .rm-status{grid-area:status;justify-self:start;max-width:100%;text-align:left}
+  body.gaming #scr-rummi .rm-bar{grid-area:bar;justify-content:flex-end}
+  body.gaming #scr-rummi .rm-rackwrap{grid-area:rack}
+}
+@media (min-width:561px) and (max-width:760px){ body.gaming #scr-rummi .rm-board{--rk:392px} }
+@media (min-width:561px) and (max-height:760px){
+  body.gaming #scr-rummi .mode-row{margin-bottom:8px} body.gaming #scr-rummi .mode-row .seg-btn{padding:6px 14px}
+  body.gaming #scr-rummi .rm-wrap{padding:12px 14px;gap:8px 12px}
+  body.gaming #scr-rummi .rm-board{--rk:366px;padding:10px}
+  body.gaming #scr-rummi .rm-rack{min-height:0;padding:8px 10px 10px}
+}
+@media (min-width:561px) and (max-height:520px){
+  body.gaming #scr-rummi .mode-row{margin-bottom:5px} body.gaming #scr-rummi .mode-row .seg-btn{padding:4px 11px;font-size:13px}
+  body.gaming #scr-rummi .rm-wrap{padding:7px 10px;gap:5px 10px;border-radius:16px}
+  body.gaming #scr-rummi .rm-opp{font-size:11.5px;padding:3px 9px}
+  body.gaming #scr-rummi .rm-board{--rk:269px;height:clamp(96px,calc(var(--avail-h,800px) - var(--rk)),480px);padding:6px;gap:7px}
+  body.gaming #scr-rummi .rt{width:28px;height:40px;border-radius:5px} body.gaming #scr-rummi .rt b{font-size:18px;transform:translateY(-2px)} body.gaming #scr-rummi .rt>i{width:5px;height:5px;bottom:5px;margin-left:-2.5px}
+  body.gaming #scr-rummi .rt.jk .ic{width:19px;height:19px} body.gaming #scr-rummi .rt.jk>i{font-size:6px;bottom:2px}
+  body.gaming #scr-rummi .rm-set{padding:4px;gap:2px;border-radius:9px} body.gaming #scr-rummi .rm-set.new{min-width:96px;min-height:50px;font-size:12px}
+  body.gaming #scr-rummi .rm-drop{width:22px;height:40px}
+  body.gaming #scr-rummi .rm-status{font-size:12.5px;padding:4px 10px}
+  body.gaming #scr-rummi .rm-bar{min-height:0} body.gaming #scr-rummi .rm-bar .btn.sm{padding:5px 9px;font-size:13px}
+  body.gaming #scr-rummi .rm-rackwrap{gap:3px} body.gaming #scr-rummi .rm-rackhead{font-size:12px}
+  body.gaming #scr-rummi .rm-rack{padding:6px 8px 8px;gap:4px}
+}
+
+/* ═══════════════ ⚫ 리버시 ═══════════════ */
+/* 판 크기 = 남는 높이(--avail-h)에서 위 · 아래 것들을 뺀 만큼 (정사각형), 좁은 화면에선 정보 칸이 판 아래 두 칸으로 */
+body.gaming #scr-reversi .rv-board{--rvk:128px;min-width:0;width:min(600px,100%,calc(var(--avail-h,800px) - var(--rvk)))}
+@media (max-width:960px) and (min-height:521px){
+  body.gaming #scr-reversi .rv-board{--rvk:266px}
+  body.gaming #scr-reversi .rv-wrap{flex-direction:column;flex-wrap:nowrap;align-items:center;gap:8px}
+  body.gaming #scr-reversi .rv-side{width:min(600px,100%,calc(var(--avail-h,800px) - var(--rvk,266px)));display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  body.gaming #scr-reversi .rv-players{display:contents}
+  body.gaming #scr-reversi .rv-bar{grid-column:1 / -1;height:7px}
+  body.gaming #scr-reversi .rv-msg{grid-column:1 / -1;font-size:12.5px;padding:6px 10px;line-height:1.4;text-align:center}
+  body.gaming #scr-reversi .rv-p{padding:6px 10px;gap:8px;border-radius:12px;min-width:0}
+  body.gaming #scr-reversi .rv-p>div{min-width:0}
+  body.gaming #scr-reversi .rv-p .rv-disc{width:24px;height:24px}
+  body.gaming #scr-reversi .rv-p b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.gaming #scr-reversi .rv-p small{font-size:10.5px}
+  body.gaming #scr-reversi .rv-p em{font-size:22px}
+}
+@media (min-width:561px) and (max-width:760px) and (min-height:521px){
+  body.gaming #scr-reversi .rv-board,body.gaming #scr-reversi .rv-side{--rvk:250px}
+}
+@media (max-width:560px){
+  body.gaming #scr-reversi .mode-row{margin-bottom:6px;gap:4px;align-items:center}
+  body.gaming #scr-reversi .mode-row .small{font-size:11px}
+  body.gaming #scr-reversi .mode-row .seg-btn{padding:5px 12px;font-size:13px;border-radius:9px}
+  body.gaming #scr-reversi .rv-board,body.gaming #scr-reversi .rv-side{--rvk:246px}
+  body.gaming #scr-reversi .rv-board{padding:9px;gap:2px;border-radius:14px;box-shadow:inset 0 0 0 6px #3b2414,inset 0 0 0 8px #7a5230,0 12px 30px rgba(0,0,0,.45)}
+  body.gaming #scr-reversi .rv-disc.black{box-shadow:0 2px 4px rgba(0,0,0,.55),inset 0 -2px 3px rgba(255,255,255,.08)}
+  body.gaming #scr-reversi .rv-disc.white{box-shadow:0 2px 4px rgba(0,0,0,.45),inset 0 -2px 3px rgba(0,0,0,.12)}
+}
+@media (min-width:561px) and (max-height:760px){
+  body.gaming #scr-reversi .mode-row{margin-bottom:8px} body.gaming #scr-reversi .mode-row .seg-btn{padding:6px 14px}
+}
+@media (min-width:561px) and (max-height:520px){
+  body.gaming #scr-reversi .mode-row{margin-bottom:5px} body.gaming #scr-reversi .mode-row .seg-btn{padding:4px 12px;font-size:13px}
+  body.gaming #scr-reversi .rv-board{--rvk:80px;padding:9px;gap:2px;border-radius:14px;box-shadow:inset 0 0 0 6px #3b2414,inset 0 0 0 8px #7a5230,0 12px 30px rgba(0,0,0,.45)}
+  body.gaming #scr-reversi .rv-wrap{gap:14px;flex-wrap:nowrap}
+  body.gaming #scr-reversi .rv-side{gap:8px;width:min(300px,40vw)}
+  body.gaming #scr-reversi .rv-players{gap:6px} body.gaming #scr-reversi .rv-p{padding:7px 12px} body.gaming #scr-reversi .rv-p em{font-size:24px}
+  body.gaming #scr-reversi .rv-p .rv-disc{width:28px;height:28px}
+  body.gaming #scr-reversi .rv-msg{font-size:13px;padding:8px 12px}
+}
+
+/* ═══════════════ 🔐 암호 해독 ═══════════════ */
+/* 상대들은 옆으로 나란히 (좁으면 두 칸씩), 숫자 고르기 판은 작게 */
+body.gaming #scr-davinci .dv-opps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,max-content));justify-content:center;gap:10px}
+body.gaming #scr-davinci .dv-opp{min-width:0}
+body.gaming #scr-davinci .dv-center{min-height:0}
+body.gaming #scr-davinci .dv-picker small{display:block;text-align:center}
+
+/* ── 휴대폰 세로 ── */
+@media (max-width:560px){
+  body.gaming #scr-davinci .mode-row{margin-bottom:6px;gap:4px;align-items:center}
+  body.gaming #scr-davinci .mode-row .small{font-size:11px}
+  body.gaming #scr-davinci .mode-row .seg-btn{padding:5px 12px;font-size:13px;border-radius:9px}
+  body.gaming #scr-davinci .dv-table{padding:9px 7px;gap:7px;border-radius:18px}
+  body.gaming #scr-davinci .dv-opps{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;width:100%}
+  body.gaming #scr-davinci .dv-opp{padding:5px 6px 7px;gap:3px;border-radius:12px}
+  body.gaming #scr-davinci .dv-name{font-size:11.5px;gap:5px}
+  body.gaming #scr-davinci .dv-name i{width:8px;height:8px}
+  body.gaming #scr-davinci .dv-name em{font-size:9.5px;padding:0 5px}
+  body.gaming #scr-davinci .dv-row{gap:4px}
+  body.gaming #scr-davinci .dv-tile{width:33px;height:47px;border-radius:7px;font-size:20px;box-shadow:0 4px 8px rgba(0,0,0,.45),inset 0 -3px 0 rgba(0,0,0,.25)}
+  body.gaming #scr-davinci .dv-tile.hid.b::before,body.gaming #scr-davinci .dv-tile.hid.w::before{inset:6px;border-width:1.5px}
+  body.gaming #scr-davinci .dv-tile.hid::after{font-size:15px}
+  body.gaming #scr-davinci .dv-tile i{font-size:8px;padding:0 4px;bottom:-7px}
+  body.gaming #scr-davinci .dv-tile.jk b{font-size:24px} body.gaming #scr-davinci .dv-tile.jk u{font-size:7px;bottom:4px}
+  body.gaming #scr-davinci .dv-tile.pick:hover{transform:translateY(-4px)} body.gaming #scr-davinci .dv-tile.sel{transform:translateY(-5px)}
+  body.gaming #scr-davinci .dv-center{gap:6px;width:100%}
+  body.gaming #scr-davinci .dv-msg{font-size:12.5px;padding:5px 10px;max-width:100%}
+  body.gaming #scr-davinci .dv-picker{gap:5px}
+  body.gaming #scr-davinci .dv-picker p{font-size:12.5px}
+  body.gaming #scr-davinci .dv-nums{display:grid;grid-template-columns:repeat(7,40px);gap:5px;justify-content:center}
+  body.gaming #scr-davinci .dv-num{width:40px;height:40px;font-size:18px;border-radius:8px}
+  body.gaming #scr-davinci .dv-num.jk{width:40px;font-size:16px} body.gaming #scr-davinci .dv-num.jk small{font-size:8px;margin-top:0}
+  body.gaming #scr-davinci .dv-picker small{font-size:10.5px}
+  body.gaming #scr-davinci .dv-me{padding:6px 10px 8px;gap:4px;border-radius:12px}
+  body.gaming #scr-davinci .dv-label{font-size:10.5px;letter-spacing:2px}
+  body.gaming #scr-davinci .dv-me .dv-tile{width:38px;height:54px;font-size:22px}
+  body.gaming #scr-davinci .dv-slot{width:14px;height:54px}
+  body.gaming #scr-davinci .dv-drawn{font-size:11px;gap:8px}
+  body.gaming #scr-davinci .dv-acts{min-height:30px;gap:8px;font-size:13px}
+  body.gaming #scr-davinci .dv-acts .btn{font-size:14px;padding:7px 12px}
+}
+/* ── 중간 · 넓은 화면: 내 암호 옆에 안내 · 멈추기 ── */
+@media (min-width:561px){
+  body.gaming #scr-davinci .dv-table{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"opps opps" "center center" "me acts";justify-items:center;align-items:center}
+  body.gaming #scr-davinci .dv-opps{grid-area:opps;width:100%} body.gaming #scr-davinci .dv-center{grid-area:center;width:100%}
+  body.gaming #scr-davinci .dv-me{grid-area:me;justify-self:end} body.gaming #scr-davinci .dv-acts{grid-area:acts;justify-self:start;justify-content:flex-start}
+}
+@media (min-width:561px) and (max-height:760px){
+  body.gaming #scr-davinci .mode-row{margin-bottom:8px} body.gaming #scr-davinci .mode-row .seg-btn{padding:6px 14px}
+  body.gaming #scr-davinci .dv-table{padding:12px 16px;gap:10px 16px}
+  body.gaming #scr-davinci .dv-opp{padding:6px 12px 9px;gap:4px}
+  body.gaming #scr-davinci .dv-tile{width:46px;height:64px;font-size:26px}
+  body.gaming #scr-davinci .dv-center{gap:7px}
+  body.gaming #scr-davinci .dv-msg{padding:6px 16px}
+  body.gaming #scr-davinci .dv-picker{gap:6px}
+  body.gaming #scr-davinci .dv-nums{max-width:none;flex-wrap:nowrap}
+  body.gaming #scr-davinci .dv-num{width:38px;height:48px;font-size:20px}
+  body.gaming #scr-davinci .dv-num.jk{width:46px}
+  body.gaming #scr-davinci .dv-me{padding:8px 14px;gap:5px}
+  body.gaming #scr-davinci .dv-slot{height:64px}
+}
+@media (min-width:561px) and (max-height:520px){
+  body.gaming #scr-davinci .mode-row{margin-bottom:5px} body.gaming #scr-davinci .mode-row .seg-btn{padding:4px 12px;font-size:13px}
+  body.gaming #scr-davinci .dv-table{padding:8px 12px;gap:6px 14px;border-radius:18px}
+  body.gaming #scr-davinci .dv-opp{padding:4px 10px 8px;gap:3px}
+  body.gaming #scr-davinci .dv-name{font-size:12px}
+  body.gaming #scr-davinci .dv-tile{width:34px;height:48px;font-size:20px;border-radius:7px}
+  body.gaming #scr-davinci .dv-tile.hid::after{font-size:15px}
+  body.gaming #scr-davinci .dv-tile i{font-size:8px;bottom:-7px}
+  body.gaming #scr-davinci .dv-row{gap:5px}
+  body.gaming #scr-davinci .dv-msg{font-size:12.5px;padding:4px 12px}
+  body.gaming #scr-davinci .dv-picker p{font-size:12.5px} body.gaming #scr-davinci .dv-picker small{font-size:10.5px}
+  body.gaming #scr-davinci .dv-num{width:32px;height:38px;font-size:17px} body.gaming #scr-davinci .dv-num.jk{width:40px}
+  body.gaming #scr-davinci .dv-me{padding:5px 12px;gap:3px} body.gaming #scr-davinci .dv-label{font-size:10.5px}
+  body.gaming #scr-davinci .dv-slot{width:14px;height:48px}
+  body.gaming #scr-davinci .dv-acts{min-height:0;font-size:13px} body.gaming #scr-davinci .dv-acts .btn{font-size:14px;padding:6px 12px}
+}
+/* 계급 전쟁: 판 결과 표 (판 사이에 잠깐) */
+@media (min-width:561px) and (max-height:760px){
+  body.gaming #scr-dalmuti .dm-summary h3,body.gaming #scr-dalmuti .dm-revolt h3,body.gaming #scr-dalmuti .dm-taxbox h3{font-size:19px;margin:0 0 4px}
+  body.gaming #scr-dalmuti .dm-summary table{font-size:12.5px;margin-bottom:6px}
+  body.gaming #scr-dalmuti .dm-summary td{padding:3px 6px} body.gaming #scr-dalmuti .dm-summary th{padding:1px 6px}
+  body.gaming #scr-dalmuti .dm-summary .btn,body.gaming #scr-dalmuti .dm-btns .btn{font-size:15px;padding:7px 16px}
+  body.gaming #scr-dalmuti .dm-final{font-size:18px;margin:2px 0 0}
+}
+/* 궁정 음모: 상대가 5명이면 — 좁은 휴대폰은 3 + 2 두 줄, 넓은 화면은 자리를 위아래 두 줄 모양으로 (한 줄에 다 보이게) */
+@media (max-width:380px){
+  body.gaming #scr-coup .cp-opps:has(>.cp-seat:nth-child(5)){flex-wrap:wrap;justify-content:center;row-gap:11px}
+  body.gaming #scr-coup .cp-opps:has(>.cp-seat:nth-child(5))>.cp-seat{flex:0 1 calc(33.33% - 4px)}
+}
+@media (min-width:961px),(min-width:561px) and (max-height:520px){
+  body.gaming #scr-coup .cp-opps:has(>.cp-seat:nth-child(5))>.cp-seat{grid-template-columns:auto auto;grid-template-areas:"who who" "inf coin";justify-content:center;min-width:0;flex:0 1 190px;padding:8px 10px;gap:5px 8px}
+  body.gaming #scr-coup .cp-opps:has(>.cp-seat:nth-child(5)) .cp-who{justify-content:center}
+}

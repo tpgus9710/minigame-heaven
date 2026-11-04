@@ -1,0 +1,670 @@
+/* v9 화면 맞춤 (c 묶음): 휴대폰 · 폴드 · 태블릿 · 노트북에서 스크롤 없이
+ * 맡은 게임: 섯다 · 포커(#scr-card, cards.js) · 원카드 · 빙고 · 과일 종치기 · OX 퀴즈 · 끝말잇기 · 캐치마인드 · 라이어 · 그림 릴레이
+ * 모두 body.gaming #scr-<키> 안에서만 걸려요. 크기는 Fit 이 넣어 주는 --avail-h(이 화면이 쓸 수 있는 높이)로 정해요.
+ * min-height:var(--avail-h) 로 화면 높이를 채우는 곳은 내용이 더 길면 그대로 늘어나서 Fit 이 알아채요 (height 는 쓰지 않아요). */
+
+/* ═════════════ 🎴 섯다 · 🃏 포커 (#scr-card) ═════════════
+ * 세로 화면: [상대 자리들] [판돈 | 기록] [내 자리] 아래에 [행동 버튼 / 기다리는 안내] (늘 같은 높이라 차례가 바뀌어도 판이 흔들리지 않아요)
+ * 가로 화면: [판 | 오른쪽에 행동 버튼], 판 안은 [상대 자리들] [기록 · 판돈] [내 자리] (낮은 화면은 [판돈 · 기록 | 내 자리])
+ * 카드 크기는 카드 줄 폭(컨테이너 단위)과 장수(:has)로 정해요 — 7장 포커도 한 줄 */
+body.gaming #scr-card{--cd-gap:8px;--cd-oc:40px;--cd-mc:56px}
+body.gaming #scr-card.active{display:flex;flex-direction:column;min-height:var(--avail-h,0px)}
+body.gaming #scr-card .table{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"opps opps" "pot log" "me me";
+  align-items:center;justify-items:center;align-content:space-evenly;gap:var(--cd-gap) 12px;padding:12px 16px;border-width:10px;border-radius:64px/52px}
+body.gaming #scr-card #card-opps{grid-area:opps}
+body.gaming #scr-card .pot-box{grid-area:pot;padding:6px 16px;border-radius:14px}
+body.gaming #scr-card .pot-box .pot{font-size:26px;line-height:1.15}
+body.gaming #scr-card .pot-box small{font-size:12px;line-height:1.3;display:block}
+body.gaming #scr-card .card-log{grid-area:log;justify-self:stretch;text-align:left;min-height:0;font-size:12.5px;line-height:1.4}
+body.gaming #scr-card #card-me{grid-area:me}
+/* 자리: [이름 · 표시] [보유 · 베팅] [카드] [족보 | 마지막 행동] */
+body.gaming #scr-card .seats{gap:8px}
+body.gaming #scr-card .seat{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:6px;align-content:start;min-width:0;padding:7px 10px 9px;border-radius:14px}
+body.gaming #scr-card .seat > :is(.seat-head,.seat-money,.cards){grid-column:1 / -1}
+body.gaming #scr-card .seat-head{flex-wrap:nowrap;min-width:0;gap:4px}
+body.gaming #scr-card .seat-name{min-width:0}
+body.gaming #scr-card .badge{flex:none}
+body.gaming #scr-card .seat-money{flex-wrap:wrap;gap:0 8px;line-height:1.3}
+body.gaming #scr-card .seat-hand{grid-column:1;text-align:left;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;min-height:0}
+body.gaming #scr-card .seat-act{grid-column:2;text-align:right;white-space:nowrap;line-height:1.35;min-height:0;align-self:center}
+body.gaming #scr-card .seat.turn{transform:none}
+body.gaming #scr-card .turnbar{bottom:3px}
+/* 카드: 카드 줄 폭에 맞춰 (장수가 많으면 작게) */
+/* --n = 장수, --f = 다음 카드가 보이는 비율 (상대 카드가 5장 이상이면 겹쳐서 왼쪽 위 숫자 · 무늬만 보이게) */
+body.gaming #scr-card .cards{container-type:inline-size;width:100%;min-height:0;margin:5px 0 4px;gap:var(--cg);--cg:4px;--n:3;--f:1}
+body.gaming #scr-card .cards:has(> .card:nth-child(4)){--n:4}
+body.gaming #scr-card .cards:has(> .card:nth-child(5)){--n:5}
+body.gaming #scr-card .cards:has(> .card:nth-child(6)){--n:6}
+body.gaming #scr-card .cards:has(> .card:nth-child(7)){--n:7}
+body.gaming #scr-card .seat:not(.mine) .cards:has(> .card:nth-child(5)){--f:.46;--cg:0px}
+body.gaming #scr-card .cards .card{--cmax:var(--cd-oc);--w:min(var(--cmax),calc((100cqi - (var(--n) - 1) * var(--cg)) / (1 + var(--f) * (var(--n) - 1))));
+  width:var(--w);height:calc(var(--w) * 1.45);border-radius:calc(var(--w) * .16)}
+body.gaming #scr-card .cards .card + .card{margin-left:calc(var(--w) * (var(--f) - 1))}
+body.gaming #scr-card .seat.mine .cards .card{--cmax:var(--cd-mc)}
+body.gaming #scr-card .card.poker .cr{font-size:calc(var(--w) * .34);top:2px;left:calc(var(--w) * .1)}
+body.gaming #scr-card .card.poker .cp{font-size:calc(var(--w) * .52);padding-top:calc(var(--w) * .26)}
+body.gaming #scr-card .seat.mine .card.poker .cp{font-size:calc(var(--w) * .56)}
+body.gaming #scr-card .card.hwatu .he{width:calc(var(--w) * .58);height:calc(var(--w) * .58);font-size:calc(var(--w) * .36);margin-bottom:calc(var(--w) * .04)}
+body.gaming #scr-card .card.hwatu .hm,body.gaming #scr-card .seat.mine .card.hwatu .hm{font-size:calc(var(--w) * .52)}
+body.gaming #scr-card .card.hwatu .hw{font-size:calc(var(--w) * .24)}
+body.gaming #scr-card .card.hwatu .ht{width:calc(var(--w) * .46);height:calc(var(--w) * .46);font-size:calc(var(--w) * .27);top:-5px;right:-5px}
+/* 행동 버튼 · 기다리는 안내: 같은 자리 · 같은 높이 */
+body.gaming #scr-card .actions{flex:none;position:static;margin-top:8px;padding:8px 10px;gap:6px;border-radius:16px;box-shadow:none}
+body.gaming #scr-card .actions .ttl{font-size:16px;line-height:1.25}
+body.gaming #scr-card .actions .btn{padding:8px 12px;border-radius:12px;font-size:16px;min-width:96px}
+body.gaming #scr-card .actions .btn small{font-size:11.5px}
+body.gaming #scr-card .waiting{flex:none;margin-top:0;font-size:14px}
+body.gaming #scr-card .actions.hidden + .waiting{margin-top:8px;min-height:var(--cd-act,62px);display:grid;place-items:center;padding:6px 10px;border-radius:16px;border:2px dashed var(--line);line-height:1.4}
+
+/* ── 세로 화면 (휴대폰 · 폴드 · 태블릿 세로) ── */
+@media (max-aspect-ratio:1/1){
+  body.gaming #scr-card{--cd-act:132px}
+  body.gaming #scr-card .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  body.gaming #scr-card .actions .ttl{grid-column:1 / -1}
+  body.gaming #scr-card .actions .btn{min-width:0}
+  /* 상대 자리: 2~3칸 격자 (4명이면 2×2) */
+  body.gaming #scr-card #card-opps{display:grid;grid-template-columns:repeat(var(--oc,2),minmax(0,1fr));width:100%}
+  body.gaming #scr-card #card-opps:has(> .seat:only-child){--oc:1;width:min(100%,300px)}
+  body.gaming #scr-card #card-opps:has(> .seat:nth-child(3)){--oc:3}
+  body.gaming #scr-card #card-opps:has(> .seat:nth-child(4)):not(:has(> .seat:nth-child(5))){--oc:2}
+  body.gaming #scr-card #card-me .seat{width:min(100%,420px)}
+}
+@media (max-aspect-ratio:1/1) and (min-width:601px){
+  body.gaming #scr-card{--cd-oc:46px;--cd-mc:66px}
+  body.gaming #scr-card #card-opps{width:min(100%,640px)}
+}
+/* 좁은 세로 화면 (휴대폰 · 폴드 접음): 작게 */
+@media (max-aspect-ratio:1/1) and (max-width:600px){
+  body.gaming #scr-card{--cd-gap:6px;--cd-act:122px;--cd-oc:36px;--cd-mc:58px}
+  body.gaming #scr-card .table{padding:8px 8px 9px;border-width:6px;outline-width:2px;border-radius:34px/30px;column-gap:8px}
+  body.gaming #scr-card .seat{padding:4px 7px 7px;border-width:2px;border-radius:11px}
+  body.gaming #scr-card .seat-name{font-size:14px}
+  body.gaming #scr-card .badge{font-size:9.5px;padding:0 5px}
+  body.gaming #scr-card .seat-money{font-size:10.5px;gap:0 6px}
+  body.gaming #scr-card .seat-hand{font-size:11.5px}
+  body.gaming #scr-card .seat-act{font-size:10.5px}
+  body.gaming #scr-card .cards{margin:3px 0 2px;--cg:3px}
+  body.gaming #scr-card .seat.mine .seat-name{font-size:16px}
+  body.gaming #scr-card .seat.mine .seat-money{font-size:12px}
+  body.gaming #scr-card .seat.mine .seat-hand{font-size:14px}
+  body.gaming #scr-card .seat.mine .seat-act{font-size:12px}
+  body.gaming #scr-card .pot-box{padding:4px 10px;border-radius:12px;max-width:150px}
+  body.gaming #scr-card .pot-box .pot{font-size:20px}
+  body.gaming #scr-card .pot-box small{font-size:10.5px}
+  body.gaming #scr-card .card-log{font-size:11px;line-height:1.35}
+  body.gaming #scr-card .card-log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.gaming #scr-card .actions{padding:6px;gap:5px;margin-top:6px;border-radius:14px}
+  body.gaming #scr-card .actions .ttl{font-size:14px}
+  body.gaming #scr-card .actions .btn{padding:6px 4px;font-size:15px;border-radius:11px}
+  body.gaming #scr-card .actions .btn small{font-size:10.5px}
+  body.gaming #scr-card .actions.hidden + .waiting{margin-top:6px;font-size:13px}
+  /* 상대가 3명 이상이면 글자를 조금 더 작게 */
+  body.gaming #scr-card #card-opps:has(> .seat:nth-child(3)) .seat-money{font-size:10px;gap:0 4px}
+  body.gaming #scr-card #card-opps:has(> .seat:nth-child(3)) .seat-name{font-size:13px}
+}
+/* 제목 줄 (760px 이하는 style.css 가 격자로 만들어요): [제목] [그만하기] [💬] [나가기] / 아래 줄에 판 · 라운드 안내 */
+@media (max-width:760px){
+  body.gaming #scr-card .game-head{grid-template-columns:minmax(0,1fr) auto auto auto;row-gap:2px}
+  body.gaming #scr-card .game-head .gh-title{display:contents}
+  body.gaming #scr-card .game-head h2{grid-row:1;grid-column:1;min-width:0;white-space:nowrap}
+  body.gaming #scr-card .game-head h2 .tt{overflow:hidden;text-overflow:ellipsis}
+  body.gaming #scr-card .game-head .status{grid-row:2;grid-column:1 / -1;-webkit-line-clamp:1;margin-top:0}
+  body.gaming #scr-card .game-head #card-stop{grid-row:1;grid-column:2;padding:5px 9px;font-size:12.5px;border-radius:10px}
+  body.gaming #scr-card .game-head .chat-tgl{grid-column:3}
+  body.gaming #scr-card .game-head [data-act=leaveGame]{grid-column:4}
+}
+@media (max-width:380px){
+  body.gaming #scr-card .game-head{column-gap:5px}
+  body.gaming #scr-card .game-head h2{gap:5px}
+  body.gaming #scr-card .game-head #card-stop{padding:5px 7px;font-size:12px}
+}
+
+/* ── 가로 화면 (휴대폰 가로 · 태블릿 가로 · 노트북): [판 | 오른쪽 행동 칸] ── */
+@media (min-aspect-ratio:1/1){
+  body.gaming #scr-card{--cd-side:clamp(200px,22vw,280px);--cd-oc:50px;--cd-mc:72px}
+  body.gaming #scr-card.active{display:grid;grid-template-columns:minmax(0,1fr) var(--cd-side);grid-template-rows:auto minmax(0,1fr);grid-template-areas:"head head" "table side";column-gap:12px}
+  body.gaming #scr-card > .game-head{grid-area:head}
+  body.gaming #scr-card > .table{grid-area:table;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"opps opps opps" "log pot ." "me me me"}
+  body.gaming #scr-card > .actions,body.gaming #scr-card > .waiting{grid-area:side;align-self:center;margin:0}
+  body.gaming #scr-card .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:10px}
+  body.gaming #scr-card .actions .ttl{grid-column:1 / -1}
+  body.gaming #scr-card .actions .btn{min-width:0;padding:10px 6px}
+  body.gaming #scr-card .actions.hidden + .waiting{margin:0;min-height:220px}
+  body.gaming #scr-card #card-opps{flex-wrap:nowrap}
+  body.gaming #scr-card #card-opps .seat{flex:0 1 220px}
+  body.gaming #scr-card .card-log{text-align:right}
+  body.gaming #scr-card #card-me .seat{width:min(440px,100%)}
+}
+/* 낮은 가로 화면 (노트북 · 태블릿 가로) */
+@media (min-aspect-ratio:1/1) and (max-height:760px){
+  body.gaming #scr-card{--cd-oc:42px;--cd-mc:60px}
+  body.gaming #scr-card .table{padding:8px 16px;border-width:9px;border-radius:64px/50px;row-gap:6px}
+  body.gaming #scr-card .seat{padding:5px 9px 8px;border-width:2px;border-radius:12px}
+  body.gaming #scr-card .seat-name{font-size:16px}
+  body.gaming #scr-card .seat-money{font-size:12px}
+  body.gaming #scr-card .seat-hand{font-size:13.5px}
+  body.gaming #scr-card .seat-act{font-size:12px}
+  body.gaming #scr-card .cards{margin:4px 0 3px}
+  body.gaming #scr-card .pot-box .pot{font-size:24px}
+  body.gaming #scr-card .actions .btn{padding:8px 6px;font-size:15px}
+  body.gaming #scr-card #card-me .seat{width:min(400px,100%)}
+}
+/* 휴대폰 가로: [상대 자리들] 아래 [판돈 · 기록 | 내 자리] */
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-card{--cd-side:190px;--cd-oc:30px;--cd-mc:42px}
+  body.gaming #scr-card > .table{grid-template-columns:minmax(0,1fr) minmax(0,320px);grid-template-areas:"opps opps" "pot me" "log me"}
+  body.gaming #scr-card .table{padding:5px 10px;border-width:5px;outline-width:2px;border-radius:40px/34px;row-gap:4px}
+  body.gaming #scr-card .seat{padding:3px 7px 6px}
+  body.gaming #scr-card .seat-name{font-size:13px}
+  body.gaming #scr-card .badge{font-size:9.5px;padding:0 5px}
+  body.gaming #scr-card .seat-money{font-size:10px}
+  body.gaming #scr-card .seat-hand{font-size:11px}
+  body.gaming #scr-card .seat-act{font-size:10px}
+  body.gaming #scr-card .cards{margin:3px 0 2px}
+  body.gaming #scr-card #card-me{width:100%}
+  body.gaming #scr-card #card-me .seat{width:100%}
+  body.gaming #scr-card .pot-box{padding:3px 10px;align-self:end}
+  body.gaming #scr-card .pot-box .pot{font-size:19px}
+  body.gaming #scr-card .pot-box small{font-size:10px}
+  body.gaming #scr-card .card-log{font-size:10.5px;line-height:1.3;text-align:center;align-self:start}
+  body.gaming #scr-card .actions{padding:6px;gap:5px}
+  body.gaming #scr-card .actions .ttl{font-size:13px}
+  body.gaming #scr-card .actions .btn{padding:5px 4px;font-size:14px}
+  body.gaming #scr-card .actions .btn small{font-size:10px}
+  body.gaming #scr-card .actions.hidden + .waiting{min-height:150px;font-size:12.5px}
+}
+
+/* ═════════════ 🖍️ 그림 릴레이 (#scr-relay — relay.js · relay.css) ═════════════
+ * 그리기 · 맞히기: 세로 화면은 [제시어] [스케치북] [도구 / 답 칸], 가로 화면은 [스케치북 | 제시어 · 도구 / 답 칸]
+ * 스케치북 폭 = 남는 높이(--avail-h - --rly-rsv)에 맞춘 4:3 (relay.css 의 100vh 기준 대신)
+ * 펼쳐 보기: 장들이 많으면 그 칸 안에서 스크롤 (다음 책 버튼은 늘 보여요) */
+body.gaming #scr-relay > .scorebar{display:none}
+body.gaming #scr-relay .rly{gap:8px;max-width:none}
+body.gaming #scr-relay .rly-stage{min-height:0}
+body.gaming #scr-relay .rly-track{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:5px}
+body.gaming #scr-relay .rly-track::-webkit-scrollbar{display:none}
+body.gaming #scr-relay .rly-chip{flex:none}
+body.gaming #scr-relay .rly-timer{height:6px}
+/* 그리기 · 맞히기 */
+body.gaming #scr-relay{--rly-rsv:300px}
+body.gaming #scr-relay .rly-task{--rly-bw:min(100%,660px,max(200px,calc((var(--avail-h,100vh) - var(--rly-rsv)) * 4 / 3)));gap:8px;max-width:none;align-items:center}
+body.gaming #scr-relay .rly-task .rly-book,body.gaming #scr-relay .rly-task .rly-tools{width:var(--rly-bw);max-width:none;margin-left:auto;margin-right:auto}
+body.gaming #scr-relay .rly-task .rly-book{margin-top:11px}
+body.gaming #scr-relay .rly-task .rly-prompt,body.gaming #scr-relay .rly-task .rly-answer-row{width:min(100%,max(var(--rly-bw),520px))}
+body.gaming #scr-relay .rly-pad{width:100%;display:flex;flex-direction:column;align-items:center}
+body.gaming #scr-relay .rly-tools{margin-top:8px;gap:7px 12px;padding:7px 10px}
+body.gaming #scr-relay .rly-prompt{padding:7px 14px 8px;border-radius:16px}
+body.gaming #scr-relay .rly-prompt b{font-size:clamp(24px,5vw,36px);line-height:1.2}
+body.gaming #scr-relay .rly-prompt b{overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* 도구: [색 9개] [굵기 · 되돌리기 · 지우기 · 다 그렸어요] 두 줄 */
+body.gaming #scr-relay .rly-tools .rly-send{width:auto;margin-left:auto;padding:8px 16px;font-size:16px}
+body.gaming #scr-relay .rly-answer-row input{font-size:18px;padding:9px 12px}
+body.gaming #scr-relay .rly-answer-row .btn{padding:9px 16px;font-size:17px}
+
+/* 세로 화면 */
+@media (max-aspect-ratio:1/1){
+  body.gaming #scr-relay{--rly-rsv:384px}
+}
+/* 휴대폰 · 폴드 접음 */
+@media (max-aspect-ratio:1/1) and (max-width:600px){
+  body.gaming #scr-relay{--rly-rsv:318px}
+  body.gaming #scr-relay .game-head .status{-webkit-line-clamp:1}
+  body.gaming #scr-relay .rly{gap:6px}
+  body.gaming #scr-relay .rly-chip{padding:2px 8px 2px 2px;font-size:12px;gap:4px}
+  body.gaming #scr-relay .rly-chip b{font-size:13px}
+  body.gaming #scr-relay .rly-av{width:22px;height:22px;font-size:11px}
+  body.gaming #scr-relay .rly-task{gap:6px}
+  body.gaming #scr-relay .rly-prompt{padding:4px 10px 5px;border-radius:14px}
+  body.gaming #scr-relay .rly-prompt .rly-meta{display:none}
+  body.gaming #scr-relay .rly-prompt small{font-size:12px;line-height:1.35}
+  body.gaming #scr-relay .rly-prompt b{font-size:27px;margin:0}
+  body.gaming #scr-relay .rly-hint{display:block;font-size:11px;line-height:1.3}
+  body.gaming #scr-relay .rly-tools{margin-top:6px;gap:6px;padding:6px 8px;border-radius:14px;justify-content:space-between}
+  body.gaming #scr-relay .rly-colors,body.gaming #scr-relay .rly-sizes{gap:5px;flex-wrap:nowrap}
+  body.gaming #scr-relay .rly-sw{width:26px;height:26px;border-width:2px}
+  body.gaming #scr-relay .rly-tool,body.gaming #scr-relay .rly-size{width:34px;height:34px;border-radius:10px}
+  body.gaming #scr-relay .rly-tools .rly-send{width:auto;margin-left:auto;padding:7px 12px;font-size:15px}
+  body.gaming #scr-relay .rly-rings{left:12px;right:12px}
+}
+@media (max-aspect-ratio:1/1) and (max-width:600px) and (max-height:740px){
+  body.gaming #scr-relay .game-head .status{display:none}
+  body.gaming #scr-relay .rly-hint{display:none}
+}
+@media (max-aspect-ratio:1/1) and (max-width:370px){
+  body.gaming #scr-relay .rly-tools{padding:6px;gap:5px}
+  body.gaming #scr-relay .rly-colors,body.gaming #scr-relay .rly-sizes{gap:4px}
+  body.gaming #scr-relay .rly-sw{width:25px;height:25px}
+  body.gaming #scr-relay .rly-tool,body.gaming #scr-relay .rly-size{width:32px;height:32px}
+  body.gaming #scr-relay .rly-sep{margin:0}
+  body.gaming #scr-relay .rly-tools .rly-send{padding:7px 9px;font-size:14px;gap:4px}
+  body.gaming #scr-relay .rly-tools .rly-send .ic{width:16px;height:16px}
+}
+
+/* 가로 화면: [스케치북 | 제시어 · 도구] */
+@media (min-aspect-ratio:1/1){
+  body.gaming #scr-relay{--rly-rsv:150px}
+  body.gaming #scr-relay .rly-task{--rly-bw:min(660px,max(220px,calc((var(--avail-h,100vh) - var(--rly-rsv)) * 4 / 3)));display:grid;grid-template-columns:minmax(0,var(--rly-bw)) minmax(220px,1fr);
+    grid-template-rows:auto minmax(0,1fr);grid-template-areas:"book prompt" "book tools";column-gap:14px;row-gap:10px;align-items:start;justify-content:center}
+  body.gaming #scr-relay .rly-pad{display:contents}
+  body.gaming #scr-relay .rly-task .rly-book{grid-area:book;width:100%;margin:11px 0 0}
+  body.gaming #scr-relay .rly-task .rly-prompt{grid-area:prompt;width:100%;max-width:440px;margin-top:4px}
+  body.gaming #scr-relay .rly-task .rly-tools,body.gaming #scr-relay .rly-task .rly-answer-row{grid-area:tools;width:100%;max-width:440px;margin:0}
+  body.gaming #scr-relay .rly-tools{justify-content:flex-start}
+  body.gaming #scr-relay .rly-tools .rly-send{width:100%;margin:2px 0 0}
+  body.gaming #scr-relay .rly-answer-row{flex-wrap:wrap}
+  body.gaming #scr-relay .rly-answer-row input{flex-basis:100%;width:auto}
+  body.gaming #scr-relay .rly-answer-row .btn{flex:1 1 auto}
+}
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-relay{--rly-rsv:112px}
+  body.gaming #scr-relay .rly{gap:6px}
+  body.gaming #scr-relay .rly-chip{padding:2px 8px 2px 2px;font-size:12px;gap:4px}
+  body.gaming #scr-relay .rly-chip b{font-size:13px}
+  body.gaming #scr-relay .rly-av{width:22px;height:22px;font-size:11px}
+  body.gaming #scr-relay .rly-task{row-gap:6px}
+  body.gaming #scr-relay .rly-prompt{padding:6px 12px 7px}
+  body.gaming #scr-relay .rly-prompt .rly-meta{position:static;display:flex;justify-content:center;max-width:none}
+  body.gaming #scr-relay .rly-prompt b{font-size:28px}
+  body.gaming #scr-relay .rly-tools{padding:6px 8px;gap:6px}
+  body.gaming #scr-relay .rly-sw{width:27px;height:27px;border-width:2px}
+  body.gaming #scr-relay .rly-tool,body.gaming #scr-relay .rly-size{width:34px;height:34px}
+  body.gaming #scr-relay .rly-tools .rly-send{padding:7px 12px;font-size:15px}
+}
+/* 맞히기: 도구 대신 답 칸(더 낮아요)이라 스케치북을 조금 더 크게 */
+@media (max-aspect-ratio:1/1){
+  body.gaming #scr-relay .rly-task:has(> .rly-answer-row){--rly-rsv:336px}
+}
+@media (max-aspect-ratio:1/1) and (max-width:600px){
+  body.gaming #scr-relay .rly-task:has(> .rly-answer-row){--rly-rsv:272px}
+}
+
+/* 단어 카드 + 주사위 */
+body.gaming #scr-relay .rly-intro{margin:4px auto;gap:18px}
+@media (max-aspect-ratio:1/1) and (max-width:600px){
+  body.gaming #scr-relay .rly-intro{gap:10px;margin:2px auto}
+  body.gaming #scr-relay .rly-wordcard{padding:9px 12px 8px;border-radius:16px}
+  body.gaming #scr-relay .rly-wc-h{padding-bottom:6px;margin-bottom:6px}
+  body.gaming #scr-relay .rly-wc-h b{font-size:17px}
+  body.gaming #scr-relay .rly-wordcard ol{grid-auto-flow:column;grid-template-rows:repeat(3,auto);grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:3px 8px}
+  body.gaming #scr-relay .rly-wordcard li{font-size:15px;padding:4px 7px;gap:8px;min-width:0}
+  body.gaming #scr-relay .rly-wordcard li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  body.gaming #scr-relay .rly-wordcard li i{width:23px;height:23px;font-size:13px}
+  body.gaming #scr-relay .rly-wc-foot{margin-top:6px;font-size:11.5px}
+  body.gaming #scr-relay .rly-roll{gap:7px}
+  body.gaming #scr-relay .rly-die .die{width:66px;height:66px;padding:10px;border-radius:15px}
+  body.gaming #scr-relay .rly-pick b{font-size:32px}
+  body.gaming #scr-relay .rly-tip{font-size:13px;line-height:1.45}
+}
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-relay .rly-intro{gap:14px;margin:0 auto}
+  body.gaming #scr-relay .rly-wordcard{padding:8px 14px 7px}
+  body.gaming #scr-relay .rly-wc-h{padding-bottom:5px;margin-bottom:5px}
+  body.gaming #scr-relay .rly-wc-h b{font-size:16px}
+  body.gaming #scr-relay .rly-wordcard ol{gap:2px}
+  body.gaming #scr-relay .rly-wordcard li{font-size:15px;padding:2px 8px}
+  body.gaming #scr-relay .rly-wordcard li i{width:22px;height:22px;font-size:12px}
+  body.gaming #scr-relay .rly-wc-foot{margin-top:5px;font-size:11px}
+  body.gaming #scr-relay .rly-roll{gap:6px}
+  body.gaming #scr-relay .rly-die .die{width:64px;height:64px;padding:10px;border-radius:15px}
+  body.gaming #scr-relay .rly-pick{min-height:0}
+  body.gaming #scr-relay .rly-pick b{font-size:30px}
+  body.gaming #scr-relay .rly-tip{font-size:12.5px;line-height:1.4}
+}
+
+/* 제출하고 기다리기 · 끝: 내 그림은 남는 높이에 맞게 */
+body.gaming #scr-relay .rly-wait{margin:8px auto}
+body.gaming #scr-relay .rly-mine .rly-book{width:min(300px,100%,max(150px,calc((var(--avail-h,100vh) - var(--rly-wrsv,420px)) * 4 / 3)))}
+@media (max-aspect-ratio:1/1) and (max-width:600px){
+  body.gaming #scr-relay .rly-wait{padding:16px 14px 16px;margin:4px auto;border-radius:18px}
+  body.gaming #scr-relay .rly-wait > b{font-size:24px;margin-top:6px}
+  body.gaming #scr-relay .rly-hg{width:54px;height:54px}
+  body.gaming #scr-relay .rly-hg .ic{width:28px;height:28px}
+  body.gaming #scr-relay .rly-mine{margin-top:12px}
+}
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-relay{--rly-wrsv:300px}
+  body.gaming #scr-relay .rly-wait{padding:10px 16px 12px;margin:0 auto;display:grid;grid-template-columns:auto auto;grid-template-areas:"hg mine" "t mine" "p mine";column-gap:22px;align-items:center;justify-content:center;max-width:none}
+  body.gaming #scr-relay .rly-wait .rly-hg{grid-area:hg;width:48px;height:48px}
+  body.gaming #scr-relay .rly-wait > b{grid-area:t;font-size:22px;margin:0}
+  body.gaming #scr-relay .rly-wait > p{grid-area:p}
+  body.gaming #scr-relay .rly-wait .rly-mine{grid-area:mine;margin:0}
+  body.gaming #scr-relay .rly-wait.over{display:block}
+  body.gaming #scr-relay .rly-final{grid-template-columns:1fr 1fr;max-width:520px;margin-top:8px}
+  body.gaming #scr-relay .rly-final li{padding:4px 10px}
+}
+
+/* 펼쳐 보기: [책 머리 · 다음 책] 아래 장들은 그 칸 안에서 스크롤 */
+body.gaming #scr-relay{--rly-rvr:290px}
+body.gaming #scr-relay .rly-reveal{gap:8px}
+body.gaming #scr-relay .rly-rv-head{position:static;padding:8px 12px;border-radius:16px}
+body.gaming #scr-relay .rly-pages{max-height:max(180px,calc(var(--avail-h,100vh) - var(--rly-rvr)));overflow-y:auto;overscroll-behavior:contain;padding:12px 10px 6px;
+  border-radius:14px;background:color-mix(in srgb,var(--panel) 55%,transparent);scrollbar-width:thin}
+@media (max-aspect-ratio:1/1) and (max-width:600px){
+  body.gaming #scr-relay{--rly-rvr:252px}
+  body.gaming #scr-relay .rly-rv-head{flex-wrap:nowrap;gap:8px;padding:6px 8px}
+  body.gaming #scr-relay .rly-rv-head .btn{width:auto;margin-left:auto;padding:8px 12px;font-size:15px}
+  body.gaming #scr-relay .rly-av.lg{width:36px;height:36px;font-size:16px}
+  body.gaming #scr-relay .rly-rv-t{min-width:0}
+  body.gaming #scr-relay .rly-rv-t b{font-size:17px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  body.gaming #scr-relay .rly-rv-tip{font-size:11.5px;line-height:1.35}
+  body.gaming #scr-relay .rly-pages{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px 10px;padding:12px 8px 6px}
+  body.gaming #scr-relay .rly-page{padding:9px}
+  body.gaming #scr-relay .rly-by{font-size:13px;margin:0 0 7px 10px}
+  body.gaming #scr-relay .rly-ans{font-size:22px;padding:18px 6px}
+  body.gaming #scr-relay .rly-big{font-size:28px;padding:12px 0 10px}
+  body.gaming #scr-relay .rly-like{padding:3px 9px;font-size:13px}
+}
+@media (min-aspect-ratio:1/1){
+  body.gaming #scr-relay{--rly-rvr:240px}
+}
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-relay{--rly-rvr:176px}
+  body.gaming #scr-relay .rly-rv-head{padding:5px 10px}
+  body.gaming #scr-relay .rly-av.lg{width:34px;height:34px;font-size:15px}
+  body.gaming #scr-relay .rly-rv-t b{font-size:17px}
+  body.gaming #scr-relay .rly-rv-head .btn{padding:7px 14px;font-size:15px}
+  body.gaming #scr-relay .rly-rv-tip{display:none}
+  /* 장들을 옆으로 한 줄 (높이가 낮아서) */
+  body.gaming #scr-relay .rly-pages{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(150px,170px);overflow-x:auto;overflow-y:hidden;gap:10px;padding:10px 8px 6px}
+  body.gaming #scr-relay .rly-page{padding:7px}
+  body.gaming #scr-relay .rly-page.ending{grid-column:auto;min-width:160px}
+  body.gaming #scr-relay .rly-by{font-size:12.5px;margin:0 0 5px 10px}
+  body.gaming #scr-relay .rly-ans{font-size:21px;padding:16px 6px}
+  body.gaming #scr-relay .rly-big{font-size:26px;padding:10px 0 8px}
+  body.gaming #scr-relay .rly-pg-foot{margin-top:5px;min-height:26px}
+  body.gaming #scr-relay .rly-like{padding:2px 9px;font-size:13px}
+}
+
+/* ═════════════ 🔤 끝말잇기 (#scr-word) ═════════════
+ * 휴대폰에서 화면 키보드가 아래를 가려도 지금 단어 · 입력 칸이 보이게: [참가자 한 줄] [단어] [안내 · 시간] [입력 칸] 을 위쪽에, 이어진 단어는 맨 아래 두 줄까지 */
+body.gaming #scr-word .wd-wrap{gap:10px}
+body.gaming #scr-word .wd-input input{flex:1 1 0;width:0;min-width:0}
+body.gaming #scr-word .wd-input .btn{flex:none}
+body.gaming #scr-word .wd-chain{max-height:62px;overflow:hidden}
+body.gaming #scr-word .wd-vote{padding:7px 10px}
+@media (max-width:600px){
+  body.gaming #scr-word .wd-wrap{gap:8px}
+  body.gaming #scr-word .wd-players{flex-wrap:nowrap;overflow-x:auto;justify-content:safe center;gap:5px;scrollbar-width:none}
+  body.gaming #scr-word .wd-players::-webkit-scrollbar{display:none}
+  body.gaming #scr-word .wd-p{flex:none;flex-direction:row;gap:5px;align-items:baseline;padding:3px 9px;border-radius:10px;font-size:13px}
+  body.gaming #scr-word .wd-p span{font-size:11px;letter-spacing:-1px}
+  body.gaming #scr-word .wd-word{font-size:44px;line-height:1.2;letter-spacing:2px}
+  body.gaming #scr-word .wd-hint{font-size:13px;min-height:19px;line-height:1.45}
+  body.gaming #scr-word .wd-input input{font-size:19px;padding:10px 12px}
+  body.gaming #scr-word .wd-input .btn{padding:10px 14px;font-size:16px}
+  body.gaming #scr-word .wd-chain{max-height:56px;gap:5px}
+  body.gaming #scr-word .wd-chain span{padding:2px 10px;font-size:13px}
+}
+@media (max-height:520px){
+  body.gaming #scr-word .wd-wrap{gap:6px}
+  body.gaming #scr-word .wd-players{flex-wrap:nowrap;overflow-x:auto;justify-content:safe center;gap:5px;scrollbar-width:none}
+  body.gaming #scr-word .wd-p{flex:none;flex-direction:row;gap:5px;align-items:baseline;padding:2px 9px;font-size:13px}
+  body.gaming #scr-word .wd-p span{font-size:11px}
+  body.gaming #scr-word .wd-word{font-size:40px;line-height:1.15}
+  body.gaming #scr-word .wd-hint{font-size:13px;min-height:18px}
+  body.gaming #scr-word .wd-input input{font-size:18px;padding:7px 12px}
+  body.gaming #scr-word .wd-input .btn{padding:7px 14px;font-size:16px}
+  body.gaming #scr-word .wd-chain{max-height:26px}
+}
+
+/* ═════════════ ⭕ OX 퀴즈 (#scr-ox) ═════════════ */
+body.gaming #scr-ox .ox-wrap{gap:12px}
+body.gaming #scr-ox .ox-q{padding:18px 20px}
+body.gaming #scr-ox .ox-reveal{padding:10px 16px}
+body.gaming #scr-ox .ox-reveal b{font-size:24px}
+body.gaming #scr-ox .ox-reveal p{margin:4px 0;line-height:1.45}
+@media (max-width:600px){
+  body.gaming #scr-ox .ox-wrap{gap:9px}
+  body.gaming #scr-ox .ox-q{padding:12px 14px;font-size:19px;line-height:1.45;border-radius:16px}
+  body.gaming #scr-ox .ox-bar{height:8px}
+  body.gaming #scr-ox .ox-btns{gap:12px}
+  body.gaming #scr-ox .ox-btn{aspect-ratio:1.6;border-radius:20px;font-size:52px}
+  body.gaming #scr-ox .ox-count{min-height:18px;font-size:13px}
+  body.gaming #scr-ox .ox-reveal{padding:8px 12px;border-radius:14px}
+  body.gaming #scr-ox .ox-reveal b{font-size:21px}
+  body.gaming #scr-ox .ox-reveal p{font-size:13.5px}
+  body.gaming #scr-ox .ox-reveal small{font-size:12px}
+}
+/* 낮은 화면: O · X 버튼 높이를 남는 높이에 맞춰요 */
+@media (max-height:760px) and (min-aspect-ratio:1/1){
+  body.gaming #scr-ox .ox-btn{aspect-ratio:auto;height:clamp(84px,calc(var(--avail-h,100vh) - 330px),186px);max-width:300px}
+}
+/* 휴대폰 가로: [문제] [시간] [⭕ ❌ | 정답 풀이] [고른 사람 수] */
+@media (max-height:520px){
+  body.gaming #scr-ox .ox-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"q q" "bar bar" "btns rev" "cnt cnt";gap:6px 12px;max-width:none}
+  body.gaming #scr-ox .ox-q{grid-area:q;padding:8px 14px;font-size:18px;line-height:1.4;border-radius:14px}
+  body.gaming #scr-ox .ox-bar{grid-area:bar;height:7px}
+  body.gaming #scr-ox .ox-btns{grid-area:btns}
+  body.gaming #scr-ox .ox-count{grid-area:cnt;min-height:16px;font-size:12.5px}
+  body.gaming #scr-ox .ox-reveal{grid-area:rev;width:min(320px,40vw);align-self:stretch;display:flex;flex-direction:column;justify-content:center;padding:6px 12px;overflow:hidden}
+  body.gaming #scr-ox .ox-btn{height:clamp(64px,calc(var(--avail-h,100vh) - 206px),150px);font-size:48px;border-radius:18px}
+  body.gaming #scr-ox .ox-reveal b{font-size:19px}
+  body.gaming #scr-ox .ox-reveal p{margin:2px 0;font-size:13px;line-height:1.4}
+  body.gaming #scr-ox .ox-reveal small{font-size:12px}
+}
+
+/* ═════════════ 🔔 과일 종치기 (#scr-halli) ═════════════
+ * 자리(이름 · 펼친 카드 · 장수)를 격자로, 카드 크기는 자리 폭 · 남는 높이에 맞춰요 (과일 그림도 카드 폭 기준)
+ * 가로 화면: [자리들 | 종 · 펼치기 버튼] */
+body.gaming #scr-halli .hg-table{gap:12px}
+body.gaming #scr-halli .hg-seats{display:grid;grid-template-columns:repeat(var(--hc,2),minmax(0,var(--hw,150px)));justify-content:center;gap:10px}
+body.gaming #scr-halli .hg-seats:has(> .hg-seat:nth-child(3)){--hc:3}
+body.gaming #scr-halli .hg-seats:has(> .hg-seat:nth-child(4)){--hc:4}
+body.gaming #scr-halli .hg-seats:has(> .hg-seat:nth-child(5)){--hc:3}
+body.gaming #scr-halli .hg-seat{min-width:0;padding:8px;gap:5px;border-radius:14px}
+body.gaming #scr-halli .hg-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+body.gaming #scr-halli .hg-count{font-size:11.5px;text-align:center;line-height:1.3}
+/* 카드: 폭 --hcw (자리 폭과 남는 높이 중 작은 쪽), 높이는 폭 × 1.36 */
+body.gaming #scr-halli .hg-card{--hcw:min(110px,100%);width:var(--hcw);height:auto;aspect-ratio:110 / 150;padding:7%;container-type:inline-size}
+body.gaming #scr-halli .hg-card img{width:31cqi;height:31cqi}
+body.gaming #scr-halli .hg-card.n1 img{width:53cqi;height:53cqi}
+body.gaming #scr-halli .hg-card.n2 img,body.gaming #scr-halli .hg-card.n3 img{width:37cqi;height:37cqi}
+body.gaming #scr-halli .hg-mid{gap:4px}
+body.gaming #scr-halli .hg-msg{min-height:26px;font-size:20px;text-align:center}
+@media (max-width:600px){
+  body.gaming #scr-halli .hg-table{gap:8px}
+  body.gaming #scr-halli .hg-seats{gap:6px;--hw:140px}
+  body.gaming #scr-halli .hg-seats:has(> .hg-seat:nth-child(4)):not(:has(> .hg-seat:nth-child(5))){--hc:2}
+  body.gaming #scr-halli .hg-seat{padding:5px;gap:3px;border-radius:12px}
+  body.gaming #scr-halli .hg-name{font-size:13px}
+  body.gaming #scr-halli .hg-count{font-size:10.5px}
+  /* 2명이면 카드를 남는 높이까지 크게 · 3명 이상(두 줄이면) 작게 */
+  body.gaming #scr-halli .hg-card{--hcw:min(100%,110px,max(64px,calc((var(--avail-h,100vh) - 400px) / 1.36)))}
+  body.gaming #scr-halli .hg-seats:has(> .hg-seat:nth-child(4)) .hg-card{--hcw:min(100%,100px,max(58px,calc((var(--avail-h,100vh) - 420px) / 2.72)))}
+  body.gaming #scr-halli .hg-bell{width:92px;height:92px}
+  body.gaming #scr-halli .hg-msg{min-height:22px;font-size:17px}
+  body.gaming #scr-halli .center .btn.lg{padding:11px 22px;font-size:18px}
+}
+@media (min-aspect-ratio:1/1){
+  body.gaming #scr-halli .hg-table{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"seats mid" "seats flip";align-items:center;column-gap:20px;max-width:1000px}
+  body.gaming #scr-halli .hg-seats{grid-area:seats}
+  body.gaming #scr-halli .hg-mid{grid-area:mid;align-self:end}
+  body.gaming #scr-halli .hg-table > .center{grid-area:flip;align-self:start}
+  body.gaming #scr-halli .hg-seats:has(> .hg-seat:nth-child(5)){--hc:3}
+  /* 카드 높이: 자리 줄 수(1~2)에 맞춰 남는 높이에서 */
+  body.gaming #scr-halli .hg-card{--hcw:min(100%,120px,max(56px,calc((var(--avail-h,100vh) - 170px) / 1.36)))}
+  body.gaming #scr-halli .hg-seats:has(> .hg-seat:nth-child(4)) .hg-card{--hcw:min(100%,110px,max(48px,calc((var(--avail-h,100vh) - 230px) / 2.72)))}
+  body.gaming #scr-halli .hg-seats:has(> .hg-seat:nth-child(4)):not(:has(> .hg-seat:nth-child(5))){--hc:4}
+}
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-halli .hg-seats{gap:6px}
+  body.gaming #scr-halli .hg-seat{padding:4px 6px;gap:2px}
+  body.gaming #scr-halli .hg-name{font-size:12.5px}
+  body.gaming #scr-halli .hg-count{font-size:10px}
+  body.gaming #scr-halli .hg-card{--hcw:min(100%,110px,max(50px,calc((var(--avail-h,100vh) - 120px) / 1.36)))}
+  body.gaming #scr-halli .hg-seats:has(> .hg-seat:nth-child(4)) .hg-card{--hcw:min(100%,90px,max(40px,calc((var(--avail-h,100vh) - 160px) / 2.72)))}
+  body.gaming #scr-halli .hg-bell{width:96px;height:96px}
+  body.gaming #scr-halli .hg-msg{min-height:22px;font-size:17px}
+  body.gaming #scr-halli .center .btn.lg{padding:10px 18px;font-size:17px}
+}
+
+/* ═════════════ 🃏 원카드 (#scr-onecard) ═════════════
+ * [참가자 한 줄] [판: 카드 더미 · 맨 위 카드 · 공격/방향/기록] [먹기 · 원카드! 버튼] [내 패]
+ * 내 패는 카드가 많으면 겹쳐서(왼쪽 위 숫자 · 무늬는 보여요) 두 줄 안에 */
+body.gaming #scr-onecard .oc-table{gap:10px}
+body.gaming #scr-onecard .oc-players{flex-wrap:nowrap;overflow-x:auto;justify-content:safe center;scrollbar-width:none;padding-top:9px;margin-top:-9px}
+body.gaming #scr-onecard .oc-players::-webkit-scrollbar{display:none}
+body.gaming #scr-onecard .oc-p{flex:none;padding:5px 12px;min-width:84px}
+body.gaming #scr-onecard .oc-p b{white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+body.gaming #scr-onecard .oc-center{flex-wrap:nowrap;padding:12px 16px;gap:16px}
+body.gaming #scr-onecard .oc-info{min-width:0;flex:0 1 260px}
+body.gaming #scr-onecard .oc-hand{--hw:62px;--ov:0px;min-height:0;padding:12px 0 0 var(--ov);gap:6px 0}
+body.gaming #scr-onecard .oc-hand .ocard{margin-left:calc(-1 * var(--ov) + 6px)}
+body.gaming #scr-onecard .oc-hand .ocard:first-child{margin-left:calc(-1 * var(--ov))}
+body.gaming #scr-onecard .oc-hand:has(> .ocard:nth-child(11)){--ov:18px}
+body.gaming #scr-onecard .oc-hand:has(> .ocard:nth-child(15)){--ov:26px}
+@media (max-width:600px){
+  body.gaming #scr-onecard .oc-table{gap:7px}
+  body.gaming #scr-onecard .oc-p{padding:3px 9px;min-width:0;border-radius:10px;flex-direction:row;gap:6px;align-items:baseline}
+  body.gaming #scr-onecard .oc-p b{font-size:13px;max-width:96px}
+  body.gaming #scr-onecard .oc-p span{font-size:11.5px}
+  body.gaming #scr-onecard .oc-p em{top:-9px;right:-4px;font-size:10px;padding:1px 6px}
+  body.gaming #scr-onecard .oc-center{padding:8px 10px;gap:10px;border-radius:16px;justify-content:space-between}
+  body.gaming #scr-onecard .oc-pile{gap:3px}
+  body.gaming #scr-onecard .oc-pile small{font-size:11px}
+  body.gaming #scr-onecard .ocard.big,body.gaming #scr-onecard .ocard.back{width:60px;height:86px}
+  body.gaming #scr-onecard .ocard.big span{font-size:32px}
+  body.gaming #scr-onecard .oc-info{flex:1 1 0;gap:4px}
+  body.gaming #scr-onecard .oc-attack{font-size:16px;padding:4px 8px}
+  body.gaming #scr-onecard .oc-log{font-size:11.5px;line-height:1.4}
+  body.gaming #scr-onecard .oc-log div:nth-child(n+4){display:none}
+  body.gaming #scr-onecard .oc-actions .btn{padding:8px 16px;font-size:16px}
+  body.gaming #scr-onecard .oc-multi{padding:6px 10px;font-size:13px;gap:6px}
+  /* 내 패: 한 줄 6장 → 많으면 겹쳐서 두 줄 (12장까지 안 겹침, 20장도 두 줄) */
+  body.gaming #scr-onecard .oc-hand{padding-top:12px;gap:8px 0}
+  body.gaming #scr-onecard .oc-hand .ocard{width:52px;height:75px}
+  body.gaming #scr-onecard .ocard i{font-size:13px;left:5px}
+  body.gaming #scr-onecard .oc-hand .ocard span{font-size:25px}
+  body.gaming #scr-onecard .oc-hand:has(> .ocard:nth-child(13)){--ov:16px}
+  body.gaming #scr-onecard .oc-hand:has(> .ocard:nth-child(15)){--ov:20px}
+  body.gaming #scr-onecard .oc-hand:has(> .ocard:nth-child(17)){--ov:24px}
+  body.gaming #scr-onecard .oc-suits .btn{width:68px;height:68px;font-size:30px}
+}
+@media (max-width:370px){
+  body.gaming #scr-onecard .oc-hand .ocard{width:48px;height:70px}
+  body.gaming #scr-onecard .oc-hand:has(> .ocard:nth-child(11)){--ov:14px}
+  body.gaming #scr-onecard .oc-hand:has(> .ocard:nth-child(15)){--ov:20px}
+  body.gaming #scr-onecard .oc-hand:has(> .ocard:nth-child(17)){--ov:24px}
+}
+/* 가로로 낮은 화면: [판 | 먹기 · 원카드!] 위에 참가자, 아래에 내 패 */
+@media (min-aspect-ratio:1/1) and (max-height:760px){
+  body.gaming #scr-onecard .oc-table{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"pl pl" "center act" "multi multi" "hand hand";gap:8px 12px;max-width:980px}
+  body.gaming #scr-onecard .oc-players{grid-area:pl}
+  body.gaming #scr-onecard .oc-center{grid-area:center;padding:10px 16px}
+  body.gaming #scr-onecard .oc-actions{grid-area:act;flex-direction:column;align-self:center}
+  body.gaming #scr-onecard .oc-multi{grid-area:multi}
+  body.gaming #scr-onecard .oc-hand{grid-area:hand}
+}
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-onecard .oc-table{gap:5px 10px}
+  body.gaming #scr-onecard .oc-p{padding:2px 9px;min-width:0;flex-direction:row;gap:6px;align-items:baseline;border-radius:10px}
+  body.gaming #scr-onecard .oc-p b{font-size:13px}
+  body.gaming #scr-onecard .oc-p span{font-size:11px}
+  body.gaming #scr-onecard .oc-center{padding:5px 12px;gap:12px;border-radius:14px}
+  body.gaming #scr-onecard .oc-pile{flex-direction:row;gap:6px}
+  body.gaming #scr-onecard .oc-pile small{font-size:11px;max-width:4.5em}
+  body.gaming #scr-onecard .ocard.big,body.gaming #scr-onecard .ocard.back{width:52px;height:75px}
+  body.gaming #scr-onecard .ocard.big span{font-size:28px}
+  body.gaming #scr-onecard .oc-attack{font-size:15px;padding:3px 8px}
+  body.gaming #scr-onecard .oc-log{font-size:11px;line-height:1.35}
+  body.gaming #scr-onecard .oc-log div:nth-child(n+3){display:none}
+  body.gaming #scr-onecard .oc-actions{gap:6px}
+  body.gaming #scr-onecard .oc-actions .btn{padding:7px 14px;font-size:15px}
+  body.gaming #scr-onecard .oc-hand{padding-top:10px;gap:4px 0}
+  body.gaming #scr-onecard .oc-hand .ocard{width:46px;height:66px}
+  body.gaming #scr-onecard .ocard i{font-size:12px;left:4px}
+  body.gaming #scr-onecard .oc-hand .ocard span{font-size:22px}
+  body.gaming #scr-onecard .oc-hand:has(> .ocard:nth-child(11)){--ov:10px}
+  body.gaming #scr-onecard .oc-hand:has(> .ocard:nth-child(15)){--ov:14px}
+  body.gaming #scr-onecard .oc-multi{padding:4px 10px;font-size:12.5px}
+}
+
+/* ═════════════ 🎱 빙고 (#scr-bingo) ═════════════
+ * 판 한 변 = 남는 높이에 맞춰요. 부른 숫자는 칸 안에서 스크롤 (판에 이미 표시돼요) · 가로 화면은 판 오른쪽에 */
+body.gaming #scr-bingo{--bg-rsv:calc(104px + var(--bg-shuf,46px))}
+body.gaming #scr-bingo .bingo-wrap{gap:14px;flex-wrap:nowrap}
+body.gaming #scr-bingo .bingo-wrap > div:first-child{flex:none}
+body.gaming #scr-bingo #bingo-board{width:min(430px,92vw,max(220px,calc(var(--avail-h,100vh) - var(--bg-rsv))));gap:min(8px,1.6vw);container-type:inline-size}
+body.gaming #scr-bingo .bcell{font-size:clamp(15px,7cqi,28px)}
+/* 섞기 시간이 끝나면(섞기 버튼이 숨으면) 판을 그만큼 크게 */
+body.gaming #scr-bingo:has(#bingo-shuffle.hidden){--bg-shuf:0px}
+body.gaming #scr-bingo #bingo-shuffle{margin-top:8px!important;padding:8px 14px;font-size:16px}
+body.gaming #scr-bingo .bingo-side{padding:12px 14px}
+body.gaming #scr-bingo .bingo-side h3{font-size:17px;margin-bottom:8px}
+body.gaming #scr-bingo #bingo-called{gap:5px;max-height:calc(var(--avail-h,100vh) - 190px);overflow-y:auto;scrollbar-width:thin}
+body.gaming #scr-bingo #bingo-called span{min-width:30px;padding:3px 6px;font-size:14px}
+@media (max-aspect-ratio:1/1){
+  body.gaming #scr-bingo{--bg-rsv:calc(244px + var(--bg-shuf,46px))}
+  body.gaming #scr-bingo .bingo-wrap{flex-direction:column;align-items:center;gap:8px}
+  body.gaming #scr-bingo .bingo-side{width:min(100%,430px,max(220px,calc(var(--avail-h,100vh) - var(--bg-rsv))));padding:7px 10px}
+  body.gaming #scr-bingo .bingo-side h3{font-size:14px;margin-bottom:5px}
+  body.gaming #scr-bingo #bingo-called{max-height:58px}
+}
+@media (max-aspect-ratio:1/1) and (max-width:600px){
+  body.gaming #scr-bingo{--bg-rsv:calc(206px + var(--bg-shuf,44px))}
+  body.gaming #scr-bingo #bingo-board{padding:8px;border-radius:16px;width:min(430px,100%,max(220px,calc(var(--avail-h,100vh) - var(--bg-rsv))))}
+  body.gaming #scr-bingo .bcell{border-radius:10px}
+  body.gaming #scr-bingo #bingo-shuffle{margin-top:6px!important;padding:7px 12px;font-size:15px}
+  body.gaming #scr-bingo .bingo-side{width:100%;padding:6px 9px}
+  body.gaming #scr-bingo .bingo-side h3{display:none}
+  body.gaming #scr-bingo #bingo-called{max-height:56px;gap:4px}
+  body.gaming #scr-bingo #bingo-called span{min-width:27px;padding:2px 5px;font-size:13px;border-radius:8px}
+}
+@media (min-aspect-ratio:1/1){
+  body.gaming #scr-bingo .bingo-side{width:min(300px,32vw)}
+}
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-bingo{--bg-rsv:calc(66px + var(--bg-shuf,42px))}
+  body.gaming #scr-bingo #bingo-board{padding:7px;border-radius:14px;gap:5px}
+  body.gaming #scr-bingo .bcell{border-radius:9px}
+  body.gaming #scr-bingo #bingo-shuffle{margin-top:6px!important;padding:6px 12px;font-size:15px}
+  body.gaming #scr-bingo .bingo-side{padding:8px 10px}
+  body.gaming #scr-bingo .bingo-side h3{font-size:14px;margin-bottom:5px}
+  body.gaming #scr-bingo #bingo-called{max-height:calc(var(--avail-h,100vh) - 110px)}
+}
+
+/* ═════════════ 🎨 캐치마인드 · 🤫 라이어 (draw.js) ═════════════
+ * 그림판(.sketch)은 좌표를 그림판 크기 비율로 바꾸니 CSS 로 크기를 바꿔도 그대로 그려져요.
+ * 캐치마인드 정답 칸(#catch-guess, draw.js): 채팅창이 접히는 1100px 이하 화면에서만 보여요 (넓은 화면은 오른쪽 채팅으로). */
+#catch-guess{display:none}
+@media (max-width:1100px){ body.in-room.gaming #scr-catch #catch-guess:not(.hidden){display:block} }
+#catch-guess{margin-top:8px;padding:8px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+#catch-guess .gb-log{font-size:13px;line-height:1.4;color:var(--muted);max-height:4.2em;overflow:hidden;margin:0 2px 6px}
+#catch-guess .gb-log:empty{display:none}
+#catch-guess .gb-log b{color:var(--text);margin-right:6px}
+#catch-guess .gb-log .sys{color:var(--good);font-weight:700}
+#catch-guess .gb-row{display:flex;gap:8px}
+#catch-guess input{flex:1;min-width:0;font-size:17px;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--panel2);color:var(--text);font-family:inherit}
+#catch-guess input:focus{outline:none;border-color:var(--accent)}
+/* 가로 화면 (휴대폰 가로 · 태블릿 가로 · 노트북): [그림판 | 제시어 · 도구 또는 정답 칸] */
+@media (min-aspect-ratio:1/1){
+  body.gaming #scr-catch.active{display:grid;grid-template-columns:minmax(0,1fr) clamp(190px,24vw,260px);grid-template-rows:auto auto auto minmax(0,1fr);
+    grid-template-areas:"head head" "score score" "cv word" "cv side";column-gap:12px;align-content:start}
+  body.gaming #scr-catch > .game-head{grid-area:head}
+  body.gaming #scr-catch > .scorebar{grid-area:score}
+  body.gaming #scr-catch #catch-word{grid-area:word;margin:0 0 8px;font-size:18px;padding:8px 10px}
+  body.gaming #scr-catch .canvas-box{display:contents}
+  body.gaming #scr-catch #catch-cv{grid-area:cv;justify-self:center;align-self:start;max-height:min(var(--cv-h,9999px),calc(var(--avail-h,500px) - var(--dr-rsv,104px)))}
+  body.gaming #scr-catch #catch-tools{grid-area:side;align-self:start;margin:0;justify-content:flex-start}
+  body.gaming #scr-catch #catch-guess{grid-area:side;align-self:start;margin:0}
+  body.gaming #scr-catch #catch-guess .gb-log{max-height:none}
+  body.gaming #scr-liar .draw-wrap{flex-wrap:nowrap;gap:12px}
+  body.gaming #scr-liar .canvas-box{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center}
+  body.gaming #scr-liar #liar-cv{max-height:min(var(--cv-h,9999px),calc(var(--avail-h,500px) - var(--dr-rsv,124px)))}
+  body.gaming #scr-liar #liar-tools{align-self:stretch}
+  body.gaming #scr-liar .side-col{flex:0 0 clamp(190px,24vw,260px);min-width:0;max-height:calc(var(--avail-h,500px) - 60px);overflow-y:auto;gap:8px}
+}
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-catch{--dr-rsv:84px}
+  body.gaming #scr-liar{--dr-rsv:100px}
+  body.gaming #scr-liar .role-card{padding:10px}
+  body.gaming #scr-liar .role-card .rc-big{font-size:24px;margin:2px 0}
+  body.gaming #scr-liar .side-col > .small{display:none}
+  body.gaming :is(#scr-catch,#scr-liar) .tools{gap:4px;padding:6px}
+}
+/* 좁은 화면에서는 '토론은 오른쪽 채팅으로' 안내가 맞지 않아요 (채팅은 💬 버튼) */
+@media (max-width:1100px){ body.in-room.gaming #scr-liar .side-col > .small{display:none} }
+@media (min-aspect-ratio:1/1){
+  body.gaming #scr-catch #catch-guess .gb-row{flex-direction:column}
+  body.gaming #scr-catch #catch-guess .btn{width:100%}
+}

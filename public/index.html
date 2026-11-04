@@ -17,6 +17,10 @@
 <link rel="stylesheet" href="/css/bang.css">
 <link rel="stylesheet" href="/css/rummi.css">
 <link rel="stylesheet" href="/css/account.css">
+<link rel="stylesheet" href="/css/fit-a.css">
+<link rel="stylesheet" href="/css/fit-b.css">
+<link rel="stylesheet" href="/css/fit-c.css">
+<link rel="stylesheet" href="/css/fit-d.css">
 </head>
 <body>
 
@@ -56,6 +60,7 @@
   <!-- ─────────── 멀티 메뉴 ─────────── -->
   <section class="screen" id="scr-multi">
     <div class="page-head"><button class="btn ghost" data-act="home">← 처음으로</button><h2><i class="h-ic" data-icon="users-group"></i>멀티 플레이</h2></div>
+    <div class="panel open-rooms" id="open-rooms"></div>
     <div class="multi-layout">
       <div class="panel"><h3>방 만들기</h3><div class="game-grid" id="create-grid"></div></div>
       <div class="panel join-panel">
@@ -73,6 +78,7 @@
       <button class="btn ghost" data-act="leave">← 방 나가기</button>
       <h2 id="lobby-title">대기실</h2>
       <div class="code-badge" data-act="copyCode" title="클릭하면 복사됩니다">방 코드 <b id="lobby-code">----</b>📋</div>
+      <div id="lobby-privacy"></div>
     </div>
     <div class="lobby-layout">
       <div class="panel">
@@ -292,7 +298,7 @@
 
 <!-- ─────────── 채팅 ─────────── -->
 <aside class="chat" id="chat">
-  <div class="chat-head"><b>💬 채팅</b><span class="small muted" id="chat-room"></span></div>
+  <div class="chat-head"><b>💬 채팅</b><span class="small muted" id="chat-room"></span><button type="button" class="chat-x" data-act="chatToggle" aria-label="채팅 닫기">✕</button></div>
   <div class="chat-log" id="chat-log"></div>
   <div class="emoji-row" id="emoji-row"></div>
   <div class="chat-form" id="chat-form">
@@ -316,6 +322,7 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/icons.js"></script>
 <script src="/js/core.js"></script>
+<script src="/js/sound.js"></script>
 <script src="/js/apple.js"></script>
 <script src="/js/race.js"></script>
 <script src="/js/omok.js"></script>

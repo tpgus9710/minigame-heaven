@@ -125,7 +125,10 @@ const Tetris = {
     m.forEach((row, r) => row.forEach((v, cc) => { if (v) this.cell(n, cc + ox, r + oy, this.COLORS[this.next], 22); }));
   },
 };
-register('tetris', { solo: () => Tetris.start(true), stop: () => { Tetris.running = false; }, key: e => {
+register('tetris', { solo: () => Tetris.start(true), stop: () => { Tetris.running = false; },
+  // 터치 화면: ◀ ▼ ▶ (누르고 있으면 계속) | 돌리기 · 바로 내리기
+  pad: ['ArrowLeft', 'ArrowDown', 'ArrowRight', '|', 'ArrowUp', 'Space'], padLabel: { ArrowUp: '⟳', Space: '⤓' }, padRepeat: ['ArrowLeft', 'ArrowRight', 'ArrowDown'],
+  key: e => {
   if (!Tetris.running) return;
   const k = e.key;
   if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', ' '].includes(k)) e.preventDefault(); else return;

@@ -17,6 +17,7 @@ const Bingo = {
     const done = BINGO_LINES.filter(l => l.every(i => set.has(this.board[i])));
     const inLine = new Set(done.flat());
     const myTurn = this.phase === 'play' && this.turnId === S.myId;
+    Sound.turn('bingo', myTurn);
     $('#bingo-board').innerHTML = this.board.map((n, i) =>
       `<button class="bcell ${set.has(n) ? 'on' : ''} ${inLine.has(i) ? 'line' : ''} ${n === this.last ? 'last' : ''}" ${myTurn && !set.has(n) ? `data-act="bingoPick" data-n="${n}"` : 'disabled'}>${n}</button>`).join('');
     $('#bingo-board').classList.toggle('my-turn', myTurn);

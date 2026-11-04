@@ -152,6 +152,7 @@ makeScreen('kart', {
   stats: [['best', '최고 기록']],
   body: `<div class="kt-stage" id="kt-stage"><canvas id="kt-cv"></canvas><div class="kt-setup hidden" id="kt-setup"></div></div>`,
 });
+$('#scr-kart').dataset.fitOverflow = 'ok';   // 휴대폰 가로에서 무대가 패드 사이까지 일부러 내려가요 → 화면 맞춤이 넘친 것으로 보지 않게
 LOBBY_OPTIONS.kart = [
   { key: 'ktMode', label: '모드', def: 'speed', values: [['speed', '스피드전'], ['item', '아이템전']] },
   { key: 'ktTrack', label: '트랙', def: 0, values: [[0, '햇살 서킷'], [1, '얼음 계곡'], [2, '사막 하이웨이'], [-1, '랜덤']] },
@@ -283,7 +284,7 @@ const Kart = {
     gameLoop((dt, now) => {
       const R = this.R; if (!R) return;
       const t0 = performance.now();
-      if (!this.fitted || this.cv.clientWidth !== this.W) this.fit();
+      if (!this.fitted || this.cv.clientWidth !== this.W || this.moved()) this.fit();
       R.acc = Math.min(R.acc + dt, 0.1);
       while (R.acc >= KT.STEP) { R.acc -= KT.STEP; this.tick(KT.STEP); if (this.R !== R) return; }
       if (R.multi) this.interp(now, dt);
@@ -769,10 +770,19 @@ const Kart = {
     this.fit();
   },
   fit() {
-    const cv = this.cv, st = $('#kt-stage');
+    const cv = this.cv, st = $('#kt-stage'), sec = $('#scr-kart');
     const w = st.clientWidth || 800, mob = w < 640;
-    const top = cv.getBoundingClientRect().top + window.scrollY;
-    const h = Math.round(mob ? clamp(Math.min(window.innerHeight - Math.max(top, 160) - (TOUCH ? 96 : 20), w * 1.6), 320, 760) : clamp(Math.min(window.innerHeight - Math.max(top, 120) - 24, w * 0.62), 360, 860));
+    // 캔버스 높이 = core.js Fit 이 쓰는 남는 높이(창 높이 - 화면 위치 - 아래 여백 - 가상 패드) - 제목 줄 → 화면 전체를 줄이지 않고 딱 맞아요
+    // (Fit 이 화면을 줄여 둔 상태여도 줄이기 전 크기로 계산해요 — 그래야 다시 맞출 때 원래 크기로 돌아와요)
+    const pad = $('#vpad'), padH = pad && !pad.classList.contains('hidden') ? pad.getBoundingClientRect().height + 18 : 0;
+    const shellB = parseFloat(getComputedStyle(sec.parentElement.parentElement).paddingBottom) || 0;
+    const sr = sec.getBoundingClientRect(), z = +sec.dataset.z || 1;
+    this.above = Math.round((cv.getBoundingClientRect().top - sr.top) / z);
+    const land = padH > 0 && window.innerHeight <= 520;            // 휴대폰 가로: 패드는 화면 위에 떠 있으니 캔버스는 바닥 가까이까지 (패드 사이로 길이 보여요)
+    const room = window.innerHeight - (sr.top + window.scrollY) - shellB - padH - this.above - 2 + (land ? padH - 6 : 0);
+    const tall = window.innerHeight > window.innerWidth;           // 세로로 긴 태블릿 · 폴드: 화면을 더 길게 써요
+    const h = Math.round(clamp(Math.min(room, mob ? w * 1.6 : w * (tall ? 1 : 0.62)), 200, mob ? 760 : 860));
+    st.style.marginBottom = land ? -(padH - 6) + 'px' : '';          // 패드 자리만큼은 화면 높이 계산에서 빼요 (kart.css: 화면 display:flow-root)
     this.dpr = Math.min(this.q === 0 ? 1 : 2, window.devicePixelRatio || 1);
     this.W = w; this.H = h;
     cv.style.height = h + 'px';
@@ -780,7 +790,15 @@ const Kart = {
     this.fitted = !!st.clientWidth;
     if (this.R) this.R.mm = null;
   },
-  baseZoom() { const W = this.W || 900; return W < 640 ? clamp(W / 520, 0.58, 0.8) : clamp(W / 930, 0.85, 1.32); },
+  /** 제목 줄 높이가 바뀌어 캔버스 위치가 달라졌는지 (글꼴 로드 · 안내 문구 줄바꿈) → 다시 맞추기 */
+  moved() {
+    const sec = this.cv && this.cv.closest('.screen');
+    if (!sec || !sec.classList.contains('active')) return false;
+    const z = +sec.dataset.z || 1;
+    return Math.abs(Math.round((this.cv.getBoundingClientRect().top - sec.getBoundingClientRect().top) / z) - (this.above || 0)) > 1;
+  },
+  /** 낮고 넓은 화면(휴대폰 가로)에서는 조금 멀리서 봐서 앞길이 더 보이게 */
+  baseZoom() { const W = this.W || 900, H = this.H || 520; return W < 640 ? clamp(W / 520, 0.58, 0.8) : clamp(Math.min(W / 930, H < 400 ? H / 420 : 9), 0.66, 1.32); },
   patterns(th) {
     if (this.pat.th !== th) this.pat = { th, cells: new Map() };
   },
@@ -1085,7 +1103,8 @@ const Kart = {
   /* ─── HUD (화면 좌표) ─── */
   panel(c, x, y, w, h, r = 14) { c.fillStyle = 'rgba(12,14,30,.62)'; ktRR(c, x, y, w, h, r); c.fill(); c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 1; c.stroke(); },
   hud(c, W, H, now) {
-    const R = this.R, me = R.me, mob = W < 640, u = mob ? clamp(W / 420, 0.72, 0.95) : clamp(W / 1100, 0.85, 1.2);
+    // 낮은 화면(휴대폰 가로)은 휴대폰 배치: 속도 · 아이템 칸을 위쪽에 (아래 모서리는 가상 패드 자리)
+    const R = this.R, me = R.me, mob = W < 640 || H < 400, u = mob ? clamp(W / 420, 0.72, 0.95) : clamp(W / 1100, 0.85, 1.2);
     const F = (px, fam = '"Black Han Sans", sans-serif') => `${Math.round(px * u)}px ${fam}`;
     const BH = '"Black Han Sans", sans-serif', NS = '"Noto Sans KR", sans-serif';
     c.textBaseline = 'alphabetic';
@@ -1239,6 +1258,7 @@ register('kart', {
   solo: () => Kart.solo(),
   stop: () => Kart.stop(),
   key: e => Kart.key(e),
+  padSide: false,                                   // 가로 화면에서도 패드는 화면 위에 떠 있어요 (넓은 길이 패드 사이로 보이게)
   pad: ['ArrowLeft', 'ArrowRight', '|', 'ArrowDown', 'ShiftLeft', 'KeyE'],
   padLabel: {
     ArrowDown: `<span class="kt-pad">${icon('hand-stop')}<small>브레이크</small></span>`,

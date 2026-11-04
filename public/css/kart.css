@@ -4,6 +4,10 @@
 .kt-stage canvas{display:block;width:100%;height:520px}
 .kt-setup{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at center,rgba(8,10,24,.35),rgba(8,10,24,.78));overflow:auto}
 .kt-setup.hidden{display:none}
+/* 화면 맞춤: 휴대폰 가로에서 kart.js 가 무대 아래 여백을 음수로 줘서 패드 사이까지 캔버스를 써요 → 그 여백이 화면 높이 계산에 들어가도록 */
+body.gaming #scr-kart.active{display:flow-root}
+/* 레이스 준비 카드는 무대(캔버스) 크기에 맞춰요 — 무대가 낮으면 촘촘하게, 넓고 낮으면 트랙은 왼쪽 · 설정은 오른쪽 (안에서 스크롤하지 않게) */
+.kt-setup{container:ktsetup / size}
 .kt-card{width:min(780px,100%);margin:auto;background:rgba(17,21,42,.9);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:20px 22px 16px;color:#eef0ff;box-shadow:0 24px 60px rgba(0,0,0,.5)}
 .kt-card h3{font-size:25px;margin:0 0 10px;display:flex;align-items:center;gap:10px;color:#fff}
 .kt-card h3 .ic{width:28px;height:28px;color:#7cf2ff}
@@ -45,4 +49,44 @@ body:has(#scr-kart.active) #vpad button{width:60px;height:60px}
   .kt-opt.sm{min-width:0}
   .kt-go{padding:12px;font-size:19px}
   .kt-keys{font-size:11.5px}
+}
+
+/* ── 레이스 준비 카드: 무대 크기별 (컨테이너 쿼리 · 무대 = .kt-setup) — 카드 안에서 스크롤하지 않게 ── */
+.kt-track canvas{width:min(100%,calc(var(--kt-ph,999px) * 1.6));margin-left:auto;margin-right:auto}
+/* 무대가 조금 낮으면: 조작 안내 문단은 숨기고(제목 줄 안내와 같아요) 간격을 줄여요 */
+@container ktsetup (max-height:640px){
+  .kt-keys{display:none}
+  .kt-card{padding:14px 16px}
+  .kt-card h3{font-size:21px;margin-bottom:4px}
+  .kt-card h3 .ic{width:24px;height:24px}
+  .kt-sec{margin:8px 0}
+  .kt-go{padding:11px;font-size:20px}
+}
+@container ktsetup (max-height:430px){
+  .kt-card{padding:10px 12px;border-radius:16px}
+  .kt-card h3{font-size:18px;margin-bottom:2px}
+  .kt-sec{margin:6px 0}
+  .kt-sec>small{margin-bottom:4px}
+  .kt-opt{padding:7px 10px}
+  .kt-opt small{display:none}
+  .kt-track small{display:none}
+  .kt-go{padding:9px;font-size:18px;margin-top:4px}
+}
+/* 넓고 낮은 무대 (노트북 · 태블릿 가로 · 휴대폰 가로): 트랙 3개는 왼쪽, 모드 · 바퀴 수 · 출발은 오른쪽 */
+@container ktsetup (min-width:600px) and (max-height:720px){
+  .kt-card{width:min(860px,100%);display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);column-gap:18px;align-items:start;
+    grid-template-areas:"h h" "tr mode" "tr laps" "tr go";grid-template-rows:auto auto auto 1fr}
+  .kt-card > h3{grid-area:h}
+  .kt-card > .kt-sec:nth-of-type(1){grid-area:mode}
+  .kt-card > .kt-sec:nth-of-type(2){grid-area:tr}
+  .kt-card > .kt-sec:nth-of-type(3){grid-area:laps}
+  .kt-card > .kt-go{grid-area:go;align-self:end}
+  .kt-card > .kt-keys{display:none}
+  .kt-opt{min-width:0}
+}
+@container ktsetup (min-width:600px) and (max-height:360px){
+  .kt-card > h3{display:none}
+  .kt-card{grid-template-areas:"tr mode" "tr laps" "tr go";grid-template-rows:auto auto 1fr}
+  .kt-card > .kt-sec:first-of-type{margin-top:0}
+  .kt-card > .kt-sec:nth-of-type(2){margin-top:0}
 }

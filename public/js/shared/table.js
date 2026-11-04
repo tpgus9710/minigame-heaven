@@ -83,7 +83,7 @@
         if (!free) schedule(); else checkEnd();
         o.onUpdate();   // 다음 차례 시간(turnEnd)까지 정한 뒤 화면에 알려요
       },
-      view(id) { return Object.assign(Core.view(state, id), { me: id, turnEnd: state.turnEnd || null, now: Date.now() }); },
+      view(id) { return Object.assign(Core.view(state, id), { me: id, turnEnd: state.turnEnd || null, now: Date.now(), myTurn: !ended && Core.pending(state).includes(id) }); },
       /** 나간 사람: 게임이 처리하거나 봇이 대신 */
       drop(id) {
         if (ended) return;

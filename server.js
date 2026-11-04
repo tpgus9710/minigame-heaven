@@ -121,6 +121,29 @@ function leaveRoom(socket) {
   pushRoom(room);
 }
 
+/** 게임 시작 (방장이 누를 때 · 모두 '한 판 더'를 눌렀을 때). 시작 못 하면 이유를 say 로 알려요 */
+function tryStart(room, say) {
+  if (room.isStarted) return false;
+  const info = REGISTRY[room.gameType];
+  const parts = participants(room);
+  if (info.requireRoles && !info.requireRoles.every(r => room.players.some(p => p.role === r))) { say(info.requireMsg); return false; }
+  if (parts.length < info.min) { say(`${info.name}은(는) 최소 ${info.min}명이 필요해요.`); return false; }
+  const notReady = parts.filter(p => !p.isHost && !p.isReady);
+  if (notReady.length) { say(`아직 준비 안 한 사람: ${notReady.map(p => p.name).join(', ')}`); return false; }
+  stopTimers(room);
+  room.session++;
+  room.isStarted = true;
+  room.rematch = null;
+  room.players.forEach(p => { p.score = 0; });
+  ACC.onStart(room);                                   // 시작할 때 참가자 기억 (기록용)
+  info.mod.start(room);
+  pushRoom(room);
+  return true;
+}
+/** 열린 방 목록에 보여 줄 방 (비공개 · 게임 중 · 가득 찬 방은 빼요) */
+const joinable = room => !room.isStarted && !room.private && room.players.length > 0 && room.players.length < REGISTRY[room.gameType].max;
+const kickedFrom = (room, socket) => !!room.kicked && (room.kicked.has(socket.id) || (!!socket.data.uid && room.kicked.has('u:' + socket.data.uid)));
+
 function lanAddresses() {
   return Object.values(os.networkInterfaces()).flat()
     .filter(i => i && (i.family === 'IPv4' || i.family === 4) && !i.internal).map(i => i.address);
@@ -155,6 +178,7 @@ io.on('connection', socket => {
     try { fn(...args); } catch (e) { console.error(`⚠️  [${ev}] 처리 중 오류:`, e); }
   });
   const toast = (msg, type = 'error') => socket.emit('toast', { msg, type });
+  const reply = (cb, d) => { if (typeof cb === 'function') cb(d); };
   const ctx = () => {
     const room = rooms.get(socket.data.code);
     return { room, me: room ? getPlayer(room, socket.id) : null };
@@ -191,8 +215,57 @@ io.on('connection', socket => {
     if (room.players.some(p => p.id === socket.id)) return;
     if (room.isStarted) return toast('이미 게임이 진행 중인 방입니다. 끝난 뒤 다시 들어와 주세요.');
     if (room.players.length >= REGISTRY[room.gameType].max) return toast('방이 가득 찼습니다.');
+    if (kickedFrom(room, socket)) return toast('방장이 내보낸 방이라 다시 들어갈 수 없어요.');
     leaveRoom(socket);
     addPlayer(room, socket, d.playerName);
+  });
+
+  /* ── 열린 방 목록 · 빠른 참가 ── */
+  on('rooms:list', (_, cb) => {
+    if (typeof cb !== 'function') return;
+    const open = [];
+    let playing = 0;
+    for (const room of rooms.values()) {
+      if (room.private || !room.players.length) continue;
+      if (room.isStarted) { playing++; continue; }
+      if (!joinable(room)) continue;
+      const info = REGISTRY[room.gameType], host = room.players.find(p => p.isHost) || room.players[0];
+      open.push({ code: room.code, game: room.gameType, n: room.players.length, max: info.max, min: info.min,
+        host: host.name, lv: host.lv || 0, av: host.av ?? null, color: host.color ?? null, uid: host.uid || null, mine: room.code === socket.data.code });
+    }
+    open.sort((a, b) => (b.n >= b.min) - (a.n >= a.min) || b.n - a.n);     // 곧 시작할 수 있는 방 · 사람 많은 방부터
+    cb({ open: open.slice(0, 60), more: Math.max(0, open.length - 60), playing });
+  });
+  on('rooms:quick', (d, cb) => {
+    const want = d && typeof d.game === 'string' && REGISTRY[d.game] ? d.game : null;
+    let best = null;
+    for (const room of rooms.values()) {
+      if (!joinable(room) || room.code === socket.data.code || (want && room.gameType !== want) || kickedFrom(room, socket)) continue;
+      if (!best || room.players.length > best.players.length) best = room;
+    }
+    if (!best) return reply(cb, { ok: false });
+    leaveRoom(socket);
+    addPlayer(best, socket, d && d.playerName);
+    reply(cb, { ok: true, code: best.code, game: best.gameType });
+  });
+  /** 방장: 비공개 (방 코드로만 입장) */
+  on('setPrivate', v => {
+    const { room, me } = ctx();
+    if (!room || !me || !me.isHost || room.private === !!v) return;
+    room.private = !!v;
+    sys(room, room.private ? '🔒 비공개 방이 됐어요. 방 코드로만 들어올 수 있어요.' : '🌐 공개 방이 됐어요. 열린 방 목록에 보여요.');
+    pushRoom(room);
+  });
+  /** 방장: 내보내기 (대기실에서만) */
+  on('kick', id => {
+    const { room, me } = ctx();
+    if (!room || !me || !me.isHost || room.isStarted || typeof id !== 'string' || id === me.id) return;
+    const p = getPlayer(room, id); if (!p) return;
+    room.kicked = room.kicked || new Set();
+    room.kicked.add(id); if (p.uid) room.kicked.add('u:' + p.uid);
+    const s = io.sockets.sockets.get(id);
+    if (s) { leaveRoom(s); s.emit('kicked', { code: room.code }); }
+    sys(room, `🚫 방장이 ${p.name} 님을 내보냈어요.`);
   });
 
   on('leaveRoom', () => leaveRoom(socket));
@@ -247,21 +320,21 @@ io.on('connection', socket => {
     const { room, me } = ctx();
     if (!room || !me) return;
     if (!me.isHost) return toast('방장만 시작할 수 있습니다.');
-    if (room.isStarted) return;
-    const info = REGISTRY[room.gameType];
-    const parts = participants(room);
-    if (info.requireRoles && !info.requireRoles.every(r => room.players.some(p => p.role === r))) return toast(info.requireMsg);
-    if (parts.length < info.min) return toast(`${info.name}은(는) 최소 ${info.min}명이 필요해요.`);
-    const notReady = parts.filter(p => !p.isHost && !p.isReady);
-    if (notReady.length) return toast(`아직 준비 안 한 사람: ${notReady.map(p => p.name).join(', ')}`);
+    tryStart(room, toast);
+  });
 
-    stopTimers(room);
-    room.session++;
-    room.isStarted = true;
-    room.players.forEach(p => { p.score = 0; });
-    ACC.onStart(room);                                   // 시작할 때 참가자 기억 (기록용)
-    info.mod.start(room);
-    pushRoom(room);
+  /** 결과창 '한 판 더': 모두 누르면 3초 뒤 같은 게임을 바로 다시 시작해요 */
+  on('rematch', v => {
+    const { room, me } = ctx();
+    if (!room || !me || !room.game || !room.game.over || !room.rematch || me.role === 'spectator') return;
+    if (v === false) room.rematch.delete(me.id); else room.rematch.add(me.id);
+    const parts = participants(room), have = parts.filter(p => room.rematch.has(p.id)).length;
+    H.emit(room, 'rematch', { ids: [...room.rematch], have, need: parts.length });
+    if (have < parts.length || parts.length < REGISTRY[room.gameType].min) return;
+    endToLobby(room, '🔁 모두 한 판 더! 3초 뒤에 시작해요');          // 누른 사람은 준비 완료로 돌아와요
+    const session = room.session;
+    H.emit(room, 'rematch:go', { at: Date.now() + 3000 });
+    H.later(room, 3000, () => { if (room.session === session && !room.isStarted) tryStart(room, msg => sys(room, `⚠️ 바로 시작하지 못했어요: ${msg}`)); });
   });
 
   on('returnToLobby', () => {

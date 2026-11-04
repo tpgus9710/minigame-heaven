@@ -19,6 +19,7 @@ const Omok = {
     if (text) return ($('#omok-status').textContent = text);
     if (!this.myColor) return ($('#omok-status').textContent = `👀 관전 중 — ${this.turn === 'black' ? '흑돌' : '백돌'} 차례`);
     $('#omok-status').textContent = this.turn === this.myColor ? '🟢 내 차례예요! 돌을 놓으세요.' : (this.solo ? '🤖 컴퓨터가 생각 중…' : '⏳ 상대 차례예요.');
+    if (!this.solo) Sound.turn('omok', !this.over && this.turn === this.myColor);
   },
   draw() {
     const cv = $('#omok-cv'), c = cv.getContext('2d'), { N, G, M } = this;

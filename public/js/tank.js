@@ -34,7 +34,31 @@ const Tank = {
   mirror(h, info, view) {
     this.v = { h: h.slice(), wind: 0, activeId: null, tanks: info.map(t => ({ id: t.id, name: t.name, color: t.color, ...view.find(x => x.id === t.id) })) };
     Object.assign(this, { anim: null, charging: false, power: 50, lastPower: null, weapon: 'normal', moveDir: 0, deadline: 0, aimSent: 0, fx: [] });
+    this.h0 = h.slice(); this.carved = [];
+    this.paintTerrain();
   },
+  /** 땅 그림 (따로 그려 두고 포탄이 터지면 그 자리만 둥글게 지워요) */
+  paintTerrain() {
+    const tc = this.terr || (this.terr = document.createElement('canvas'));
+    tc.width = 960; tc.height = 540;
+    const c = tc.getContext('2d'), h = this.h0;
+    const g = c.createLinearGradient(0, 160, 0, 540); g.addColorStop(0, '#6b4931'); g.addColorStop(1, '#3e291c');
+    c.fillStyle = g; c.beginPath(); c.moveTo(0, 540);
+    for (let x = 0; x < 960; x++) c.lineTo(x, h[x]);
+    c.lineTo(960, 540); c.fill();
+    c.strokeStyle = '#7ac74f'; c.lineWidth = 5; c.lineJoin = 'round'; c.beginPath();
+    for (let x = 0; x < 960; x++) x ? c.lineTo(x, h[x]) : c.moveTo(x, h[x]);
+    c.stroke();
+    for (const k of this.carved) this.carveDraw(k);
+  },
+  carveDraw([x, y, r]) {
+    const c = this.terr.getContext('2d');
+    c.save();
+    c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+    c.globalCompositeOperation = 'source-atop'; c.strokeStyle = 'rgba(28,14,6,.6)'; c.lineWidth = 6; c.beginPath(); c.arc(x, y, r + 2, 0, Math.PI * 2); c.stroke();
+    c.restore();
+  },
+  carve(k) { this.carved.push(k); this.carveDraw(k); },
   me() { return this.v.tanks.find(t => t.id === this.myId); },
   myTurn() { return this.v.activeId === this.myId && !this.anim && !this.over; },
   loop() { gameLoop((dt, now) => { this.update(dt, now); this.draw(dt, now); }); },
@@ -74,9 +98,21 @@ const Tank = {
   },
   /** 포탄 궤적 → 폭발 → 지형·체력 반영 */
   playShot(r, done) {
+    if (this.anim) this.endAnim();                                 // 앞 발사가 아직 그려지는 중이면 (창을 내려 뒀다가 등) 마저 반영
     const vt = this.v.tanks.find(t => t.id === r.id);
     if (vt) { vt.angle = r.angle; }
-    this.anim = { paths: r.shots, t: 0, r, done, booms: r.booms.map(b => ({ ...b, shown: false })) };
+    const carves = r.carves || r.booms.map(b => [b.x, b.y, b.r]), base = carves.length - r.booms.length;
+    if (r.carves && this.carved.length !== base) { this.carved = carves.slice(0, base); this.paintTerrain(); }   // 놓친 폭발이 있으면 다시 그리기
+    this.anim = { paths: r.shots, t: 0, r, done, booms: r.booms.map((b, i) => ({ ...b, k: carves[base + i], shown: false })) };
+  },
+  /** 발사 그리기를 끝내고 결과 반영 (터지지 않은 폭발도 땅에 반영) */
+  endAnim() {
+    const A = this.anim; if (!A) return;
+    A.booms.forEach(b => { if (!b.shown) { b.shown = true; this.carve(b.k); } });
+    this.v.h = A.r.h.slice(); this.sync(A.r.tanks);
+    (A.r.falls || []).forEach(f => { const vt = this.v.tanks.find(x => x.id === f.id); if (vt) this.fx.push({ x: vt.x, y: vt.y - 40, txt: '-' + f.dmg, t: 1.2 }); });
+    const done = A.done; this.anim = null;
+    if (done) done();
   },
   update(dt, now) {
     const t = this.me();
@@ -93,14 +129,9 @@ const Tank = {
         if (idx < p.length - 1) continue;
         const end = p[p.length - 1];
         const b = A.booms.find(b => !b.shown && Math.hypot(b.x - end[0], b.y - end[1]) < 6);
-        if (b) { b.shown = true; this.fx.push({ x: b.x, y: b.y, r: b.r, t: 0.5 }); b.hits.forEach(h => { const vt = this.v.tanks.find(x => x.id === h.id); if (vt) this.fx.push({ x: vt.x, y: vt.y - 40, txt: '-' + h.dmg, t: 1.2 }); }); }
+        if (b) { b.shown = true; this.carve(b.k); this.fx.push({ x: b.x, y: b.y, r: b.r, t: 0.5 }); b.hits.forEach(h => { const vt = this.v.tanks.find(x => x.id === h.id); if (vt) this.fx.push({ x: vt.x, y: vt.y - 40, txt: '-' + h.dmg, t: 1.2 }); }); }
       }
-      if (idx >= maxLen + 25) {                                    // 다 날아가면 결과 반영
-        this.v.h = A.r.h.slice(); this.sync(A.r.tanks);
-        (A.r.falls || []).forEach(f => { const vt = this.v.tanks.find(x => x.id === f.id); if (vt) this.fx.push({ x: vt.x, y: vt.y - 40, txt: '-' + f.dmg, t: 1.2 }); });
-        const done = A.done; this.anim = null;
-        if (done) done();
-      }
+      if (idx >= maxLen + 25) this.endAnim();                     // 다 날아가면 결과 반영
     }
     if (this.myTurn() && t) {
       const da = (held('ArrowUp', 'KeyW') ? 1 : 0) - (held('ArrowDown', 'KeyS') ? 1 : 0);
@@ -142,12 +173,7 @@ const Tank = {
     c.fillStyle = 'rgba(40,40,80,.35)'; c.beginPath(); c.moveTo(0, H);
     for (let x = 0; x <= W; x += 20) c.lineTo(x, 260 + Math.sin(x * 0.01) * 40 + Math.sin(x * 0.023) * 25);
     c.lineTo(W, H); c.fill();
-    c.fillStyle = '#5a3d2b'; c.beginPath(); c.moveTo(0, H);
-    for (let x = 0; x < W; x++) c.lineTo(x, v.h[x]);
-    c.lineTo(W, H); c.fill();
-    c.strokeStyle = '#7ac74f'; c.lineWidth = 5; c.beginPath();
-    for (let x = 0; x < W; x++) x ? c.lineTo(x, v.h[x]) : c.moveTo(x, v.h[x]);
-    c.stroke();
+    if (this.terr) c.drawImage(this.terr, 0, 0);
     c.textAlign = 'center';
     for (const t of v.tanks) {
       if (!t.alive) { c.fillStyle = '#333'; c.beginPath(); c.roundRect(t.x - 15, t.y - 8, 30, 8, 3); c.fill(); continue; }
@@ -215,6 +241,7 @@ socket.on('tank:turn', d => {
   Tank.v.activeId = d.id; Tank.v.wind = d.wind; Tank.deadline = performance.now() + d.seconds * 1000; Tank.moveDir = 0;
   Tank.sync(d.tanks);
   if (d.id === S.myId) { Tank.power = Tank.me().power; toast('🎯 내 차례예요!', 'info'); }
+  Sound.turn('tank', d.id === S.myId);
 });
 socket.on('tank:aim', d => { const t = Tank.v && Tank.v.tanks.find(x => x.id === d.id); if (t) { t.angle = d.angle; } });
 socket.on('tank:pos', d => { const t = Tank.v && Tank.v.tanks.find(x => x.id === d.id); if (t) Object.assign(t, { x: d.x, y: d.y, fuel: d.fuel }); if (d.id === Tank.myId) Tank.updateBar(); });

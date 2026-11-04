@@ -37,6 +37,7 @@ socket.on('word:start', d => {
 socket.on('word:turn', d => {
   if (!isScreen('word')) return;
   const mine = d.id === S.myId;
+  Sound.turn('word', mine);
   Word.players(d.hearts, d.id);
   $('#wd-word').innerHTML = esc(d.word.slice(0, -1)) + `<em>${esc(d.word.slice(-1))}</em>`;
   $('#wd-hint').textContent = `${mine ? '🟢 내 차례! ' : `⏳ ${d.name} 님 차례 · `}'${d.starts.join("' 또는 '")}'(으)로 시작하는 단어`;

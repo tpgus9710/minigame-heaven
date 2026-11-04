@@ -45,8 +45,22 @@ socket.on('draw:clear', () => Sketches.catch.clear());
  *  🎨 캐치마인드
  * ===================================================================== */
 const Catch = { endsAt: 0, drawerId: null };
+// 채팅창이 접히는 좁은 화면(휴대폰 · 폴드 · 태블릿)에서는 그림 바로 아래에 정답 칸 — 채팅을 열지 않고 그림을 보면서 맞혀요 (보내면 채팅으로 가요)
+$('#scr-catch .canvas-box').insertAdjacentHTML('afterend', `<div class="guess-bar hidden" id="catch-guess"><div class="gb-log" id="catch-glog"></div>
+  <div class="gb-row"><input type="text" id="catch-guess-input" maxlength="40" autocomplete="off" enterkeyhint="send" placeholder="정답을 입력하세요!"><button class="btn good" data-act="catchGuess">보내기</button></div></div>`);
+ACT.catchGuess = () => { const i = $('#catch-guess-input'), v = i.value.trim(); if (!v || !S.code) return; socket.emit('chat', { msg: v }); i.value = ''; i.focus(); };
+$('#catch-guess-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); ACT.catchGuess(); } });
+socket.on('chat', d => {                                     // 정답 칸 위에 최근 채팅 3줄 (다른 사람이 뭘 쳤는지)
+  if (!isScreen('catch') || d.emoji) return;
+  const log = $('#catch-glog'), div = document.createElement('div');
+  div.className = d.system ? 'sys' : '';
+  div.innerHTML = d.system ? esc(d.msg) : `<b>${esc(d.name)}</b>${esc(d.msg)}`;
+  log.append(div);
+  while (log.children.length > 3) log.firstChild.remove();
+});
 socket.on('catch:start', () => {
   stopLocal(); Sketches.catch.clear(); Sketches.catch.enable(false);
+  $('#catch-guess').classList.add('hidden'); $('#catch-glog').innerHTML = '';
   $('#catch-word').textContent = '곧 시작합니다…';
   show('catch'); renderScores();
   every(250, () => { $('#catch-time').textContent = Catch.endsAt ? secLeft(Catch.endsAt) : '-'; });
@@ -55,14 +69,15 @@ socket.on('catch:turn', d => {
   Catch.endsAt = Date.now() + d.seconds * 1000; Catch.drawerId = d.drawerId;
   const mine = d.drawerId === S.myId;
   Sketches.catch.clear(); Sketches.catch.enable(mine);
+  $('#catch-guess').classList.toggle('hidden', mine);
   $('#catch-turn').textContent = `${d.turn}/${d.total}`;
-  $('#catch-status').textContent = mine ? '✏️ 내가 그릴 차례! 글자나 숫자는 쓰면 안 돼요.' : `✏️ ${d.drawerName} 님이 그리는 중 — 채팅창에 정답을 입력하세요!`;
+  $('#catch-status').textContent = mine ? '✏️ 내가 그릴 차례! 글자나 숫자는 쓰면 안 돼요.' : `✏️ ${d.drawerName} 님이 그리는 중 — ${window.innerWidth <= 1100 ? '정답 칸' : '채팅창'}에 정답을 입력하세요!`;
   $('#catch-word').innerHTML = mine ? '제시어를 받는 중…' : `${'○'.repeat(d.length)} <span class="muted small">(${d.length}글자)</span>`;
   $('#chat-input').placeholder = mine ? '메시지 입력…' : '정답을 입력하세요!';
 });
 socket.on('catch:word', d => { $('#catch-word').innerHTML = `제시어: <span style="color:var(--warn)">${esc(d.word)}</span>`; });
 socket.on('catch:solved', d => {
-  Catch.endsAt = 0; Sketches.catch.enable(false);
+  Catch.endsAt = 0; Sketches.catch.enable(false); $('#catch-guess').classList.add('hidden');
   $('#catch-word').innerHTML = `🎉 ${esc(d.by)} 님 정답! <span style="color:var(--good)">${esc(d.word)}</span>`;
 });
 
@@ -83,6 +98,7 @@ socket.on('liar:start', d => {
 socket.on('liar:turn', d => {
   Liar.endsAt = Date.now() + d.seconds * 1000;
   const mine = d.drawerId === S.myId;
+  Sound.turn('liar', mine);
   Sketches.liar.enable(mine);
   $('#liar-turn').textContent = `${d.turn}/${d.total}`;
   $('#liar-status').textContent = mine ? '✏️ 내 차례! 한 붓 그리고 "다 그렸어요"를 누르세요.' : `✏️ ${d.drawerName} 님이 그리는 중…`;

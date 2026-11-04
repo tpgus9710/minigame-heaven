@@ -1,6 +1,7 @@
 /* =====================================================================
  *  🛡️ 탱크 대포 엔진 — 화면(싱글 · AI)과 서버(멀티)가 같은 코드를 씁니다.
- *  지형은 x마다 땅 높이(h[x])로 표현하고, 포탄은 1/60초 단위로 계산합니다.
+ *  지형은 처음에 x마다 땅 높이(h[x])로 만들고, 게임 중에는 픽셀 단위 땅 지도(m)로 계산해요.
+ *  (포트리스처럼 옆면에 맞아도 둥글게 파이고, 굴 · 처마도 생겨요) 포탄은 1/60초 단위로 계산합니다.
  * ===================================================================== */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -16,7 +17,45 @@
   };
   const rad = a => (a * Math.PI) / 180;
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const ground = (s, x) => s.h[clamp(Math.round(x), 0, W - 1)];
+  const FOOT = 10;                                   // 탱크 바퀴 반 너비: 이 안에 땅이 한 곳이라도 있으면 걸쳐서 서 있어요
+
+  /* ── 픽셀 땅 지도: m[y*W+x] = 1 이면 땅 ── */
+  function buildMask(h) {
+    const m = new Uint8Array(W * H);
+    for (let x = 0; x < W; x++) for (let y = Math.max(0, Math.round(h[x])); y < H; y++) m[y * W + x] = 1;
+    return m;
+  }
+  /** 이 점이 땅인지 (화면 아래 끝은 땅, 양옆 바깥 · 위쪽은 하늘) */
+  function solid(s, x, y) {
+    x = Math.floor(x); y = Math.floor(y);
+    if (x < 0 || x >= W || y < 0) return false;
+    if (y >= H) return true;
+    return s.m[y * W + x] === 1;
+  }
+  /** x 줄에서 y0 아래로 처음 만나는 땅 (없으면 H) */
+  function below(s, x, y0) {
+    x = clamp(Math.round(x), 0, W - 1);
+    for (let y = Math.max(0, Math.round(y0)); y < H; y++) if (s.m[y * W + x]) return y;
+    return H;
+  }
+  /** 탱크가 x에서 y0 높이부터 내려오면 멈추는 곳 (바퀴 폭 안에서 가장 높은 땅) */
+  function restY(s, x, y0) {
+    let best = H;
+    for (let c = Math.round(x) - FOOT; c <= Math.round(x) + FOOT; c++) if (c >= 0 && c < W) best = Math.min(best, below(s, c, y0));
+    return best;
+  }
+  /** 줄마다 맨 위 땅 높이 (예전 화면과 맞추려고 보내요) */
+  const tops = s => Array.from({ length: W }, (_, x) => below(s, x, 0));
+  /** 둥글게 파기 */
+  function carve(s, cx, cy, r) {
+    cx = Math.round(cx); cy = Math.round(cy);
+    for (let y = Math.max(0, cy - r); y <= Math.min(H - 1, cy + r); y++) {
+      const half = Math.floor(Math.sqrt(Math.max(0, r * r - (y - cy) * (y - cy))));
+      const x0 = Math.max(0, cx - half), x1 = Math.min(W - 1, cx + half);
+      if (x0 <= x1) s.m.fill(0, y * W + x0, y * W + x1 + 1);
+    }
+    s.carves.push([cx, cy, r]);
+  }
 
   function makeTerrain(rnd) {
     const base = 330 + rnd() * 70, waves = [];
@@ -39,7 +78,9 @@
           angle: x < W / 2 ? 55 : 125, power: 60, fuel: MAX_FUEL, ammo: { big: WEAPONS.big.ammo, triple: WEAPONS.triple.ammo } };
       }),
     };
-    s.tanks.forEach(t => { flatten(s, t.x); t.y = ground(s, t.x); });
+    s.tanks.forEach(t => flatten(s, t.x));
+    s.m = buildMask(h); s.carves = [];
+    s.tanks.forEach(t => { t.y = restY(s, t.x, 0); });
     return s;
   }
   /** 탱크가 설 자리를 살짝 평평하게 */
@@ -50,27 +91,30 @@
   const active = s => s.tanks[s.turn];
   const muzzle = (t, a) => ({ x: t.x + Math.cos(rad(a)) * 20, y: t.y - 12 - Math.sin(rad(a)) * 20 });
 
-  /** 포탄 궤적 계산 (땅이나 탱크에 닿을 때까지) */
+  /** 포탄 궤적 계산 (땅이나 탱크에 닿을 때까지) — 한 칸씩 잘게 나눠 봐서 얇은 벽도 뚫고 지나가지 않아요 */
   function simulate(s, x, y, vx, vy, shooterId) {
     const path = [[Math.round(x), Math.round(y)]], ax = s.wind * 0.0045;
     for (let i = 0; i < 1600; i++) {
-      vx += ax; vy += G; x += vx; y += vy;
+      vx += ax; vy += G;
+      const n = Math.max(1, Math.ceil(Math.max(Math.abs(vx), Math.abs(vy)) / 3));
+      for (let k = 1; k <= n; k++) {
+        const px = x + (vx * k) / n, py = y + (vy * k) / n;
+        if (solid(s, px, py)) { path.push([Math.round(px), Math.round(py)]); return { path, hit: { x: px, y: py } }; }
+        for (const t of s.tanks) {
+          if (!t.alive || (t.id === shooterId && i < 8)) continue;
+          const dx = t.x - px, dy = t.y - 9 - py;
+          if (dx * dx + dy * dy < TANK_R * TANK_R) { path.push([Math.round(px), Math.round(py)]); return { path, hit: { x: px, y: py } }; }
+        }
+      }
+      x += vx; y += vy;
       if (i % 2 === 1) path.push([Math.round(x), Math.round(y)]);
       if (x < -400 || x > W + 400 || y > H + 60) return { path, hit: null };
-      if (x >= 0 && x < W && y >= s.h[Math.floor(x)]) { path.push([Math.round(x), Math.round(y)]); return { path, hit: { x, y } }; }
-      for (const t of s.tanks) {
-        if (!t.alive || (t.id === shooterId && i < 8)) continue;
-        if (Math.hypot(t.x - x, t.y - 9 - y) < TANK_R) { path.push([Math.round(x), Math.round(y)]); return { path, hit: { x, y } }; }
-      }
     }
     return { path, hit: null };
   }
   function explode(s, cx, cy, w) {
     const R = w.r;
-    for (let x = Math.max(0, Math.floor(cx - R)); x <= Math.min(W - 1, Math.ceil(cx + R)); x++) {
-      const dy = Math.sqrt(Math.max(0, R * R - (x - cx) * (x - cx)));
-      if (s.h[x] >= cy - dy && s.h[x] < cy + dy) s.h[x] = Math.min(H, Math.round(cy + dy));
-    }
+    carve(s, cx, cy, R);                                // 옆면 · 아래 · 위 어디에 맞아도 둥글게 파여요
     const hits = [];
     for (const t of s.tanks) {
       if (!t.alive) continue;
@@ -84,7 +128,7 @@
     const falls = [];
     for (const t of s.tanks) {
       if (!t.alive) continue;
-      const y = ground(s, t.x);
+      const y = restY(s, t.x, t.y);                     // 바퀴 밑 땅이 사라지면 떨어져요
       if (y > t.y + 1) {
         const fall = y - t.y;
         t.y = y;
@@ -114,7 +158,7 @@
     const booms = shots.filter(sh => sh.hit).map(sh => explode(s, sh.hit.x, sh.hit.y, w));
     const falls = settle(s);
     checkDeaths(s);
-    return { id, angle: t.angle, power: t.power, weapon: wk, shots: shots.map(sh => sh.path), booms, falls, h: s.h.slice(), tanks: view(s) };
+    return { id, angle: t.angle, power: t.power, weapon: wk, shots: shots.map(sh => sh.path), booms, falls, carves: s.carves.slice(), h: tops(s), tanks: view(s) };
   }
   function nextTurn(s) {
     if (s.over) return;
@@ -126,8 +170,9 @@
   function move(s, id, dir, dt) {
     const t = active(s);
     if (!t || t.id !== id || !dir || t.fuel <= 0) return false;
-    const nx = clamp(t.x + dir * 45 * dt, 8, W - 8), ny = ground(s, nx);
-    if (ny < t.y - 45 * dt * 1.6) return false;
+    const nx = clamp(t.x + dir * 45 * dt, 8, W - 8), up = 45 * dt * 1.6;
+    const ny = restY(s, nx, t.y - up - 1);              // 조금 높은 곳까지는 올라가고, 더 높으면 벽이에요
+    if (ny < t.y - up || ny >= H - 2) return false;     // 너무 가파르거나 · 바닥 없는 구멍으로는 못 가요
     t.fuel = Math.max(0, t.fuel - Math.abs(nx - t.x));
     t.x = nx; t.y = ny;
     return true;
@@ -157,5 +202,5 @@
     const weapon = t.ammo.big > 0 && s.rnd() < 0.3 ? 'big' : t.ammo.triple > 0 && s.rnd() < 0.25 ? 'triple' : 'normal';
     return { angle: clamp(Math.round(best.angle + (s.rnd() - 0.5) * 10 * err), 0, 180), power: clamp(Math.round(best.power + (s.rnd() - 0.5) * 16 * err), 10, 100), weapon };
   }
-  return { W, H, G, TANK_R, MAX_FUEL, WEAPONS, COLORS, newGame, fire, nextTurn, move, aiPlan, view, active, muzzle };
+  return { W, H, G, TANK_R, MAX_FUEL, WEAPONS, COLORS, newGame, fire, nextTurn, move, aiPlan, view, active, muzzle, solid, restY, tops };
 });

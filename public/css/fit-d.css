@@ -1,0 +1,187 @@
+/* v9 화면 맞춤 (d 묶음): 휴대폰 · 폴드 · 태블릿 · 노트북에서 스크롤 없이
+ * 맡은 게임: 액션 · 아케이드 · 퍼즐 (kart · tetris · pong · omok · snake · dodge · plat · volley · bomb · tank · breakout · zombie ·
+ *            shooter · gem · fruit · stack · mole · mine · g2048 · rain · apple · race · shisen)
+ * 모두 body.gaming #scr-<키> 안에서만 걸려요. 판 크기는 Fit 이 넣어 주는 --avail-h(이 화면이 쓸 수 있는 높이)로 정하고,
+ * 캔버스는 Fit 의 --cv-h(넘칠 때 줄이는 값)도 함께 지켜요 → min(var(--cv-h), 내가 정한 크기).
+ * 화면 구분: 좁은 세로 화면 = max-width:760px (style.css 와 같은 기준) · 휴대폰 가로 = max-height:520px · 나머지 = 태블릿 · 노트북 */
+
+/* 싱글에서는 점수 막대가 비어 있어요 → 큰 화면에서도 자리를 차지하지 않게 (멀티에서는 그대로 보여요) */
+body.gaming :is(#scr-tetris,#scr-pong,#scr-omok,#scr-snake,#scr-dodge,#scr-plat,#scr-volley,#scr-bomb,#scr-tank,#scr-breakout,#scr-zombie,
+  #scr-shooter,#scr-gem,#scr-fruit,#scr-stack,#scr-mole,#scr-mine,#scr-g2048,#scr-rain,#scr-apple,#scr-race,#scr-shisen) > .scorebar:empty{display:none}
+
+/* ═════════════ 🧱 테트리스 ═════════════
+ * 판(300×600) 높이 = 남는 높이 - 제목 줄(--tt-rsv) · 옆 정보 칸(--ts-w)은 판 옆에 붙여요 (줄바꿈하지 않게).
+ * 터치 화면에는 키보드가 없으니 조작키 안내 칸은 숨겨요. */
+body.gaming #scr-tetris{--tt-rsv:74px;--ts-w:224px;--ts-gap:14px}
+body.gaming.in-room #scr-tetris{--tt-rsv:106px}
+body.gaming #scr-tetris .tetris-wrap{flex-wrap:nowrap;gap:var(--ts-gap);align-items:flex-start}
+body.gaming #scr-tetris #tetris-cv{flex:none;width:auto;height:auto;max-width:calc(100% - var(--ts-w) - var(--ts-gap));
+  max-height:min(var(--cv-h,600px),calc(var(--avail-h,100vh) - var(--tt-rsv)))}
+body.gaming #scr-tetris .t-side{flex:none;width:var(--ts-w);gap:8px}
+body.gaming #scr-tetris .t-box{padding:8px 12px;border-radius:13px}
+body.gaming #scr-tetris .t-box small{font-size:12.5px}
+body.gaming #scr-tetris .t-box b{font-size:24px;line-height:1.25}
+body.gaming #scr-tetris #tetris-next{display:block;margin:5px auto 0;max-width:100%;height:auto}
+body.gaming #scr-tetris .boss-hp{margin-top:4px}
+body.gaming #scr-tetris .t-box.keys{font-size:12.5px;line-height:1.65}
+@media (pointer:coarse){ body.gaming #scr-tetris .t-box.keys{display:none} }
+/* 노트북 낮은 화면: 정보 칸을 조금 더 촘촘하게 (판 높이보다 길어지지 않게) */
+@media (min-width:761px) and (max-height:760px){
+  body.gaming #scr-tetris .t-side{gap:7px}
+  body.gaming #scr-tetris .t-box{padding:6px 12px}
+  body.gaming #scr-tetris .t-box b{font-size:22px}
+  body.gaming #scr-tetris .t-box.keys{line-height:1.55}
+}
+/* 좁은 휴대폰: 정보 칸을 좁게 · 글자를 작게 (판을 크게) */
+@media (max-width:600px){
+  body.gaming #scr-tetris{--ts-w:clamp(82px,25vw,112px);--ts-gap:8px}
+  body.gaming #scr-tetris .t-side{gap:6px}
+  body.gaming #scr-tetris .t-box{padding:6px 5px;border-radius:11px}
+  body.gaming #scr-tetris .t-box small{font-size:11px;line-height:1.3}
+  body.gaming #scr-tetris .t-box b{font-size:19px}
+  body.gaming #scr-tetris .boss-hp{height:9px}
+  body.gaming #scr-tetris .t-box.keys{font-size:11px;line-height:1.5;padding:6px}
+  body.gaming #scr-tetris .t-box.keys kbd{padding:0 3px;font-size:10.5px}
+}
+@media (min-width:601px) and (max-width:760px){ body.gaming #scr-tetris{--tt-rsv:60px} body.gaming.in-room #scr-tetris{--tt-rsv:92px} }
+/* 휴대폰 가로: 정보 칸을 두 줄 격자로 판 옆에 */
+@media (max-height:520px){
+  body.gaming #scr-tetris{--tt-rsv:46px;--ts-w:236px;--ts-gap:10px}
+  body.gaming.in-room #scr-tetris{--tt-rsv:76px}
+  body.gaming #scr-tetris .t-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  body.gaming #scr-tetris .t-box{padding:5px 8px}
+  body.gaming #scr-tetris .t-box small{font-size:11px}
+  body.gaming #scr-tetris .t-box b{font-size:19px}
+  body.gaming #scr-tetris .t-box.keys{grid-column:1 / -1;font-size:11px;line-height:1.55}
+  body.gaming #scr-tetris #tetris-next{width:84px}
+}
+
+/* ═════════════ 🍎 사과 게임 ═════════════
+ * 17×10 판을 남는 자리(폭 · 높이)에 맞춰 칸 크기 --ac(최대 42px)를 정해요.
+ * 세로로 긴 자리(휴대폰 세로 · 세로 태블릿)에서는 판을 돌려서(10열 × 17줄) 사과를 더 크게 보여 줘요.
+ * apple.js 는 사과마다 offsetLeft/Top 으로 고르니 크기 · 방향이 바뀌어도 드래그가 그대로 맞아요. */
+body.gaming #scr-apple.active{display:flex;flex-direction:column;height:var(--avail-h,auto)}
+body.gaming #scr-apple > div.center{flex:1 1 0;min-height:0;container:apple / size;display:flex;align-items:center;justify-content:center}
+body.gaming #scr-apple #apple-board{--ac:min(42px,100cqw / 19.7,100cqh / 11.9);grid-template-columns:repeat(17,var(--ac));grid-auto-rows:var(--ac);
+  gap:calc(var(--ac) * .12);padding:calc(var(--ac) * .38);border-radius:calc(var(--ac) * .48)}
+@container apple (max-aspect-ratio:1/1){
+  body.gaming #scr-apple #apple-board{--ac:min(42px,100cqw / 11.9,100cqh / 19.7);grid-auto-flow:column;grid-template-columns:none;
+    grid-template-rows:repeat(17,var(--ac));grid-auto-columns:var(--ac)}
+}
+body.gaming #scr-apple .apple{width:var(--ac);height:var(--ac);font-size:calc(var(--ac) * .5)}
+body.gaming #scr-apple .apple::before{top:calc(var(--ac) * -.09);width:max(2px,calc(var(--ac) * .07));height:calc(var(--ac) * .19)}
+
+/* ═════════════ ⏱️ 1 to 50 ═════════════  5×5 판을 남는 자리에 맞춰요 (버튼 최대 84px) */
+body.gaming #scr-race.active{display:flex;flex-direction:column;height:var(--avail-h,auto)}
+body.gaming #scr-race > div.center{flex:1 1 0;min-height:0;container:race / size;display:flex;align-items:center;justify-content:center}
+body.gaming #scr-race #race-grid{--rc:min(84px,(100cqw - 2px) / 5.92,(100cqh - 2px) / 5.92);grid-template-columns:repeat(5,var(--rc));
+  gap:calc(var(--rc) * .12);padding:calc(var(--rc) * .21);border-radius:calc(var(--rc) * .24)}
+body.gaming #scr-race .rbtn{width:var(--rc);height:var(--rc);font-size:calc(var(--rc) * .36);border-radius:calc(var(--rc) * .19)}
+
+/* ═════════════ 💣 지뢰찾기 ═════════════
+ * 칸 크기 --mc 를 남는 자리에 맞춰요 (mine.js 가 판 크기 --mw · --mh 를 넣어 줘요).
+ * 터치 화면은 칸이 너무 작아지지 않게 26px 이상 → 판이 자리보다 크면 판 안에서만 밀어서 봐요 (화면 전체는 그대로).
+ * 세로로 긴 자리에서 가로로 긴 판(고급 30×16)은 돌려서(16×30) 보여 줘요 — 칸마다 data-i 로 누르니 그대로 맞아요. */
+body.gaming #scr-mine.active{display:flex;flex-direction:column;height:var(--avail-h,auto)}
+body.gaming #scr-mine > div.center{flex:1 1 0;min-height:0;container:mine / size;overflow:auto!important;overscroll-behavior:contain;display:flex;justify-content:flex-start;align-items:flex-start}   /* 판이 크면 왼쪽 위부터 (가운데 정렬이면 왼쪽이 잘려서 못 봐요) — 작으면 margin:auto 로 가운데 */
+body.gaming #scr-mine #mine-grid{--mc:clamp(var(--mc-min,14px),min((100cqw - 24px) / var(--mw,9) - 2px,(100cqh - 24px) / var(--mh,9) - 2px),34px);
+  grid-auto-rows:var(--mc);flex:none;margin:auto}
+body.gaming #scr-mine .mc{width:var(--mc);height:var(--mc);font-size:calc(var(--mc) * .6);border-radius:calc(var(--mc) * .18)}
+@container mine (max-aspect-ratio:1/1){
+  body.gaming #scr-mine #mine-grid[data-wide]{--mc:clamp(var(--mc-min,14px),min((100cqw - 24px) / var(--mh,9) - 2px,(100cqh - 24px) / var(--mw,9) - 2px),34px);
+    grid-auto-flow:column;grid-template-columns:none!important;grid-template-rows:repeat(var(--mw,9),var(--mc));grid-auto-columns:var(--mc)}
+}
+body.gaming #scr-mine .mine-tools{margin-bottom:8px;gap:8px}
+@media (pointer:coarse){
+  body.gaming #scr-mine #mine-grid{--mc-min:26px}
+  body.gaming #scr-mine .mine-tools > .small{display:none}          /* '오른쪽 클릭 = 깃발' 안내는 터치 화면에 맞지 않아요 (⛏️/🚩 버튼으로 바꿔요) */
+}
+@media (max-width:600px){
+  body.gaming #scr-mine .mine-tools{flex-wrap:nowrap}
+  body.gaming #scr-mine .mine-levels{gap:4px;min-width:0}
+  body.gaming #scr-mine .mine-levels .seg-btn{padding:6px 8px;font-size:12.5px;white-space:nowrap}
+  body.gaming #scr-mine #mine-flag{padding:6px 9px;font-size:13px;white-space:nowrap;margin-left:auto}
+}
+/* 휴대폰 가로: [난이도 · 깃발 (세로로)] | 판 */
+@media (max-height:520px){
+  body.gaming #scr-mine.active{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);column-gap:10px;
+    grid-template-areas:"head head" "score score" "tools board"}
+  body.gaming #scr-mine > .game-head{grid-area:head} body.gaming #scr-mine > .scorebar{grid-area:score}
+  body.gaming #scr-mine .mine-tools{grid-area:tools;flex-direction:column;align-items:stretch;flex-wrap:nowrap;margin:0}
+  body.gaming #scr-mine .mine-levels{flex-direction:column}
+  body.gaming #scr-mine > div.center{grid-area:board}
+}
+
+/* ═════════════ ☔ 산성비 타자 ═════════════
+ * 내리는 판을 남는 높이에 맞춰요 (rain.js 가 판 크기가 바뀌면 떨어지는 거리도 다시 맞춰요).
+ * 휴대폰: [산성도 · 입력 칸]을 판 위로 → 키보드가 올라와도 입력 칸이 보이고, 키보드가 가린 만큼(--kb, rain.js) 판이 줄어 바닥까지 보여요. */
+body.gaming #scr-rain.active{display:flex;flex-direction:column;height:var(--avail-h,auto)}
+body.gaming #scr-rain .rain-wrap{flex:1 1 0;min-height:0;width:100%;display:flex;flex-direction:column;padding-bottom:var(--kb,0px)}
+body.gaming #scr-rain #rain-field{flex:1 1 0;min-height:110px;height:auto;max-height:560px}
+body.gaming #scr-rain .rain-bottom{flex:none}
+@media (max-width:760px){
+  body.gaming #scr-rain .rain-bottom{order:-1;border-radius:16px 16px 0 0;padding:8px;gap:8px}
+  body.gaming #scr-rain #rain-field{border-radius:0 0 16px 16px;border:1px solid var(--line);border-top:none}
+  body.gaming #scr-rain .acid{min-width:0;flex:none;gap:5px}
+  body.gaming #scr-rain .acid small{font-size:11px}
+  body.gaming #scr-rain .acid-track{flex:none;width:clamp(40px,14vw,90px)}
+  body.gaming #scr-rain #rain-input{min-width:0;font-size:18px;padding:9px 10px}
+}
+@media (max-height:520px){
+  body.gaming #scr-rain .rain-bottom{padding:6px 10px}
+  body.gaming #scr-rain #rain-input{padding:7px 10px;font-size:17px}
+}
+
+/* ═════════════ 휴대폰 가로 (높이 520px 이하): 캔버스가 세로를 다 쓰게 ═════════════
+ * (가상 패드가 있는 게임은 core.js 가 패드를 양옆으로 보내고 그 사이에 게임을 놓아요) */
+@media (max-height:520px){
+  /* 핑퐁 · 오목: [판 | 옆 정보] 한 줄 (줄바꿈하면 판이 작아져요) */
+  body.gaming #scr-pong .pong-wrap,body.gaming #scr-omok .omok-wrap{flex-wrap:nowrap;gap:12px;align-items:center}
+  body.gaming #scr-pong #pong-cv,body.gaming #scr-omok #omok-cv{max-height:min(var(--cv-h,9999px),calc(var(--avail-h,300px) - 50px));max-width:calc(100% - 212px)}
+  body.gaming #scr-pong .p-side,body.gaming #scr-omok .omok-side{width:200px;flex:none}
+  body.gaming #scr-omok .omok-side > .small{display:none}
+  /* 벽돌깨기: [판 | 빠르게 · 회수] */
+  body.gaming #scr-breakout .center.col{flex-direction:row;align-items:flex-end;justify-content:center;gap:12px}
+  body.gaming #scr-breakout #bk-cv{max-height:min(var(--cv-h,9999px),calc(var(--avail-h,300px) - 50px))}
+  body.gaming #scr-breakout .row-btns{flex-direction:column;margin:0}
+  /* 총알피하기: 안내 글은 숨기고 판을 크게 */
+  body.gaming #scr-dodge #dodge-help{display:none}
+  body.gaming #scr-dodge .mode-row{margin-bottom:6px}
+  body.gaming #scr-dodge #dodge-cv{max-height:min(var(--cv-h,9999px),calc(var(--avail-h,300px) - 92px))}
+}
+
+/* ═════════════ 💎 보석 맞추기 · 🔨 두더지 · 🔢 2048 ═════════════
+ * 판을 남는 자리(폭 · 높이 중 작은 쪽)에 맞춰요 — 화면 전체를 줄이지 않아요.
+ * 보석: gem.js 가 칸 크기를 var(--gs) 로 놓아요 (누르기 · 밀기는 보석 요소로 알아내니 크기가 바뀌어도 그대로). */
+body.gaming #scr-gem.active,body.gaming #scr-mole.active,body.gaming #scr-g2048.active{display:flex;flex-direction:column;height:var(--avail-h,auto)}
+body.gaming #scr-gem > div.center,body.gaming #scr-mole > div.center,body.gaming #scr-g2048 > div.center{flex:1 1 0;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center}
+body.gaming #scr-gem .gem-board{--gs:min(54px,(100cqw - 2px) / 8,(100cqh - 2px) / 8);max-width:none;flex:none}
+body.gaming #scr-gem .gem{width:var(--gs);height:var(--gs)}
+body.gaming #scr-gem .gem-svg{width:calc(var(--gs) * .82);height:calc(var(--gs) * .82)}
+body.gaming #scr-gem .gem.sp-h::after{inset:calc(var(--gs) * .41) calc(var(--gs) * .07)}
+body.gaming #scr-gem .gem.sp-v::after{inset:calc(var(--gs) * .07) calc(var(--gs) * .41)}
+body.gaming #scr-mole .mole-board{width:min(520px,100cqw,100cqh);padding:min(18px,3cqh);gap:min(14px,2.6cqh);flex:none}
+body.gaming #scr-mole .mole{font-size:min(64px,9vw,9cqh)}
+body.gaming #scr-g2048 #b2048{width:min(440px,100cqw,100cqh);flex:none}
+body.gaming #scr-mole > p.small,body.gaming #scr-g2048 > p.small{flex:none;margin:8px 0 0!important}
+@media (pointer:coarse){ body.gaming #scr-mole > p.small{display:none} }          /* '키보드: 숫자 1~9' 안내는 터치 화면에 필요 없어요 */
+@media (max-height:520px){ body.gaming #scr-g2048 > p.small{display:none} }
+
+/* ═════════════ 🀄 사천성 ═════════════  판 폭을 남는 높이에서 정해요 (12×8 패, 패는 3:4 → 판 폭 = 높이 × 1.12) */
+body.gaming #scr-shisen .ss-board{width:min(820px,calc(100vw - 80px),calc((var(--avail-h,600px) - var(--ss-rsv,150px)) * 1.12));min-width:0}
+body.gaming #scr-shisen .ss-tile b{font-size:clamp(11px,2.6vw,30px)}
+@media (max-width:600px){
+  body.gaming #scr-shisen{--ss-rsv:128px}
+  body.gaming #scr-shisen .ss-wrap{padding:12px;border-radius:16px}
+  body.gaming #scr-shisen .ss-board{width:min(calc(100vw - 48px),calc((var(--avail-h,600px) - var(--ss-rsv)) * 1.12));gap:2px}
+  body.gaming #scr-shisen .ss-tile b{font-size:clamp(11px,4.2vw,22px)}
+}
+/* 휴대폰 가로 · 낮은 노트북: [판 | 힌트 · 섞기] */
+@media (max-height:760px) and (min-aspect-ratio:1/1){
+  body.gaming #scr-shisen.active{display:grid;grid-template-columns:auto auto;justify-content:center;grid-template-areas:"head head" "score score" "board tools";column-gap:12px;align-items:end}
+  body.gaming #scr-shisen > .game-head{grid-area:head} body.gaming #scr-shisen > .scorebar{grid-area:score}
+  body.gaming #scr-shisen .ss-wrap{grid-area:board;margin:0;padding:12px;justify-self:end}
+  body.gaming #scr-shisen .ss-tools{grid-area:tools;justify-self:start;flex-direction:column;align-items:stretch;margin:0;max-width:150px}
+  body.gaming #scr-shisen{--ss-rsv:86px}
+  body.gaming #scr-shisen .ss-board{width:min(820px,calc(100vw - 260px),calc((var(--avail-h,600px) - var(--ss-rsv)) * 1.12))}
+}

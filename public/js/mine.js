@@ -14,7 +14,9 @@ const Mine = {
     const sz = w * h;
     this.mine = new Uint8Array(sz); this.open = new Uint8Array(sz); this.flag = new Uint8Array(sz); this.adj = new Uint8Array(sz);
     const grid = $('#mine-grid');
-    grid.style.gridTemplateColumns = `repeat(${w}, 28px)`;
+    grid.style.gridTemplateColumns = `repeat(${w}, var(--mc, 28px))`;      // 칸 크기는 화면에 맞춰 CSS(--mc)가 정해요
+    grid.style.setProperty('--mw', w); grid.style.setProperty('--mh', h);
+    grid.toggleAttribute('data-wide', w > h);
     grid.innerHTML = Array.from({ length: sz }, (_, i) => `<div class="mc" data-i="${i}"></div>`).join('');
     this.cells = $$('.mc', grid);
     this.hud();

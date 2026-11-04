@@ -230,3 +230,53 @@
   .wh-send .btn{font-size:0;padding:10px 14px}
   .wh-send .btn .ic{width:20px;height:20px}
 }
+
+/* ── v9: 오늘의 미션 ── */
+.ac-daily{max-width:660px;margin:12px auto 0;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 14px;text-align:left;box-shadow:var(--shadow)}
+.ac-body .ac-daily{max-width:none;margin:0 0 12px;box-shadow:none;background:var(--panel2)}
+.dl-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px}
+.dl-head>.ic{width:20px;height:20px;color:var(--good)}
+.dl-head small{color:var(--muted);font-weight:700}
+.dl-streak,.dl-bonus{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--panel2);border:1px solid var(--line)}
+.dl-streak{color:#ff9f43} .dl-streak.plain{color:var(--good)} .dl-streak .ic,.dl-bonus .ic{width:14px;height:14px}
+.dl-bonus{margin-left:auto;color:var(--muted)} .dl-bonus.got{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}
+.dl-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.dl-m{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-width:0}
+.ac-body .dl-m{background:var(--panel)}
+.dl-m.done{border-color:color-mix(in srgb,var(--good) 45%,transparent);background:color-mix(in srgb,var(--good) 10%,var(--panel2))}
+.dl-ic{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;flex:none;background:var(--panel);color:var(--accent-2)}
+.dl-m.done .dl-ic{background:var(--good);color:#04301f}
+.dl-ic .ic{width:16px;height:16px}
+.dl-t{flex:1;min-width:0} .dl-t b{display:block;font-size:12.5px;line-height:1.3}
+.dl-bar{display:block;height:5px;border-radius:99px;background:var(--panel);overflow:hidden;margin-top:5px}
+.dl-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--good));border-radius:99px}
+.dl-n{text-align:right;font-family:'Black Han Sans';font-size:14px;white-space:nowrap} .dl-n small{display:block;font-family:'Noto Sans KR';font-size:10.5px;color:var(--muted);font-weight:700}
+.dl-m.done .dl-n{color:var(--good)}
+
+/* ── v9: 프로필 카드 ── */
+.modal.acct.cardv{width:min(520px,100%);text-align:left}
+.cd-head{display:flex;align-items:center;gap:14px;padding-right:40px;margin-bottom:12px}
+.cd-t{flex:1;min-width:0} .cd-t h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cd-t small{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+.cd-streak{display:inline-flex;align-items:center;gap:4px;color:#ff9f43;font-weight:700} .cd-streak .ic{width:14px;height:14px}
+.cardv h4{display:flex;align-items:center;gap:7px;font-size:16px;margin:14px 0 8px} .cardv h4 .ic{width:18px;height:18px;color:var(--accent-2)}
+.cd-favs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cd-fav{display:flex;align-items:center;gap:9px;background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:8px 10px;min-width:0}
+.cd-fav .gi.sm{width:30px;height:30px;border-radius:9px;flex:none} .cd-fav .gi.sm .ic{width:17px;height:17px}
+.cd-fav span{min-width:0} .cd-fav b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cd-fav small{display:block;font-size:11.5px;color:var(--muted)}
+.cd-meta{margin:12px 0 0}
+.cd-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.cd-btns .btn{display:inline-flex;align-items:center}
+.ac-who{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer;border-radius:10px}
+.ac-who:hover b{text-decoration:underline}
+.ac-row.fr .ac-who{flex:1}
+.ac-vol{flex-direction:row!important;align-items:center;gap:10px!important;color:var(--text)!important;flex-wrap:wrap}
+.ac-vol input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
+.ac-invite.on{border-color:var(--good)}
+
+@media (max-width:640px){
+  .dl-list{grid-template-columns:1fr;gap:6px}
+  .dl-bonus{margin-left:0}
+  .ac-daily{margin-top:10px;padding:10px 12px}
+  .cd-favs{grid-template-columns:1fr}
+}

@@ -27,7 +27,10 @@ const Apple = {
 (() => {
   const board = $('#apple-board');
   let start = null;
-  const local = e => { const r = board.getBoundingClientRect(); return { x: e.clientX - r.left - board.clientLeft, y: e.clientY - r.top - board.clientTop }; };
+  const local = e => {             // 화면에 맞춰 줄어든(zoom) 상태여도 판 안의 좌표로
+    const r = board.getBoundingClientRect(), k = r.width / (board.offsetWidth || r.width) || 1;
+    return { x: (e.clientX - r.left) / k - board.clientLeft, y: (e.clientY - r.top) / k - board.clientTop };
+  };
   function update(e) {
     const p = local(e);
     const x1 = Math.min(start.x, p.x), x2 = Math.max(start.x, p.x), y1 = Math.min(start.y, p.y), y2 = Math.max(start.y, p.y);

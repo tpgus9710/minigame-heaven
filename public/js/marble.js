@@ -5,9 +5,9 @@ makeScreen('marble', {
   title: '🌍 세계여행 보드게임', status: '주사위를 굴려 도시를 사고 건물을 지어요. 상대가 내 땅에 오면 통행료!',
   stats: [['round', '라운드'], ['fund', '복지기금'], ['time', '남은 시간']],
   body: `<div class="mode-row" id="mb-solo"><span class="muted small">AI 상대</span>
-      <button class="seg-btn" data-act="mbSolo" data-bots="1">1명</button><button class="seg-btn" data-act="mbSolo" data-bots="2">2명</button><button class="seg-btn" data-act="mbSolo" data-bots="3">3명</button>
+      <button class="seg-btn" data-act="mbSolo" data-bots="1">1명</button><button class="seg-btn on" data-act="mbSolo" data-bots="2">2명</button><button class="seg-btn" data-act="mbSolo" data-bots="3">3명</button>
       <span class="muted small" style="margin-left:10px">라운드</span>
-      <button class="seg-btn" data-act="mbSolo" data-rounds="10">10</button><button class="seg-btn" data-act="mbSolo" data-rounds="20">20</button><button class="seg-btn" data-act="mbSolo" data-rounds="30">30</button></div>
+      <button class="seg-btn" data-act="mbSolo" data-rounds="10">10</button><button class="seg-btn on" data-act="mbSolo" data-rounds="20">20</button><button class="seg-btn" data-act="mbSolo" data-rounds="30">30</button></div>
     <div class="mb-wrap"><div class="mb-board" id="mb-board"></div><div class="mb-side" id="mb-side"></div></div>`,
 });
 
@@ -150,6 +150,8 @@ $('#mb-board').addEventListener('click', e => {
   Marble.info(i);
 });
 window.addEventListener('resize', () => { if (isScreen('marble') && Marble.v) Marble.v.players.forEach((p, k) => { const tk = $(`.mb-token[data-id="${p.id}"]`); if (tk) Marble.place(tk, Marble.disp[p.id], k); }); });
+// 판 크기가 바뀌면(화면 맞춤 · 제목 줄 크기 변화 등) 말도 다시 놓아요
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => { if (isScreen('marble') && Marble.v) Marble.v.players.forEach((p, k) => { const tk = $(`.mb-token[data-id="${p.id}"]`); if (tk && !tk.dataset.walking) Marble.place(tk, Marble.disp[p.id], k); }); }).observe($('#mb-board'));
 Object.assign(ACT, {
   mbDo: el => Marble.ctx && Marble.ctx.send({ t: el.dataset.t, lvl: el.dataset.lvl != null ? +el.dataset.lvl : undefined }),
   mbSolo: el => {

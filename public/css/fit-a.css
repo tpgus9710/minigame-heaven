@@ -1,0 +1,652 @@
+/* v9 화면 맞춤 (a 묶음): 휴대폰 · 폴드 · 태블릿 · 노트북에서 스크롤 없이
+ * 맡은 게임: 윷놀이(yut) · 요트 다이스(yacht) · 세계여행(marble) · 인생(life) · 도둑잡기(thief) · 블랙잭(blackjack)
+ * 모두 body.gaming #scr-<키> 안에서만 걸려요. 판 크기는 Fit 이 넣어 주는 --avail-h(이 화면이 쓸 수 있는 높이)로 정해요
+ * (세계여행만 화면 단위 — 아래 설명). 낮은 가로 화면에서는 옵션 줄을 오른쪽 칸 위로 올려 판을 키워요(윷 · 세계여행 · 인생 · 블랙잭). */
+
+/* ═════════════ 공통: 싱글 옵션 줄(AI 수 · 말 수 · 라운드)을 한 줄로 작게 ═════════════ */
+body.gaming :is(#yt-solo,#yc-solo,#mb-solo,#lf-solo,#th-solo,#bj-solo){flex-wrap:nowrap;align-items:center;gap:5px;margin-bottom:8px;white-space:nowrap}
+body.gaming :is(#yt-solo,#yc-solo,#mb-solo,#lf-solo,#th-solo,#bj-solo) .seg-btn{padding:5px 12px;font-size:14px;border-radius:9px;line-height:1.35}
+body.gaming :is(#yt-solo,#yc-solo,#mb-solo,#lf-solo,#th-solo,#bj-solo) > span.muted{font-size:12px}
+/* 좁은 휴대폰: 버튼을 붙여서(묶음) 폭을 줄여요 */
+@media (max-width:600px){
+  body.gaming :is(#yt-solo,#yc-solo,#mb-solo,#lf-solo,#th-solo,#bj-solo){gap:0;margin-bottom:6px}
+  body.gaming :is(#yt-solo,#yc-solo,#mb-solo,#lf-solo,#th-solo,#bj-solo) .seg-btn{padding:4px 9px;font-size:13px;border-radius:0;margin-left:-2px}
+  body.gaming :is(#yt-solo,#yc-solo,#mb-solo,#lf-solo,#th-solo,#bj-solo) > span.muted{margin:0 6px 0 8px!important}
+  body.gaming :is(#yt-solo,#yc-solo,#mb-solo,#lf-solo,#th-solo,#bj-solo) > span.muted:first-child{margin-left:0!important}
+  body.gaming :is(#yt-solo,#yc-solo,#mb-solo,#lf-solo,#th-solo,#bj-solo) > span.muted + .seg-btn{border-radius:9px 0 0 9px;margin-left:0}
+  body.gaming :is(#yt-solo,#yc-solo,#mb-solo,#lf-solo,#th-solo,#bj-solo) > .seg-btn:is(:last-child,:has(+ span.muted)){border-radius:0 9px 9px 0}
+  body.gaming :is(#yt-solo,#yc-solo,#mb-solo,#lf-solo,#th-solo,#bj-solo) > .seg-btn.on{position:relative;z-index:1}
+}
+
+/* 싱글은 시간 제한이 없어 '남은 시간' 이 늘 '-' → 숨겨요 (멀티에서는 그대로) */
+body.gaming:not(.in-room) :is(#yut-time-box,#yacht-time-box,#marble-time-box,#life-time-box,#thief-time-box,#blackjack-time-box){display:none}
+/* 보드·카드 게임은 점수 막대를 쓰지 않아요 (멀티에서 이전 게임 점수가 남아 보일 수 있어서 숨겨요) */
+body.gaming :is(#scr-yut,#scr-yacht,#scr-marble,#scr-life,#scr-thief,#scr-blackjack) > .scorebar{display:none}
+
+/* ═════════════ 🥢 윷놀이 ═════════════
+ * 세로 화면(휴대폰 · 폴드 · 태블릿 세로): 판 위 · 아래에 [윷 던지는 곳 | 결과 · 버튼] · 메시지 · 참가자 한 줄
+ * 가로 화면(휴대폰 가로 · 태블릿 가로 · 노트북): 판 왼쪽 · 오른쪽에 던지는 곳과 참가자 (낮은 화면은 두 칸으로)
+ * 판 한 변 = --yt-bw : 남는 높이(--avail-h)에서 판 말고 나머지 높이(--yt-rsv)를 뺀 값 */
+body.gaming #scr-yut{--yt-bw:min(640px,100%,calc(var(--avail-h,100vh) - var(--yt-rsv,140px)))}
+body.gaming #scr-yut .yt-wrap{flex-wrap:nowrap}
+body.gaming #scr-yut .yt-board-wrap{flex:0 0 auto;min-width:0;width:var(--yt-bw)}
+body.gaming #scr-yut .yt-msg{display:flex;align-items:center}
+
+/* ── 작은 화면 공통: 결과 칩 · 버튼 · 메시지 · 참가자 카드를 작게 (세로 화면 + 휴대폰 가로) ── */
+@media (max-aspect-ratio:1/1), (max-height:520px){
+  body.gaming #scr-yut .yt-chips{min-height:34px;gap:5px;align-content:center;align-items:center;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;justify-content:safe center}
+  body.gaming #scr-yut .yt-chips::-webkit-scrollbar{display:none}
+  body.gaming #scr-yut .yt-chip{flex:none;padding:2px 10px;font-size:17px;border-radius:10px}
+  body.gaming #scr-yut .yt-chips:has(.yt-chip:nth-child(4)) .yt-chip{padding:2px 6px;font-size:15px;gap:3px}
+  body.gaming #scr-yut .yt-acts{min-height:47px}
+  body.gaming #scr-yut .yt-go{width:100%;padding:9px 12px;font-size:20px}
+  body.gaming #scr-yut .yt-hint{font-size:12.5px;line-height:1.35}
+  body.gaming #scr-yut .yt-msg{height:31px;padding:1px 10px;font-size:12.5px;line-height:1.2;border-radius:10px;overflow:hidden}
+  body.gaming #scr-yut .yt-players{display:grid;gap:6px}
+  body.gaming #scr-yut .yt-p{padding:4px 8px;border-left-width:4px;border-radius:10px;min-width:0}
+  body.gaming #scr-yut .yt-p-top{gap:5px;font-size:13px;line-height:1.4;min-width:0}
+  body.gaming #scr-yut .yt-p-top b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  body.gaming #scr-yut .yt-p-top em{font-size:11px;white-space:nowrap}
+  body.gaming #scr-yut .yt-home{margin-top:3px;gap:4px;min-height:21px}
+  body.gaming #scr-yut .yt-home i{flex:none;width:21px;height:21px}
+  /* 카드가 좁으면(참가자 4명): '골인 n/4' 글자는 숨기고(말 모양에 골인 표시가 있어요) 상대 말은 작은 점으로 */
+  body.gaming #scr-yut .yt-p{container:ytp / inline-size}
+}
+@container ytp (max-width:150px){
+  body.gaming #scr-yut .yt-p-top em{display:none}
+}
+@container ytp (max-width:124px){
+  body.gaming #scr-yut .yt-home{gap:2px}
+}
+@container ytp (max-width:96px){
+  body.gaming #scr-yut .yt-p-top{gap:4px;font-size:12px}
+  body.gaming #scr-yut .yt-p-top .dot{width:9px;height:9px;flex:none}
+  body.gaming #scr-yut .yt-home{gap:2px}
+  body.gaming #scr-yut .yt-home i{width:13px;height:13px;border-width:1.5px}
+}
+
+/* ── 세로 화면 ── */
+@media (max-aspect-ratio:1/1){
+  body.gaming #scr-yut{--yt-rsv:331px}
+  body.gaming.in-room #scr-yut{--yt-rsv:349px}
+  body.gaming #scr-yut .yt-wrap{flex-direction:column;align-items:center;gap:6px}
+  body.gaming #scr-yut .yt-side{width:max(var(--yt-bw),min(100%,420px));gap:5px}
+  body.gaming #scr-yut .yt-throw{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);grid-template-rows:34px auto;gap:6px 10px;padding:6px;border-radius:14px;align-items:center}
+  body.gaming #scr-yut .yt-mat{grid-row:1 / 3;align-self:stretch;height:auto;min-height:0;border-radius:11px}
+  body.gaming #scr-yut .yt-sticks{gap:10px}
+  body.gaming #scr-yut .yt-stick{width:17px;height:64px;border-radius:9px}
+  body.gaming #scr-yut .yt-stick b{inset:7px 0;font-size:10px}
+  body.gaming #scr-yut .yt-stick.toss{animation-name:ytTossA}
+  body.gaming #scr-yut .yt-call{font-size:38px}
+  body.gaming #scr-yut .yt-players{display:flex;flex-direction:row}
+  body.gaming #scr-yut .yt-p{flex:1 1 0}
+  body.gaming #scr-yut .yt-p.me{flex-grow:1.55}
+}
+@keyframes ytTossA{0%{transform:translateY(0) rotate(var(--r))}35%{transform:translateY(-24px) rotate(calc(var(--r) + 190deg)) scaleX(.45)}70%{transform:translateY(3px) rotate(calc(var(--r) + 350deg)) scaleX(1)}100%{transform:translateY(0) rotate(var(--r))}}
+/* 휴대폰 세로: 싱글이면 제목 줄 한 줄 [제목 · 차례 · 나가기], 규칙 안내 문구는 높이가 넉넉할 때만 */
+@media (max-width:600px){
+  body.gaming #scr-yut{--yt-rsv:282px}
+  body.gaming.in-room #scr-yut{--yt-rsv:300px}
+  body.gaming:not(.in-room) #scr-yut .game-head .gh-title{display:contents}
+  body.gaming:not(.in-room) #scr-yut .game-head h2{grid-row:1;grid-column:1;min-width:0}
+  body.gaming:not(.in-room) #scr-yut .game-head .status{grid-row:2;grid-column:1 / -1;margin-top:-2px}
+  body.gaming:not(.in-room) #scr-yut .game-head .stats{grid-row:1;grid-column:2;flex-wrap:nowrap;min-width:0}
+  body.gaming:not(.in-room) #scr-yut .game-head .stat{min-width:0;max-width:150px}
+  body.gaming:not(.in-room) #scr-yut .game-head .stat b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+}
+@media (max-width:600px) and (max-height:740px){
+  body.gaming #scr-yut .game-head .status{display:none}
+}
+@media (max-width:600px) and (min-height:741px){
+  body.gaming #scr-yut{--yt-rsv:318px}
+  body.gaming.in-room #scr-yut{--yt-rsv:336px}
+}
+
+/* ── 가로 화면 ── */
+@media (min-aspect-ratio:1/1){
+  body.gaming #scr-yut{--yt-rsv:110px;--yt-bw:min(640px,calc(100% - 300px),calc(var(--avail-h,100vh) - var(--yt-rsv)))}
+  body.gaming #scr-yut .yt-wrap{gap:14px;align-items:flex-start}
+  body.gaming #scr-yut .yt-side{flex:0 1 320px;min-width:0}
+}
+/* 낮은 가로 화면(노트북 · 태블릿 가로 · 휴대폰 가로): 옵션 줄을 오른쪽 위로 올려 판을 크게 [판 | 옵션 / 던지는 곳 · 메시지 · 참가자]
+ * 오른쪽 아래는 두 칸 [던지는 곳 | 메시지 · 참가자], 판 높이에 맞춰 늘어나요 */
+@media (min-aspect-ratio:1/1) and (max-height:760px){
+  body.gaming #scr-yut{--yt-rsv:72px;--yt-bw:min(640px,calc(100vw - 460px - var(--yt-chat,0px)),calc(var(--avail-h,100vh) - var(--yt-rsv)))}
+  body.gaming #scr-yut.active{display:grid;grid-template-columns:var(--yt-bw) minmax(0,640px);grid-template-rows:auto auto minmax(0,1fr);
+    grid-template-areas:"head head" "board mode" "board side";column-gap:14px;justify-content:center;align-items:start}
+  body.gaming #scr-yut > .game-head{grid-area:head}
+  body.gaming #scr-yut > #yt-solo{grid-area:mode;justify-content:flex-start;margin-bottom:10px}
+  body.gaming #scr-yut .yt-wrap{display:contents}
+  body.gaming #scr-yut .yt-board-wrap{grid-area:board}
+  body.gaming #scr-yut .yt-side{grid-area:side;align-self:stretch;width:auto;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:10px}
+  body.gaming #scr-yut .yt-throw{grid-row:1 / 3;gap:10px}
+  body.gaming #scr-yut .yt-mat{flex:1 1 0;height:auto;min-height:96px}
+  body.gaming #scr-yut .yt-msg{grid-column:2}
+  body.gaming #scr-yut .yt-players{grid-column:2;align-content:start}
+}
+@media (min-aspect-ratio:1/1) and (max-height:760px) and (min-width:1101px){ body.gaming.in-room #scr-yut{--yt-chat:312px} }
+/* 휴대폰 가로: 던지는 곳 · 참가자 카드를 작게 (참가자 4명도 판 높이 안에) */
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-yut{--yt-rsv:46px}
+  body.gaming #scr-yut > #yt-solo{margin-bottom:6px}
+  body.gaming #scr-yut .yt-throw{padding:8px;gap:8px}
+  body.gaming #scr-yut .yt-stick{width:22px;height:96px}
+  body.gaming #scr-yut .yt-stick.toss{animation-name:ytTossA}
+  body.gaming #scr-yut .yt-players{gap:4px}
+}
+
+/* ═════════════ 🎲 요트 다이스 ═════════════
+ * 점수표(15줄)가 가장 길어요 → 큰 화면이 아니면 [위쪽 6칸+보너스 | 아래쪽 6칸+총점] 두 칸으로 나란히 (yacht.js 가 tbody 두 개로 그려요)
+ * 세로 화면: 주사위판 → 메시지 → 점수표 / 가로 화면: [주사위판 · 메시지 | 점수표] */
+body.gaming #scr-yacht .yc-table tr.yc-head2{display:none}
+body.gaming #scr-yacht .yc-msg{display:flex;align-items:center}
+/* 주사위 5개가 판 폭에 한 줄로 들어가게 (판 폭 기준 크기) */
+body.gaming #scr-yacht .yc-tray{container-type:inline-size}
+body.gaming #scr-yacht .yc-dice{flex-wrap:nowrap}
+body.gaming #scr-yacht .yc-die .die{width:var(--dz,72px);height:var(--dz,72px)}
+body.gaming #scr-yacht .yc-tray{--dz:min(72px,calc((100cqi - 4 * 14px) / 5))}
+
+/* 점수표 두 칸 (한 표가 다 들어가는 큰 화면 말고 전부: 높이 920px 이하 또는 좁은 화면) */
+@media (max-height:920px), (max-width:900px){
+  body.gaming #scr-yacht .yc-card{padding:6px}
+  body.gaming #scr-yacht .yc-table{display:flex;gap:10px;align-items:flex-start}
+  body.gaming #scr-yacht .yc-table > tbody{display:table;flex:1 1 0;min-width:0;border-collapse:collapse}
+  body.gaming #scr-yacht .yc-table tr.yc-head2{display:table-row}
+  body.gaming #scr-yacht .yc-table th{padding:5px 4px;font-size:12px;max-width:80px;overflow:hidden;text-overflow:ellipsis}
+  body.gaming #scr-yacht .yc-table td{padding:4px 4px;min-width:40px;line-height:1.25}
+  body.gaming #scr-yacht .yc-table td:first-child{min-width:0}
+  body.gaming #scr-yacht .yc-table tr.total td{font-size:19px;padding-top:6px}
+}
+/* 낮거나 좁은 화면: 점수표 설명 글은 숨기고(칸 이름 위에 마우스를 올리면 보여요) 줄을 촘촘하게 */
+@media (max-width:600px), (max-height:520px){
+  body.gaming #scr-yacht .yc-table td:first-child small{display:none}
+  body.gaming #scr-yacht .yc-table td{padding:3px 3px;font-size:15px;min-width:34px;line-height:1.2}
+  body.gaming #scr-yacht .yc-table td:first-child{font-size:12px;white-space:nowrap}
+  body.gaming #scr-yacht .yc-table th{padding:4px 3px;font-size:11px;line-height:1.2}
+  body.gaming #scr-yacht .yc-table th small{font-size:9.5px}
+  body.gaming #scr-yacht .yc-table tr.sub td{font-size:12.5px}
+  body.gaming #scr-yacht .yc-table tr.total td{font-size:17px;padding-top:4px}
+  body.gaming #scr-yacht .yc-table tr.total td:first-child{font-size:12px}
+  body.gaming #scr-yacht .yc-table tr:not(:first-child){height:27px}
+}
+@media (max-width:600px) and (min-height:690px){
+  body.gaming #scr-yacht .yc-table tr:not(:first-child){height:31px}
+}
+/* 보너스 칸의 '/63' (큰 화면은 그대로 보이게) */
+body.gaming #scr-yacht .yc-table tr.sub td:not(:first-child) small{font:inherit;color:inherit}
+/* 휴대폰에서 3~4명: 칸을 더 좁게 (칸 이름은 두 줄까지) */
+@media (max-width:600px){
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) > tbody{table-layout:fixed;width:10px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) th:first-child{width:62px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(5)) th:first-child{width:58px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) td{min-width:0;font-size:14px;padding:2px 1px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) td:first-child{white-space:normal;word-break:keep-all;line-height:1.1;font-size:11px;padding:2px 2px 2px 3px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) th{max-width:46px;font-size:10px;padding:3px 1px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) th:first-child{font-size:0}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) tr.sub td{font-size:11px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) tr.sub td:not(:first-child) small{display:none}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) tr.total td{font-size:15px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) tr.total td:first-child{font-size:11px}
+}
+
+/* ── 세로 화면 ── */
+@media (max-aspect-ratio:1/1){
+  body.gaming #scr-yacht .yc-wrap{flex-direction:column;flex-wrap:nowrap;align-items:center;gap:6px}
+  body.gaming #scr-yacht .yc-left{flex:none;width:100%;max-width:700px;gap:6px}
+  body.gaming #scr-yacht .yc-card{flex:none;width:100%;max-width:700px}
+  body.gaming #scr-yacht .yc-tray{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"who who" "dice dice" "hint acts";gap:6px 12px;padding:10px 14px;min-height:0;align-items:center}
+  body.gaming #scr-yacht .yc-who{grid-area:who;justify-self:center}
+  body.gaming #scr-yacht .yc-dice{grid-area:dice;min-height:0;padding-bottom:18px;flex-wrap:nowrap}
+  body.gaming #scr-yacht .yc-hint{grid-area:hint;margin:0;text-align:left;min-height:0}
+  body.gaming #scr-yacht .yc-acts{grid-area:acts}
+}
+/* 휴대폰 세로 */
+@media (max-width:600px){
+  body.gaming #scr-yacht .yc-tray{padding:8px 10px;gap:6px 10px;border-radius:20px}
+  body.gaming #scr-yacht .yc-who{font-size:13.5px;padding:3px 12px}
+  body.gaming #scr-yacht .yc-dice{gap:7px;padding-bottom:14px}
+  body.gaming #scr-yacht .yc-tray{--dz:min(56px,calc((100cqi - 4 * 7px) / 5))}
+  body.gaming #scr-yacht .yc-die .die{padding:8px;border-radius:12px}
+  body.gaming #scr-yacht .yc-die em{bottom:-17px;font-size:10px;padding:0 6px}
+  body.gaming #scr-yacht .yc-hint{font-size:12px;line-height:1.35}
+  body.gaming #scr-yacht .yc-acts .btn.lg{padding:10px 16px;font-size:19px}
+  body.gaming #scr-yacht .yc-acts .btn small{display:none}
+  body.gaming #scr-yacht .yc-hint{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  body.gaming #scr-yacht .yc-msg{height:31px;padding:1px 10px;font-size:12.5px;line-height:1.2;border-radius:10px;overflow:hidden}
+}
+@media (max-width:600px) and (max-height:660px){
+  body.gaming #scr-yacht .game-head .status{display:none}
+}
+
+/* ── 가로 화면 ── */
+@media (min-aspect-ratio:1/1) and (max-height:920px){
+  body.gaming #scr-yacht .yc-wrap{flex-wrap:nowrap;gap:14px}
+  body.gaming #scr-yacht .yc-left{flex:1 1 340px;min-width:280px;max-width:520px;gap:10px}
+  body.gaming #scr-yacht .yc-card{flex:1 1 600px;max-width:680px;min-width:0}
+  body.gaming #scr-yacht .yc-tray{min-height:0;padding:14px 14px 12px;gap:10px}
+  body.gaming #scr-yacht .yc-dice{min-height:0;padding-bottom:16px}
+  body.gaming #scr-yacht .yc-hint{margin:0}
+}
+/* 휴대폰 가로 */
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-yacht .yc-left{flex:1 1 300px;min-width:260px;gap:6px}
+  body.gaming #scr-yacht .yc-tray{padding:8px 10px;gap:6px;border-radius:20px}
+  body.gaming #scr-yacht .yc-who{font-size:13px;padding:3px 12px}
+  body.gaming #scr-yacht .yc-dice{gap:6px;padding-bottom:14px}
+  body.gaming #scr-yacht .yc-tray{--dz:min(48px,calc((100cqi - 4 * 6px) / 5))}
+  body.gaming #scr-yacht .yc-die .die{padding:7px;border-radius:11px}
+  body.gaming #scr-yacht .yc-die em{bottom:-17px;font-size:10px;padding:0 6px}
+  body.gaming #scr-yacht .yc-hint{font-size:12px;line-height:1.3}
+  body.gaming #scr-yacht .yc-acts .btn.lg{padding:9px 18px;font-size:18px}
+  body.gaming #scr-yacht .yc-msg{height:31px;padding:1px 10px;font-size:12.5px;line-height:1.2;border-radius:10px;overflow:hidden}
+}
+
+/* ═════════════ 🌍 세계여행 ═════════════
+ * 말(토큰)은 marble.js 가 칸 위치(px)로 놓아요 (판 크기가 바뀌면 다시 놓도록 marble.js 에 ResizeObserver 를 더했어요).
+ * 판 크기는 처음 그릴 때부터 정해지는 화면 단위(dvh · vw)로 정하고 (--mb-r = 판 말고 나머지 높이),
+ * 판 밖으로 잠깐 삐져나온 말이 '넘침'으로 잡혀 Fit 이 줄이지 않게 판은 overflow:clip 이에요.
+ * 세로 화면: 판 아래 참가자 한 줄 / 가로 화면: [판 | 옵션 · 참가자] */
+body.gaming #scr-marble{--mb-r:240px;--mb-bw:min(780px,100%,calc(100vh - var(--mb-r)));--mb-bw:min(780px,100%,calc(100dvh - var(--mb-r)))}
+body.gaming #scr-marble .mb-board{container-type:inline-size;min-width:0;min-height:0;width:var(--mb-bw);overflow:hidden;overflow:clip}
+/* 칸 글씨는 화면 폭이 아니라 판 크기에 맞춰요 (큰 판 = 예전 노트북 모양 그대로) */
+body.gaming #scr-marble .mb-cell .flag{font-size:clamp(8px,1.28cqi,10px)}
+body.gaming #scr-marble .mb-cell .nm{font-size:clamp(9px,1.67cqi,13px)}
+body.gaming #scr-marble .mb-cell .nm.long{font-size:clamp(8px,1.28cqi,10px)}
+body.gaming #scr-marble .mb-cell .pr{font-size:clamp(8px,1.41cqi,11px)}
+body.gaming #scr-marble .mb-cell .key-ic{font-size:clamp(10px,1.92cqi,15px)}
+body.gaming #scr-marble .mb-cell .corner-t{font-size:clamp(12px,2.56cqi,20px)}
+body.gaming #scr-marble .mb-cell.corner small{font-size:clamp(8px,1.28cqi,10px)}
+body.gaming #scr-marble .mb-logo{font-size:clamp(26px,5.9cqi,46px)}
+body.gaming #scr-marble .mb-msg{font-size:clamp(12px,2.05cqi,16px)}
+body.gaming #scr-marble .mb-p-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 판이 작으면 가운데(주사위 · 메시지 · 버튼 · 칸 정보)를 촘촘하게 · 로고는 뒤 배경으로 */
+@container (max-width:460px){
+  body.gaming #scr-marble .mb-center{gap:6px;padding:8px}
+  body.gaming #scr-marble .mb-logo{position:absolute;left:0;right:0;top:9%;pointer-events:none}
+  body.gaming #scr-marble .mb-dice{min-height:0;gap:10px}
+  body.gaming #scr-marble .mb-dice .die{width:40px;height:40px;padding:6px;border-radius:9px}
+  body.gaming #scr-marble .mb-msg{min-height:0;line-height:1.35}
+  body.gaming #scr-marble .mb-acts{gap:5px}
+  body.gaming #scr-marble .mb-acts .btn{padding:7px 11px;font-size:14px;border-radius:11px}
+  body.gaming #scr-marble .mb-acts .btn.lg{padding:10px 22px;font-size:19px}
+  body.gaming #scr-marble .mb-info{padding:5px 9px;font-size:11.5px;line-height:1.4;max-width:100%}
+  body.gaming #scr-marble .mb-tolls span{font-size:10px;padding:0 4px}
+  body.gaming #scr-marble .mb-card{padding:14px}
+}
+@container (max-width:330px){
+  body.gaming #scr-marble .mb-center{gap:4px;padding:5px}
+  body.gaming #scr-marble .mb-dice .die{width:32px;height:32px;padding:5px;border-radius:8px}
+  body.gaming #scr-marble .mb-msg{font-size:11.5px}
+  body.gaming #scr-marble .mb-acts .btn{padding:5px 8px;font-size:12.5px}
+  body.gaming #scr-marble .mb-acts .btn small{font-size:10.5px;margin-left:2px}
+  body.gaming #scr-marble .mb-acts .btn.lg{padding:8px 16px;font-size:17px}
+  body.gaming #scr-marble .mb-info{font-size:11px;padding:4px 7px}
+  body.gaming #scr-marble .mb-card{padding:10px;width:86%}
+  body.gaming #scr-marble .mb-card b{font-size:20px}
+}
+
+/* ── 세로 화면: 참가자 카드 한 줄 ── */
+@media (max-aspect-ratio:1/1){
+  body.gaming #scr-marble .mb-wrap{flex-direction:column;flex-wrap:nowrap;align-items:center;gap:8px}
+  body.gaming #scr-marble .mb-side{flex-direction:row;flex-wrap:nowrap;width:var(--mb-bw);gap:6px}
+  body.gaming #scr-marble .mb-p{flex:1 1 0;min-width:0;padding:5px 9px;border-left-width:4px;border-radius:10px}
+  body.gaming #scr-marble .mb-p.turn{transform:none}
+  body.gaming #scr-marble .mb-p-top{gap:5px;font-size:13px;min-width:0}
+  body.gaming #scr-marble .mb-p-top b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  body.gaming #scr-marble .mb-p-top .pawn{flex:none;width:11px;height:11px}
+  body.gaming #scr-marble .mb-p-top em{font-size:10px;padding:0 5px;flex:none}
+  body.gaming #scr-marble .mb-money{font-size:18px;margin-top:0;line-height:1.25}
+  body.gaming #scr-marble .mb-money small{font-size:10px;margin-left:2px}
+  body.gaming #scr-marble .mb-p-sub{font-size:10.5px}
+  /* 판 = 화면 높이 - (위쪽 막대 · 제목 · 옵션 · 참가자 줄) */
+  body.gaming #scr-marble{--mb-r:270px}
+}
+@media (max-aspect-ratio:1/1) and (min-width:761px){
+  body.gaming #scr-marble{--mb-r:294px}
+}
+
+/* ── 가로 화면: 옵션 줄을 오른쪽 칸 위로 올려서 판을 크게 ── */
+@media (min-aspect-ratio:1/1){
+  body.gaming #scr-marble{--mb-r:156px;--mb-bw:min(780px,calc(100vw - 450px - var(--mb-chat,0px)),calc(100vh - var(--mb-r)));--mb-bw:min(780px,calc(100vw - 450px - var(--mb-chat,0px)),calc(100dvh - var(--mb-r)))}
+  body.gaming #scr-marble.active{display:grid;grid-template-columns:var(--mb-bw) minmax(390px,420px);grid-template-rows:auto auto minmax(0,1fr);
+    grid-template-areas:"head head" "board mode" "board side";column-gap:14px;justify-content:center;align-items:start}
+  body.gaming #scr-marble > .game-head{grid-area:head}
+  body.gaming #scr-marble > #mb-solo{grid-area:mode;justify-content:flex-start;margin-bottom:10px}
+  body.gaming #scr-marble .mb-wrap{display:contents}
+  body.gaming #scr-marble .mb-board{grid-area:board}
+  body.gaming #scr-marble .mb-side{grid-area:side;width:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  body.gaming #scr-marble .mb-p{min-width:0}
+  body.gaming #scr-marble .mb-p.turn{transform:none}
+  body.gaming #scr-marble .mb-p-top b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+}
+@media (min-aspect-ratio:1/1) and (min-width:1101px){ body.gaming.in-room #scr-marble{--mb-chat:312px} }
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-marble{--mb-r:58px}
+  body.gaming #scr-marble > #mb-solo{margin-bottom:6px}
+  body.gaming #scr-marble .mb-side{gap:6px}
+  body.gaming #scr-marble .mb-p{padding:6px 10px}
+  body.gaming #scr-marble .mb-money{font-size:19px}
+}
+
+/* ═════════════ 🎓 인생 보드게임 ═════════════
+ * 판(SVG 1100×670)은 높이(--lf-bh)에 맞춰 그리고, 화면보다 넓으면 지금처럼 가로로 밀어서 봐요(차를 따라가요).
+ * 세로 화면: 판 → [룰렛 | 버튼] → 참가자 한 줄 / 가로 화면: [판 | 옵션 · 룰렛 · 참가자] */
+body.gaming #scr-life{--lf-bh:min(670px,calc(var(--avail-h,100vh) - var(--lf-rsv,300px)))}
+body.gaming #scr-life .lf-stage{flex:none;min-width:0;max-width:100%}
+body.gaming #scr-life .lf-scroll .lf-board{min-width:0;height:var(--lf-bh);width:auto;max-width:none}
+body.gaming #scr-life .lf-p-tags{flex-wrap:nowrap;overflow:hidden}
+body.gaming #scr-life .lf-p-tags span{flex:none}
+body.gaming #scr-life .lf-p.turn{transform:none}
+body.gaming #scr-life .lf-dec{overflow:auto}
+
+/* ── 세로 화면 ── */
+@media (max-aspect-ratio:1/1){
+  body.gaming #scr-life{--lf-rsv:300px}
+  body.gaming #scr-life .lf-wrap{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:6px}
+  body.gaming #scr-life .lf-stage{width:100%}
+  body.gaming #scr-life .lf-scroll{display:flex;justify-content:safe center}
+  body.gaming #scr-life .lf-scroll .lf-board{flex:none}
+  body.gaming #scr-life .lf-side{width:100%;flex-direction:column;flex-wrap:nowrap;gap:6px}
+  body.gaming #scr-life .lf-spin{flex:none;flex-direction:row;justify-content:center;align-items:center;gap:16px;padding:6px 12px;border-radius:14px}
+  body.gaming #scr-life .lf-wheel-wrap{width:var(--lf-wh,104px);height:var(--lf-wh,104px);flex:none}
+  body.gaming #scr-life .lf-pointer{top:-5px;border-left-width:8px;border-right-width:8px;border-top-width:16px}
+  body.gaming #scr-life .lf-hub{width:42px;height:42px;margin:-21px 0 0 -21px;font-size:11px;border-width:2px}
+  body.gaming #scr-life .lf-hub.big{font-size:22px}
+  body.gaming #scr-life .lf-acts{flex-direction:column;min-height:0;gap:6px;flex:0 1 auto}
+  body.gaming #scr-life .lf-players{flex:none;flex-direction:row;gap:6px;overflow-x:auto;scrollbar-width:thin}
+  body.gaming #scr-life .lf-p{flex:1 0 100px;min-width:0;padding:5px 9px;border-left-width:4px;border-radius:10px}
+  body.gaming #scr-life .lf-p-top{gap:5px;font-size:13px;min-width:0}
+  body.gaming #scr-life .lf-p-top b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  body.gaming #scr-life .lf-p-top em{font-size:10px;padding:0 6px;flex:none}
+  body.gaming #scr-life .lf-p-money{font-size:18px;margin-top:0;line-height:1.25}
+  body.gaming #scr-life .lf-p-money small{font-size:10px;margin-left:2px}
+  body.gaming #scr-life .lf-p-job{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.gaming #scr-life .lf-p-tags{margin-top:3px;gap:3px}
+  body.gaming #scr-life .lf-p-tags span{font-size:10px;padding:0 5px}
+  body.gaming #scr-life .lf-p-cards{display:none}
+}
+/* 휴대폰 세로: 싱글이면 제목 줄 한 줄 [제목 · 차례 · 나가기], 참가자 카드는 [이름 · 돈 · 직업]만 */
+@media (max-width:600px){
+  body.gaming #scr-life{--lf-rsv:277px}
+  body.gaming.in-room #scr-life{--lf-rsv:287px}
+  body.gaming:not(.in-room) #scr-life .game-head .gh-title{display:contents}
+  body.gaming:not(.in-room) #scr-life .game-head h2{grid-row:1;grid-column:1;min-width:0}
+  body.gaming:not(.in-room) #scr-life .game-head .status{grid-row:2;grid-column:1 / -1;margin-top:-2px}
+  body.gaming:not(.in-room) #scr-life .game-head .stats{grid-row:1;grid-column:2;flex-wrap:nowrap;min-width:0}
+  body.gaming:not(.in-room) #scr-life .game-head .stat{min-width:0;max-width:140px}
+  body.gaming:not(.in-room) #scr-life .game-head .stat b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  body.gaming #scr-life .lf-p-tags{display:none}
+}
+@media (max-width:600px) and (max-height:740px){
+  body.gaming #scr-life .game-head .status{display:none}
+}
+@media (max-width:600px) and (min-height:741px){
+  body.gaming #scr-life{--lf-rsv:313px}
+  body.gaming.in-room #scr-life{--lf-rsv:333px}
+}
+/* 세로 태블릿 · 폴드 펼침: 판 아래에 [룰렛 | 참가자] 나란히 */
+@media (max-aspect-ratio:1/1) and (min-width:601px){
+  body.gaming #scr-life{--lf-rsv:330px;--lf-wh:150px;--lf-bh:min(670px,calc(var(--avail-h,100vh) - var(--lf-rsv)),calc((100vw - 34px) / 1.642))}
+  body.gaming #scr-life .lf-side{flex-direction:row;align-items:stretch}
+  body.gaming #scr-life .lf-spin{flex:0 0 auto;flex-direction:column;gap:10px;padding:10px 16px}
+  body.gaming #scr-life .lf-players{flex:1 1 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));align-content:start;overflow:visible}
+  body.gaming #scr-life .lf-p{flex:none}
+}
+
+/* ── 가로 화면: 옵션 줄을 오른쪽 칸 위로 올려서 판을 크게 [판 | 옵션 · 룰렛 · 참가자] ── */
+@media (min-aspect-ratio:1/1){
+  body.gaming #scr-life{--lf-sw:300px;--lf-rsv:70px;--lf-bh:min(670px,calc(var(--avail-h,100vh) - var(--lf-rsv)),calc((100vw - 48px - var(--lf-sw) - var(--lf-chat,0px)) / 1.642))}
+  body.gaming #scr-life.active{display:grid;grid-template-columns:max-content minmax(var(--lf-sw),520px);grid-template-rows:auto auto minmax(0,1fr);
+    grid-template-areas:"head head" "stage mode" "stage side";column-gap:14px;justify-content:center;align-items:start}
+  body.gaming #scr-life > .game-head{grid-area:head}
+  body.gaming #scr-life > #lf-solo{grid-area:mode;justify-content:flex-start;margin-bottom:10px}
+  body.gaming #scr-life .lf-wrap{display:contents}
+  body.gaming #scr-life .lf-stage{grid-area:stage}
+  body.gaming #scr-life .lf-side{grid-area:side;width:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;align-items:start;container:lfside / inline-size}
+  body.gaming #scr-life .lf-spin{padding:12px;gap:10px}
+  body.gaming #scr-life .lf-wheel-wrap{width:var(--lf-wh,150px);height:var(--lf-wh,150px)}
+  body.gaming #scr-life .lf-pointer{top:-6px;border-left-width:10px;border-right-width:10px;border-top-width:20px}
+  body.gaming #scr-life .lf-hub{width:54px;height:54px;margin:-27px 0 0 -27px;font-size:13px}
+  body.gaming #scr-life .lf-hub.big{font-size:26px}
+  body.gaming #scr-life .lf-players{gap:8px}
+  body.gaming #scr-life .lf-p{padding:7px 11px}
+  body.gaming #scr-life .lf-p-money{font-size:20px;margin-top:0}
+}
+@media (min-width:1101px){ body.gaming.in-room #scr-life{--lf-chat:312px} }
+/* 오른쪽 칸이 좁으면(태블릿 가로 · 멀티 채팅창이 옆에 있을 때) 룰렛은 가로로 [룰렛 | 버튼], 참가자는 두 칸 */
+@container lfside (max-width:440px){
+  body.gaming #scr-life .lf-spin{--lf-wh:118px;flex-direction:row;justify-content:center;align-items:center;gap:14px}
+  body.gaming #scr-life .lf-acts{flex-direction:column}
+  body.gaming #scr-life .lf-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  body.gaming #scr-life .lf-p{padding:5px 9px;min-width:0}
+  body.gaming #scr-life .lf-p-top{min-width:0}
+  body.gaming #scr-life .lf-p-top b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  body.gaming #scr-life .lf-p-money{font-size:18px}
+  body.gaming #scr-life .lf-p-job{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.gaming #scr-life .lf-p-cards{display:none}
+}
+/* 휴대폰 가로 */
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-life{--lf-rsv:44px;--lf-wh:92px}
+  body.gaming #scr-life .lf-spin{--lf-wh:92px}
+  body.gaming #scr-life > #lf-solo{margin-bottom:6px}
+  body.gaming #scr-life .lf-side{gap:6px}
+  body.gaming #scr-life .lf-spin{padding:5px 10px;border-radius:14px}
+  body.gaming #scr-life .lf-pointer{top:-5px;border-left-width:8px;border-right-width:8px;border-top-width:15px}
+  body.gaming #scr-life .lf-hub{width:38px;height:38px;margin:-19px 0 0 -19px;font-size:10px;border-width:2px}
+  body.gaming #scr-life .lf-hub.big{font-size:20px}
+  body.gaming #scr-life .lf-acts .btn{padding:8px 14px;font-size:15px}
+  body.gaming #scr-life .lf-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  body.gaming #scr-life .lf-p{padding:4px 8px;border-left-width:4px;border-radius:10px;min-width:0}
+  body.gaming #scr-life .lf-p-top{gap:5px;font-size:12.5px;min-width:0}
+  body.gaming #scr-life .lf-p-top b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  body.gaming #scr-life .lf-p-money{font-size:16px;line-height:1.25}
+  body.gaming #scr-life .lf-p-money small{font-size:10px}
+  body.gaming #scr-life .lf-p-job{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.gaming #scr-life .lf-p-tags,body.gaming #scr-life .lf-p-cards{display:none}
+}
+
+/* ═════════════ 🃏 도둑잡기 ═════════════
+ * 원래는 높이 560px 이상 탁자에 자리 · 가운데 · 내 패를 위치(%)로 겹쳐 놓아요.
+ * 휴대폰 세로: 위에서 아래로 [상대 자리 한 줄 → 메시지 · 뽑을 카드 → 내 패]
+ * 낮은 가로 화면: [상대 자리 목록 | 메시지 · 뽑을 카드 / 내 패]
+ * 그 밖(태블릿 세로 · 큰 화면): 원래 배치, 탁자 높이만 화면에 맞게 */
+body.gaming #scr-thief .th-table{height:min(700px,calc(var(--avail-h,100vh) - var(--th-rsv,130px)))}
+
+@media (max-width:600px){
+  body.gaming #scr-thief{--th-rsv:110px}
+  body.gaming #scr-thief .th-table{height:auto;min-height:calc(var(--avail-h,100vh) - var(--th-rsv));display:flex;flex-direction:column;justify-content:space-between;gap:8px;padding:10px 8px;border-radius:22px}
+  body.gaming #scr-thief #th-seats{display:flex;justify-content:center;gap:6px}
+  body.gaming #scr-thief .th-seat{position:static;transform:none;flex:1 1 0;min-width:0;max-width:118px;width:auto;padding:5px 4px;gap:2px}
+  body.gaming #scr-thief .th-av{width:28px;height:28px;font-size:13px}
+  body.gaming #scr-thief .th-seat b{font-size:12px;max-width:100%}
+  body.gaming #scr-thief .th-seat small{font-size:10.5px;white-space:nowrap}
+  body.gaming #scr-thief .th-seat em{font-size:10px;padding:0 6px}
+  body.gaming #scr-thief .th-mini{height:22px;max-width:100%;overflow:hidden}
+  body.gaming #scr-thief .th-mini i{width:13px;height:20px;margin-left:-9px}
+  body.gaming #scr-thief .th-center{position:static;transform:none;width:100%;gap:6px}
+  body.gaming #scr-thief .th-pile{height:46px;width:150px}
+  body.gaming #scr-thief .th-pile .pc.sm{width:34px;height:50px}
+  body.gaming #scr-thief .th-pile .pc.sm span{font-size:17px}
+  body.gaming #scr-thief .th-pile .pc.sm i{font-size:9px;top:2px;left:3px}
+  body.gaming #scr-thief .th-pile .pc.sm i.br{top:auto;left:auto;bottom:2px;right:3px}
+  body.gaming #scr-thief .th-pair .pc{margin-left:-18px}
+  body.gaming #scr-thief .th-msg{font-size:13px;padding:5px 12px;line-height:1.35}
+  body.gaming #scr-thief .th-pick p{font-size:13px;margin-bottom:6px}
+  body.gaming #scr-thief .th-pick p.warn{padding:6px 10px;line-height:1.4}
+  body.gaming #scr-thief .th-me{position:static;gap:6px}
+  body.gaming #scr-thief .th-hand{min-height:78px}
+  body.gaming #scr-thief .th-me-bar{font-size:13px;padding:4px 5px 4px 12px;gap:8px;max-width:100%}
+  body.gaming #scr-thief .th-me-bar .btn{padding:7px 12px;font-size:14px;border-radius:12px}
+}
+@media (max-width:600px) and (max-height:740px){
+  body.gaming #scr-thief .game-head .status{display:none}
+}
+@media (max-width:600px) and (min-height:741px){
+  body.gaming #scr-thief{--th-rsv:142px}
+}
+
+/* ── 낮은 가로 화면(노트북 · 태블릿 가로 · 휴대폰 가로) ── */
+@media (min-aspect-ratio:1/1) and (max-height:760px){
+  body.gaming #scr-thief{--th-rsv:118px}
+  body.gaming #scr-thief .th-table{display:grid;grid-template-columns:minmax(150px,210px) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;
+    grid-template-areas:"seats center" "seats me";gap:8px 16px;padding:14px 18px}
+  body.gaming #scr-thief #th-seats{grid-area:seats;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:0}
+  body.gaming #scr-thief .th-seat{position:static;transform:none;width:auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"av nm em" "av inf em";
+    column-gap:8px;row-gap:0;align-items:center;text-align:left;padding:6px 10px;border-radius:12px}
+  body.gaming #scr-thief .th-av{grid-area:av;width:34px;height:34px;font-size:15px}
+  body.gaming #scr-thief .th-seat b{grid-area:nm;max-width:100%}
+  body.gaming #scr-thief .th-seat small{grid-area:inf}
+  body.gaming #scr-thief .th-seat em{grid-area:em}
+  body.gaming #scr-thief .th-mini{display:none}
+  body.gaming #scr-thief .th-center{grid-area:center;position:static;transform:none;width:100%;justify-content:center;align-self:center}
+  body.gaming #scr-thief .th-pile{position:absolute;right:14px;top:10px;transform:scale(.72);transform-origin:top right;pointer-events:none}
+  body.gaming #scr-thief .th-me{grid-area:me;position:static}
+}
+/* 휴대폰 가로: 내 패와 막대를 나란히 */
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-thief{--th-rsv:82px}
+  body.gaming #scr-thief .th-table{gap:4px 12px;padding:8px 12px;border-radius:20px;grid-template-columns:minmax(130px,170px) minmax(0,1fr)}
+  body.gaming #scr-thief #th-seats{gap:4px}
+  body.gaming #scr-thief .th-seat{padding:3px 8px;column-gap:6px}
+  body.gaming #scr-thief .th-av{width:26px;height:26px;font-size:12px}
+  body.gaming #scr-thief .th-seat b{font-size:12px}
+  body.gaming #scr-thief .th-seat small{font-size:10px}
+  body.gaming #scr-thief .th-seat em{font-size:10px;padding:0 6px}
+  body.gaming #scr-thief .th-center{gap:5px}
+  body.gaming #scr-thief .th-pile{transform:scale(.5)}
+  body.gaming #scr-thief .th-msg{font-size:12.5px;padding:4px 12px}
+  body.gaming #scr-thief .th-pick p{font-size:12.5px;margin-bottom:4px}
+  body.gaming #scr-thief .th-pick p.warn{padding:5px 10px}
+  body.gaming #scr-thief .th-fan .pc{width:46px;height:66px}
+  body.gaming #scr-thief .th-fan .pc span{font-size:22px}
+  body.gaming #scr-thief .th-me{flex-direction:row;justify-content:center;align-items:flex-end;gap:10px}
+  body.gaming #scr-thief .th-hand{min-height:70px}
+  body.gaming #scr-thief .th-hand .pc{width:46px;height:66px}
+  body.gaming #scr-thief .th-hand .pc span{font-size:22px}
+  body.gaming #scr-thief .th-me-bar{flex-direction:column;align-items:stretch;gap:4px;border-radius:14px;padding:5px 6px;font-size:12px;text-align:center}
+  body.gaming #scr-thief .th-me-bar .btn{padding:6px 10px;font-size:13px;border-radius:10px}
+}
+
+/* ═════════════ 🂡 블랙잭 ═════════════
+ * 휴대폰 세로: 탁자를 작게(카드 · 자리 한 줄), 칩 · 행동 버튼은 아래 한 줄
+ * 낮은 가로 화면: [탁자 | 옵션 · 칩 / 행동 버튼] — 탁자 높이는 남는 높이에 맞춰요 */
+body.gaming #scr-blackjack .bj-name{flex-wrap:wrap;justify-content:center;row-gap:0;max-width:100%}
+body.gaming #scr-blackjack .bj-name b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+
+@media (max-width:600px){
+  body.gaming #scr-blackjack{--bj-rsv:214px}
+  body.gaming #scr-blackjack .bj-table{min-height:calc(var(--avail-h,100vh) - var(--bj-rsv));justify-content:space-evenly;padding:8px 6px 16px;gap:6px;border-radius:0 0 46px 46px / 0 0 30px 30px}
+  body.gaming #scr-blackjack .bj-arc{font-size:8.5px;letter-spacing:1.5px;text-align:center}
+  body.gaming #scr-blackjack .bj-dealer{gap:3px}
+  body.gaming #scr-blackjack .bj-dealer small{font-size:9.5px;letter-spacing:3px}
+  body.gaming #scr-blackjack .bj-dealer .bj-cards{padding-left:22px;min-height:70px}
+  body.gaming #scr-blackjack .bj-dealer .pc{width:49px;height:70px;margin-left:-22px}
+  body.gaming #scr-blackjack .bj-dealer .pc span{font-size:24px}
+  body.gaming #scr-blackjack .bj-dealer .pc i{font-size:11px;top:3px;left:4px}
+  body.gaming #scr-blackjack .bj-dealer .pc i.br{top:auto;left:auto;bottom:3px;right:4px}
+  body.gaming #scr-blackjack .bj-total{font-size:17px;padding:1px 11px;min-height:22px}
+  body.gaming #scr-blackjack .bj-msg{font-size:13px;padding:4px 12px;text-align:center;line-height:1.35}
+  body.gaming #scr-blackjack .bj-seats{gap:4px;margin-top:0}
+  body.gaming #scr-blackjack .bj-seat{min-width:96px;flex:1 1 96px;padding:5px 3px;gap:5px;border-radius:12px}
+  body.gaming #scr-blackjack .bj-hands{min-height:92px;gap:4px}
+  body.gaming #scr-blackjack .bj-hand{gap:3px;padding:2px}
+  body.gaming #scr-blackjack .bj-hand .bj-cards{padding-left:25px;min-height:54px}
+  body.gaming #scr-blackjack .bj-hand .bj-cards .pc{width:38px;height:54px;margin-left:-25px}
+  body.gaming #scr-blackjack .bj-hand .pc span{font-size:18px}
+  body.gaming #scr-blackjack .bj-hand .pc i{font-size:9.5px;top:2px;left:3px}
+  body.gaming #scr-blackjack .bj-hand .pc i.br{top:auto;left:auto;bottom:2px;right:3px}
+  body.gaming #scr-blackjack .bj-hinfo{gap:4px}
+  body.gaming #scr-blackjack .bj-hinfo b{font-size:15px}
+  body.gaming #scr-blackjack .bj-chip{width:24px;height:24px;font-size:8px;border-width:2px}
+  body.gaming #scr-blackjack .bj-res{font-size:11px;padding:1px 7px}
+  body.gaming #scr-blackjack .bj-name{font-size:11px;padding:2px 8px;gap:0 4px;border-radius:11px;line-height:1.3}
+  body.gaming #scr-blackjack .bj-name i{width:8px;height:8px}
+  body.gaming #scr-blackjack .bj-wait,body.gaming #scr-blackjack .bj-betchip{font-size:11px}
+  body.gaming #scr-blackjack .bj-controls{margin-top:8px;min-height:96px;gap:6px;justify-content:flex-start}
+  body.gaming #scr-blackjack .bj-note{font-size:13.5px;text-align:center}
+  body.gaming #scr-blackjack .bj-chips{gap:9px;flex-wrap:nowrap}
+  body.gaming #scr-blackjack .bj-chipbtn{width:54px;height:54px;font-size:15px;border-width:4px}
+  body.gaming #scr-blackjack .bj-chipbtn.call{font-size:13px}
+  body.gaming #scr-blackjack .bj-chipbtn small{display:none}
+  body.gaming #scr-blackjack .bj-acts{flex-wrap:nowrap;gap:6px;width:100%}
+  body.gaming #scr-blackjack .bj-acts .btn{flex:1 1 0;min-width:0;padding:12px 4px;font-size:17px;border-radius:13px}
+  body.gaming #scr-blackjack .bj-acts .btn small{display:none}
+}
+@media (max-width:600px){
+  /* 결과(승리 · 패배) 표시는 카드 위에 겹쳐서 — 줄이 늘지 않게 */
+  body.gaming #scr-blackjack .bj-hand{position:relative}
+  body.gaming #scr-blackjack .bj-res{position:absolute;left:0;right:0;top:24px;margin-inline:auto;width:max-content;z-index:2;box-shadow:0 3px 8px rgba(0,0,0,.45)}
+  /* 4명 이상(자리 두 줄): 카드 · 딜러 자리를 더 작게 */
+  body.gaming #scr-blackjack .bj-table:has(.bj-seat:nth-child(4)) .bj-arc{display:none}
+  body.gaming #scr-blackjack .bj-table:has(.bj-seat:nth-child(4)) .bj-dealer .bj-cards{min-height:60px}
+  body.gaming #scr-blackjack .bj-table:has(.bj-seat:nth-child(4)) .bj-dealer .pc{width:42px;height:60px}
+  body.gaming #scr-blackjack .bj-table:has(.bj-seat:nth-child(4)) .bj-seats{row-gap:4px}
+  body.gaming #scr-blackjack .bj-table:has(.bj-seat:nth-child(4)) .bj-seat{padding:3px;gap:3px}
+  body.gaming #scr-blackjack .bj-table:has(.bj-seat:nth-child(4)) .bj-hands{min-height:74px}
+  body.gaming #scr-blackjack .bj-table:has(.bj-seat:nth-child(4)) .bj-hand .bj-cards{padding-left:22px;min-height:48px}
+  body.gaming #scr-blackjack .bj-table:has(.bj-seat:nth-child(4)) .bj-hand .bj-cards .pc{width:34px;height:48px;margin-left:-22px}
+  body.gaming #scr-blackjack .bj-table:has(.bj-seat:nth-child(4)) .bj-hand .pc span{font-size:16px}
+  body.gaming #scr-blackjack .bj-table:has(.bj-seat:nth-child(4)) .bj-res{top:18px}
+}
+@media (max-width:600px) and (max-height:740px){
+  body.gaming #scr-blackjack .game-head .status{display:none}
+}
+@media (max-width:600px) and (min-height:741px){
+  body.gaming #scr-blackjack{--bj-rsv:248px}
+}
+
+/* ── 낮은 가로 화면(높이 920px 이하): [탁자 | 옵션 · 칩 / 버튼] ── */
+@media (min-aspect-ratio:1/1) and (max-height:920px){
+  body.gaming #scr-blackjack{--bj-rsv:70px}
+  body.gaming #scr-blackjack.active{display:grid;grid-template-columns:minmax(0,1100px) minmax(200px,270px);grid-template-rows:auto auto minmax(0,1fr);
+    grid-template-areas:"head head" "table mode" "table ctl";column-gap:14px;justify-content:center;align-items:start}
+  body.gaming #scr-blackjack > .game-head{grid-area:head}
+  body.gaming #scr-blackjack > #bj-solo{grid-area:mode;justify-content:center;margin:4px 0 10px}
+  body.gaming #scr-blackjack .bj-table{grid-area:table;width:100%;min-height:0;height:calc(var(--avail-h,100vh) - var(--bj-rsv));justify-content:space-evenly;padding:14px 16px 22px;gap:8px}
+  body.gaming #scr-blackjack .bj-hands{min-height:118px}
+  body.gaming #scr-blackjack .bj-controls{grid-area:ctl;margin-top:0;min-height:0;align-self:start}
+  body.gaming #scr-blackjack .bj-note{text-align:center}
+  body.gaming #scr-blackjack .bj-chips{display:grid;grid-template-columns:repeat(3,auto);gap:22px 12px;justify-content:center}
+  body.gaming #scr-blackjack .bj-acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
+  body.gaming #scr-blackjack .bj-acts .btn{padding:12px 8px}
+  body.gaming #scr-blackjack .bj-acts .btn.lg{font-size:20px}
+}
+/* 휴대폰 가로: 탁자 안을 촘촘하게 */
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-blackjack{--bj-rsv:44px}
+  body.gaming #scr-blackjack.active{grid-template-columns:minmax(0,1fr) 212px;column-gap:10px}
+  body.gaming #scr-blackjack > #bj-solo{margin:0 0 6px;flex-wrap:wrap;row-gap:4px}
+  body.gaming #scr-blackjack .bj-table{padding:6px 10px 14px;gap:4px;border-radius:0 0 60px 60px / 0 0 30px 30px}
+  body.gaming #scr-blackjack .bj-arc{display:none}
+  body.gaming #scr-blackjack .bj-dealer{flex-direction:row;gap:10px}
+  body.gaming #scr-blackjack .bj-dealer small{font-size:9.5px;letter-spacing:3px;writing-mode:vertical-rl}
+  body.gaming #scr-blackjack .bj-dealer .bj-cards{padding-left:22px;min-height:64px}
+  body.gaming #scr-blackjack .bj-dealer .pc{width:45px;height:64px;margin-left:-22px}
+  body.gaming #scr-blackjack .bj-dealer .pc span{font-size:22px}
+  body.gaming #scr-blackjack .bj-dealer .pc i{font-size:10px;top:3px;left:4px}
+  body.gaming #scr-blackjack .bj-dealer .pc i.br{top:auto;left:auto;bottom:3px;right:4px}
+  body.gaming #scr-blackjack .bj-total{font-size:17px;padding:1px 11px;min-height:22px}
+  body.gaming #scr-blackjack .bj-msg{font-size:12.5px;padding:3px 12px}
+  body.gaming #scr-blackjack .bj-seats{gap:6px;margin-top:0;flex-wrap:nowrap}
+  body.gaming #scr-blackjack .bj-seat{min-width:0;flex:1 1 0;max-width:200px;padding:4px;gap:4px;border-radius:12px}
+  body.gaming #scr-blackjack .bj-hands{min-height:84px;gap:4px}
+  body.gaming #scr-blackjack .bj-hand{gap:3px;padding:2px}
+  body.gaming #scr-blackjack .bj-hand .bj-cards{padding-left:25px;min-height:52px}
+  body.gaming #scr-blackjack .bj-hand .bj-cards .pc{width:37px;height:52px;margin-left:-25px}
+  body.gaming #scr-blackjack .bj-hand .pc span{font-size:18px}
+  body.gaming #scr-blackjack .bj-hand .pc i{font-size:9.5px;top:2px;left:3px}
+  body.gaming #scr-blackjack .bj-hand .pc i.br{top:auto;left:auto;bottom:2px;right:3px}
+  body.gaming #scr-blackjack .bj-hinfo b{font-size:15px}
+  body.gaming #scr-blackjack .bj-chip{width:24px;height:24px;font-size:8px;border-width:2px}
+  body.gaming #scr-blackjack .bj-res{font-size:11px;padding:1px 7px}
+  body.gaming #scr-blackjack .bj-name{font-size:11px;padding:2px 8px;border-radius:11px}
+  body.gaming #scr-blackjack .bj-controls{gap:6px}
+  body.gaming #scr-blackjack .bj-note{font-size:13px}
+  body.gaming #scr-blackjack .bj-chips{gap:10px 8px}
+  body.gaming #scr-blackjack .bj-chipbtn{width:50px;height:50px;font-size:14px;border-width:4px}
+  body.gaming #scr-blackjack .bj-chipbtn small{display:none}
+  body.gaming #scr-blackjack .bj-acts .btn{padding:10px 6px;font-size:16px}
+  body.gaming #scr-blackjack .bj-acts .btn.lg{font-size:18px}
+  body.gaming #scr-blackjack .bj-acts .btn small{display:none}
+}
