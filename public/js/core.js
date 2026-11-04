@@ -161,6 +161,7 @@ var Fit = {
       else { this.zoom(sec, zb, W); sec.style.margin = '0 auto'; }
     }
     this.last = { sec, h: sec.offsetHeight, w: sec.scrollWidth, vis: this.visH(sec), H, W, iw: window.innerWidth, ih: window.innerHeight };
+    if (typeof Stick !== 'undefined' && Stick.g) Stick.layout();               // 조이스틱 자리도 바뀐 화면에 맞게 (stick.js)
   },
   /** 화면에 보이는 높이 — 화면 상자보다 내용이 넘쳤으면 내용까지 (zoom 비율 반영) */
   visH(sec) {
@@ -936,6 +937,8 @@ padEl.id = 'vpad'; padEl.className = 'hidden';
 document.body.append(padEl);
 function updatePad() {
   const g = Games[S.screen];
+  const stick = TOUCH && g && g.stick && typeof Stick !== 'undefined';           // 조이스틱 패드를 쓰는 게임 (stick.js)
+  if (typeof Stick !== 'undefined') { if (stick) return Stick.on(g, S.screen); Stick.off(); }
   if (!TOUCH || !g || !g.pad) { padEl.classList.add('hidden'); return; }
   const cut = g.pad.indexOf('|'), L = cut < 0 ? g.pad : g.pad.slice(0, cut), R = cut < 0 ? [] : g.pad.slice(cut + 1);
   const btn = c => `<button data-code="${c}">${(g.padLabel && g.padLabel[c]) || PAD_LABEL[c] || c}</button>`;

@@ -1,19 +1,20 @@
 /* =====================================================================
- *  📮 버그 · 불편 신고 (누구나) · 신고함 (운영자)
- *   - 위쪽 [신고] 버튼 · 홈 화면 아래 링크 → 종류 · 내용 · 지금 화면 정보(게임 · 기기 · 화면 크기)를
+ *  📮 신고 · 요청 (누구나: 버그 · 불편해요 · 희망 게임 · 요청 사항 · 기타) · 신고함 (운영자)
+ *   - 메뉴 → 신고 · 요청 · 홈 화면 아래 링크 → 종류 · 내용 · 지금 화면 정보(게임 · 기기 · 화면 크기)를
  *     운영자에게 비공개로 보내요. 다른 사람에게는 보이지 않아요.
  *   - 운영자가 답장하면 [내 신고]에 빨간 점 → 처리 상태 · 답장 확인
  *     (로그인했으면 어디서든, 손님이면 이 기기에 보관한 영수증으로)
  *   - 운영자: 내 정보 → 운영 → 신고함 (새 신고 알림 · 확인함 · 처리 완료 · 답장 · 지우기)
  *   서버: lib/report.js
  * ===================================================================== */
-const RP_KIND = { bug: ['버그', 'bug'], ux: ['불편해요', 'alert-triangle'], idea: ['제안', 'sparkles'], etc: ['기타', 'message-circle'] };
+const RP_KIND = { bug: ['버그', 'bug'], ux: ['불편해요', 'alert-triangle'], game: ['희망 게임', 'device-gamepad-2'], idea: ['요청 사항', 'sparkles'], etc: ['기타', 'message-circle'] };
 const RP_ST = { new: '접수됨', seen: '확인 중', done: '처리 완료' };          // 신고한 사람에게
 const RP_OPST = { new: '새 신고', seen: '확인함', done: '완료' };             // 운영자에게
 const RP_PH = {
   bug: '어떤 게임 · 화면에서 무엇을 하다가 어떤 일이 생겼는지 적어 주세요.&#10;예) 루미큐브에서 타일을 누르자마자 시간 초과가 떠요.',
   ux: '불편했던 점을 적어 주세요.&#10;예) 휴대폰에서 버튼이 작아서 누르기 힘들어요.',
-  idea: '바라는 점 · 새 게임 아이디어를 적어 주세요.',
+  game: '하고 싶은 게임을 알려 주세요. 어떻게 하는 게임인지도 적어 주면 더 좋아요.&#10;예) 젠가 · 할리갈리 4인 · 테트리스 대결 …',
+  idea: '바라는 점 · 생겼으면 하는 기능을 적어 주세요.&#10;예) 친구랑 같은 팀으로 하는 모드가 있으면 좋겠어요.',
   etc: '운영자에게 전하고 싶은 말을 적어 주세요.',
 };
 // (계정 화면의 dup · empty · none 같은 이름과 겹치지 않게 rp 를 붙여요)
@@ -46,7 +47,7 @@ const Report = {
     const lag = parseInt(((($('#conn span') || {}).textContent || '').match(/(\d+)ms/) || [])[1], 10) || 0;
     return { scr, game: key, name: key && GAME_INFO[key] ? GAME_INFO[key].name : '', solo: !!S.solo || (!S.code && !!key),
       w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1, touch: navigator.maxTouchPoints > 0 && matchMedia('(pointer: coarse)').matches,
-      ver: (S.serverInfo && S.serverInfo.build) || '', lag };
+      ver: [typeof APP_VER !== 'undefined' && APP_VER ? 'v' + APP_VER : '', (S.serverInfo && S.serverInfo.build) || ''].filter(Boolean).join(' · '), lag };
   },
   ctxText(c) {
     if (!c) return '';
@@ -71,17 +72,17 @@ const Report = {
   html() {
     const u = this.ui;
     const tab = (k, ic, label, extra = '') => `<button class="ac-tab ${u.tab === k ? 'on' : ''}" data-act="rpTab" data-tab="${k}">${icon(ic)}${label}${extra}</button>`;
-    const opBar = this.isOp() ? `<button class="rp-opbar" data-act="rpGoOp">${icon('inbox')}<span>운영자 신고함${this.opNew ? ` · 새 신고 <b>${this.opNew}</b>개` : ''}</span></button>` : '';
-    return `<div class="rp-head"><span class="rp-ic">${icon('message-report')}</span><div><h2>버그 · 불편 신고</h2><p class="muted">운영자만 볼 수 있어요. 다른 사람에게는 보이지 않아요.</p></div>
+    const opBar = this.isOp() ? `<button class="rp-opbar" data-act="rpGoOp">${icon('inbox')}<span>운영자 신고 · 요청함${this.opNew ? ` · 새 글 <b>${this.opNew}</b>개` : ''}</span></button>` : '';
+    return `<div class="rp-head"><span class="rp-ic">${icon('message-report')}</span><div><h2>신고 · 요청</h2><p class="muted">버그 · 불편한 점 · 하고 싶은 게임 · 바라는 점을 운영자에게 보내요. 운영자만 볼 수 있어요.</p></div>
         <button class="nb-x" data-act="rpClose" aria-label="닫기">${icon('x')}</button></div>${opBar}
-      <div class="ac-tabs rp-tabs">${tab('write', 'send', '신고하기')}${tab('mine', 'inbox', '내 신고', this.unread ? `<i class="ac-dot">${this.unread}</i>` : '')}</div>
+      <div class="ac-tabs rp-tabs">${tab('write', 'send', '보내기')}${tab('mine', 'inbox', '보낸 글', this.unread ? `<i class="ac-dot">${this.unread}</i>` : '')}</div>
       ${u.tab === 'mine' ? this.mineHTML() : this.writeHTML()}`;
   },
   writeHTML() {
     const u = this.ui;
     if (u.sent) return `<div class="rp-done">${icon('circle-check')}<h3>보냈어요! 고마워요</h3>
-      <p class="muted">운영자가 확인하면 [내 신고]에서 처리 상태와 답장을 볼 수 있어요.${Acct.me ? '' : '<br>손님으로 보낸 신고는 이 기기에서만 다시 볼 수 있어요.'}</p>
-      <div class="ov-actions"><button class="btn ghost" data-act="rpTab" data-tab="mine">${icon('inbox')}내 신고 보기</button><button class="btn good" data-act="rpClose">닫기</button></div></div>`;
+      <p class="muted">운영자가 확인하면 [보낸 글]에서 처리 상태와 답장을 볼 수 있어요.${Acct.me ? '' : '<br>손님으로 보낸 글은 이 기기에서만 다시 볼 수 있어요.'}</p>
+      <div class="ov-actions"><button class="btn ghost" data-act="rpTab" data-tab="mine">${icon('inbox')}보낸 글 보기</button><button class="btn good" data-act="rpClose">닫기</button></div></div>`;
     const kinds = Object.entries(RP_KIND).map(([k, [t, ic]]) => `<button class="seg-btn rp-k ${k} ${u.kind === k ? 'on' : ''}" data-act="rpKind" data-k="${k}">${icon(ic)}${t}</button>`).join('');
     return `<div class="rp-form">
       <div class="rp-kinds">${kinds}</div>
@@ -101,8 +102,8 @@ const Report = {
   mineHTML() {
     const L = this.mine;
     if (!L) return '<div class="muted center ac-load">불러오는 중…</div>';
-    const guest = Acct.me ? '' : '<p class="small muted rp-guest">손님으로 보낸 신고는 보낸 기기에서만 볼 수 있어요. 로그인하면 어디서든 볼 수 있어요.</p>';
-    if (!L.length) return `<p class="muted center rp-empty">아직 보낸 신고가 없어요.</p>${guest}`;
+    const guest = Acct.me ? '' : '<p class="small muted rp-guest">손님으로 보낸 글은 보낸 기기에서만 볼 수 있어요. 로그인하면 어디서든 볼 수 있어요.</p>';
+    if (!L.length) return `<p class="muted center rp-empty">아직 보낸 글이 없어요.</p>${guest}`;
     return `<div class="rp-list">${L.map(r => this.itemHTML(r)).join('')}</div>${guest}`;
   },
   bind() {
@@ -122,7 +123,7 @@ const Report = {
     this.addTk(r.id, r.tk);
     u.text = ''; u.sent = r.id; this.mine = null;
     if (this.isOpen()) this.render();
-    toast('📮 신고를 보냈어요. 고마워요!', 'good');
+    toast(u.kind === 'game' || u.kind === 'idea' ? '📮 요청을 보냈어요. 고마워요!' : '📮 신고를 보냈어요. 고마워요!', 'good');
   },
   async loadMine() {
     if (!Acct.me && !this.tks().length) { this.mine = []; this.unread = 0; this.renderBtn(); if (this.isOpen() && this.ui.tab === 'mine') this.render(); return; }
@@ -148,7 +149,8 @@ const Report = {
     const n = this.unread + this.opNew;
     b.querySelector('.rp-dot').textContent = n > 99 ? '99+' : n || '';
     b.classList.toggle('has', !!n);
-    b.title = this.opNew ? `버그 · 불편 신고 (새 신고 ${this.opNew}개)` : this.unread ? '버그 · 불편 신고 (운영자 답장이 왔어요)' : '버그 · 불편 신고';
+    b.title = this.opNew ? `신고 · 요청 (새 글 ${this.opNew}개)` : this.unread ? '신고 · 요청 (운영자 답장이 왔어요)' : '신고 · 요청';
+    if (typeof Menu !== 'undefined') Menu.badge();                          // 메뉴 버튼의 빨간 점 (menu.js)
   },
   /** 접속 · 로그인 · 역할이 바뀌면 답장 · 새 신고 수를 다시 받아요 */
   sync(force) {
@@ -176,7 +178,7 @@ const Report = {
     if (typeof Acct !== 'undefined' && Acct.ui.view === 'me') Acct.refreshHead();
     const s = $('.op-subs [data-k="rep"]');
     if (s) { const d = s.querySelector('.ac-dot'); if (d) d.remove(); if (this.opNew) s.insertAdjacentHTML('beforeend', `<i class="ac-dot">${this.opNew}</i>`); }
-    if (this.isOpen()) { const ob = $('.rp-opbar span'); if (ob) ob.innerHTML = `운영자 신고함${this.opNew ? ` · 새 신고 <b>${this.opNew}</b>개` : ''}`; }
+    if (this.isOpen()) { const ob = $('.rp-opbar span'); if (ob) ob.innerHTML = `운영자 신고 · 요청함${this.opNew ? ` · 새 글 <b>${this.opNew}</b>개` : ''}`; }
   },
   opOpen: () => !!$('#rp-op'),
   async opRender() {
@@ -193,9 +195,9 @@ const Report = {
   opHTML() {
     const o = this.op, c = o.counts;
     const chip = (k, t, n) => `<button class="seg-btn ${o.f === k ? 'on' : ''}" data-act="rpOpF" data-f="${k}">${t} <b>${n}</b></button>`;
-    const empty = { new: '새 신고가 없어요. 👍', seen: '확인 중인 신고가 없어요.', done: '처리 완료한 신고가 없어요.', all: '아직 들어온 신고가 없어요.' }[o.f];
-    return `<div class="ac-set rp-op"><h4>${icon('inbox')}신고함 <button class="btn sm ghost op-refresh" data-act="rpOpRefresh" title="새로 고침">${icon('refresh')}</button></h4>
-      <div class="op-seg rp-fs">${chip('new', '새 신고', c.new)}${chip('seen', '확인함', c.seen)}${chip('done', '완료', c.done)}${chip('all', '전체', c.all)}</div>
+    const empty = { new: '새 글이 없어요. 👍', seen: '확인 중인 글이 없어요.', done: '처리 완료한 글이 없어요.', all: '아직 들어온 글이 없어요.' }[o.f];
+    return `<div class="ac-set rp-op"><h4>${icon('inbox')}신고 · 요청함 <button class="btn sm ghost op-refresh" data-act="rpOpRefresh" title="새로 고침">${icon('refresh')}</button></h4>
+      <div class="op-seg rp-fs">${chip('new', '새 글', c.new)}${chip('seen', '확인함', c.seen)}${chip('done', '완료', c.done)}${chip('all', '전체', c.all)}</div>
       <div class="rp-list">${o.list && o.list.length ? o.list.map(r => this.opItem(r)).join('') : `<p class="muted small rp-empty">${empty}</p>`}</div>
       ${o.more ? '<button class="btn sm ghost rp-more" data-act="rpOpMore">더 보기</button>' : ''}
       <p class="small muted">신고는 운영자만 볼 수 있어요. 답장하면 신고한 사람의 [내 신고]에 보이고, 로그인한 사람에게는 바로 알림이 가요.</p></div>`;
@@ -243,14 +245,14 @@ const Report = {
 /* ─── 화면에 붙이기: 위쪽 버튼 · 신고 창 · 홈 화면 링크 ─── */
 (() => {
   const b = document.createElement('button');
-  b.id = 'rp-top'; b.className = 'btn ghost sm rp-top'; b.dataset.act = 'rpOpen'; b.title = '버그 · 불편 신고';
+  b.id = 'rp-top'; b.className = 'btn ghost sm rp-top'; b.dataset.act = 'rpOpen'; b.title = '신고 · 요청';
   b.innerHTML = `${icon('message-report')}<span class="tb-t">신고</span><b class="rp-dot"></b>`;
   $('#theme-btn').before(b);
-  document.body.insertAdjacentHTML('beforeend', '<div class="overlay" id="rp-ov"><div class="modal rp-modal" id="rp-modal" role="dialog" aria-modal="true" aria-label="버그 · 불편 신고"></div></div>');
+  document.body.insertAdjacentHTML('beforeend', '<div class="overlay" id="rp-ov"><div class="modal rp-modal" id="rp-modal" role="dialog" aria-modal="true" aria-label="신고 · 요청"></div></div>');
   $('#rp-ov').addEventListener('mousedown', e => { if (e.target.id === 'rp-ov') Report.close(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && Report.isOpen()) Report.close(); });
   const hero = $('#scr-home .hero');
-  if (hero) hero.insertAdjacentHTML('beforeend', `<button class="rp-home" data-act="rpOpen">${icon('bug')}버그나 불편한 점이 있나요? <b>운영자에게 알려 주세요</b></button>`);
+  if (hero) hero.insertAdjacentHTML('beforeend', `<button class="rp-home" data-act="rpOpen">${icon('message-report')}불편한 점이나 하고 싶은 게임이 있나요? <b>신고 · 요청</b></button>`);
 })();
 // 로그인 · 로그아웃 · 역할이 바뀌면 다시 받아요 (account.js 의 setMe 뒤에)
 {
@@ -263,14 +265,14 @@ if (socket.connected) Report.sync(true);
 socket.on('admin:report', d => {
   if (!d || !Report.isOp()) return;
   const r = d.r, [t] = RP_KIND[r && r.kind] || RP_KIND.etc;
-  if (r) toast(`📮 새 신고 [${t}] ${String(r.text).slice(0, 40)}${[...String(r.text)].length > 40 ? '…' : ''}`, 'good');
+  if (r) toast(`📮 새 글 [${t}] ${String(r.text).slice(0, 40)}${[...String(r.text)].length > 40 ? '…' : ''}`, 'good');
   if (typeof Sound !== 'undefined') Sound.play('invite');
   Report.opLive({ ...d, isNew: true });
 });
 socket.on('admin:report:upd', d => { if (d && Report.isOp()) Report.opLive(d); });
 // 신고한 사람: 운영자 답장
 socket.on('report:reply', d => {
-  toast('📮 운영자가 신고에 답장했어요. 위쪽 [신고] → 내 신고에서 볼 수 있어요.', 'good');
+  toast('📮 운영자가 답장했어요. 메뉴 → 신고 · 요청 → 보낸 글에서 볼 수 있어요.', 'good');
   if (typeof Sound !== 'undefined') Sound.play('invite');
   Report.unread++; Report.renderBtn();
   if (Report.isOpen() && Report.ui.tab === 'mine') Report.loadMine();

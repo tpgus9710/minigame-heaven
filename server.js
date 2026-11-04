@@ -77,7 +77,8 @@ if (compression) app.use(compression());           // 화면 파일을 압축해
 // 얼굴 인식 모델 · 실행기는 크고 바뀌지 않아서 브라우저가 오래 보관하게 해요 (폴더 이름에 버전이 들어 있어요)
 app.use(['/vendor', '/models'], (req, res, next) => { res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); next(); });
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/health', (req, res) => res.json({ ok: true, rooms: rooms.size, players: io.engine.clientsCount, accounts: ACC.status() }));   // 클라우드 상태 확인용
+const APP_VERSION = (() => { try { return require('./package.json').version; } catch { return ''; } })();   // 패치 버전 (화면 왼쪽 아래 · 메뉴에도 보여요)
+app.get('/health', (req, res) => res.json({ ok: true, version: APP_VERSION, rooms: rooms.size, players: io.engine.clientsCount, accounts: ACC.status() }));   // 클라우드 상태 확인용
 
 // 🛡️ 어떤 오류가 나도 서버가 꺼지지 않게 (로그만 남김)
 process.on('uncaughtException', e => console.error('⚠️  처리되지 않은 오류 (서버는 계속 실행됩니다):', e));
@@ -204,7 +205,7 @@ function lanAddresses() {
     .filter(i => i && (i.family === 'IPv4' || i.family === 4) && !i.internal).map(i => i.address);
 }
 
-const serverInfo = () => ({ lan: CLOUD ? [] : lanAddresses(), port: PORT, publicUrl, online: ONLINE || CLOUD, build: BUILD });
+const serverInfo = () => ({ lan: CLOUD ? [] : lanAddresses(), port: PORT, publicUrl, online: ONLINE || CLOUD, build: BUILD, version: APP_VERSION });
 
 /* ─── 접속 한도: 인터넷에 공개해도 서버가 버티도록 ─── */
 const perIp = new Map();

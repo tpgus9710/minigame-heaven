@@ -189,3 +189,14 @@
   .gs-ph{font-size:12px}
   .gs-bar{min-height:30px;padding:3px 8px;font-size:12.5px}
 }
+
+/* v12: 전통 화투 그림 (js/gostop-art.js 가 카드마다 그림을 배경으로 붙여요) · 작은 달 숫자 · 光 · 쌍피 표시만 위에 */
+.hw.art{background-color:#fbf6e9;background-size:100% 100%;background-repeat:no-repeat}
+.hw.art::before{display:none}
+.hw.art .n{left:calc(var(--w) * .05);top:calc(var(--w) * .05);min-width:calc(var(--w) * .3);height:calc(var(--w) * .3);padding:0 calc(var(--w) * .04);box-sizing:border-box;border-radius:99px;
+  display:grid;place-items:center;font:400 calc(var(--w) * .2)/1 'Black Han Sans',sans-serif;color:#fff;background:rgba(24,18,18,.6);letter-spacing:-.03em}
+.hw.art .n.n2{left:calc(var(--w) * .05);font-size:calc(var(--w) * .18)}
+.hw.art .t.gw{width:calc(var(--w) * .34);height:calc(var(--w) * .34);right:calc(var(--w) * .05);top:calc(var(--w) * .05);font-size:calc(var(--w) * .21)}
+.hw.art .t.p2{left:auto;right:calc(var(--w) * .05);bottom:calc(var(--w) * .05);padding:calc(var(--w) * .045) calc(var(--w) * .08);border-radius:99px;font-size:calc(var(--w) * .16);background:rgba(24,18,18,.78)}
+.hw.art.mini .t.p2{padding:0;width:calc(var(--w) * .36);height:calc(var(--w) * .16)}
+.hw.big.art .n{font-size:calc(var(--w) * .18)}

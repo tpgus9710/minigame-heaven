@@ -27,10 +27,11 @@
   border:1px solid color-mix(in srgb,var(--info) 40%,var(--line));background:color-mix(in srgb,var(--info) 12%,var(--panel2));color:var(--text);font:700 14px 'Noto Sans KR',sans-serif}
 .rp-opbar .ic{width:18px;height:18px;flex:none;color:var(--info);margin:0} .rp-opbar span{flex:1} .rp-opbar b{color:var(--bad)}
 .rp-tabs{margin:14px 0 12px}
-.rp-kinds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.rp-kinds{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:10px}
+@media (max-width:560px){ .rp-kinds{grid-template-columns:repeat(3,minmax(0,1fr))} .seg-btn.rp-k{font-size:13px;padding:9px 4px;gap:4px} }
 .seg-btn.rp-k{flex-direction:row;align-items:center;justify-content:center;gap:5px;padding:9px 6px;border-radius:12px;font:700 14px 'Noto Sans KR',sans-serif;white-space:nowrap}
 .rp-k .ic{width:17px;height:17px;margin:0;flex:none}
-.rp-k.bug.on .ic{color:var(--bad)} .rp-k.ux.on .ic{color:var(--warn)} .rp-k.idea.on .ic{color:var(--good)}
+.rp-k.bug.on .ic{color:var(--bad)} .rp-k.ux.on .ic{color:var(--warn)} .rp-k.idea.on .ic{color:var(--good)} .rp-k.game.on .ic{color:var(--info)}
 .rp-form textarea{width:100%;display:block;font:inherit;font-size:15px;line-height:1.55;padding:10px 12px;border-radius:12px;border:2px solid var(--line);
   background:var(--panel2);color:var(--text);resize:vertical;min-height:130px}
 .rp-form textarea:focus{outline:none;border-color:var(--accent)}
@@ -63,6 +64,7 @@
 .rp-kind.bug{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
 .rp-kind.ux{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
 .rp-kind.idea{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.rp-kind.game{background:color-mix(in srgb,var(--info) 18%,transparent);color:var(--info)}
 .rp-st{font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--panel);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
 .rp-item.op .rp-st{background:var(--panel2)}
 .rp-st.new{color:var(--warn)} .rp-st.seen{color:var(--info)} .rp-st.done{color:var(--good)}

@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="/css/admin.css">
 <link rel="stylesheet" href="/css/report.css">
 <link rel="stylesheet" href="/css/manual.css">
+<link rel="stylesheet" href="/css/menu.css">
 <link rel="stylesheet" href="/css/fit-a.css">
 <link rel="stylesheet" href="/css/fit-b.css">
 <link rel="stylesheet" href="/css/fit-c.css">
@@ -201,9 +202,10 @@
   <!-- ─────────── 핑퐁 ─────────── -->
   <section class="screen" id="scr-pong">
     <div class="game-head">
-      <div class="gh-title"><h2 id="pong-title">🏓 핑퐁</h2><div class="status" id="pong-status">마우스를 판 위에서 움직여 패들을 조종하세요.</div></div>
+      <div class="gh-title"><h2 id="pong-title">🏓 핑퐁</h2><div class="status" id="pong-status">마우스로 패들을 움직여요.</div></div>
       <button class="btn ghost" data-act="leaveGame">나가기</button>
     </div>
+    <div class="mode-row hidden" id="pong-levels"><button class="seg-btn" data-act="pongLv" data-lv="easy">쉬움</button><button class="seg-btn" data-act="pongLv" data-lv="normal">보통</button><button class="seg-btn" data-act="pongLv" data-lv="hard">어려움</button></div>
     <div class="pong-wrap">
       <canvas id="pong-cv" width="600" height="600"></canvas>
       <div class="p-side" id="pong-side"></div>
@@ -330,12 +332,14 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/icons.js"></script>
 <script src="/js/core.js"></script>
+<script src="/js/stick.js"></script>
 <script src="/js/sound.js"></script>
 <script src="/js/apple.js"></script>
 <script src="/js/race.js"></script>
 <script src="/js/omok.js"></script>
 <script src="/js/draw.js"></script>
 <script src="/js/tetris.js"></script>
+<script src="/js/shared/pong-core.js"></script>
 <script src="/js/pong.js"></script>
 <script src="/js/cards.js"></script>
 <script src="/js/mine.js"></script>
@@ -390,6 +394,7 @@
 <script src="/js/shared/chess-core.js"></script>
 <script src="/js/chess.js"></script>
 <script src="/js/shared/gostop-core.js"></script>
+<script src="/js/gostop-art.js"></script>
 <script src="/js/gostop.js"></script>
 <script src="/js/shared/sudoku-core.js"></script>
 <script src="/js/sudoku.js"></script>
@@ -410,5 +415,7 @@
 <script src="/js/report.js"></script>
 <script src="/js/manual.js"></script>
 <script src="/js/tutorial.js"></script>
+<script src="/js/patchnotes.js"></script>
+<script src="/js/menu.js"></script>
 </body>
 </html>

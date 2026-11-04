@@ -3,7 +3,7 @@
  *  내 차례: 손패를 누르면 바닥의 같은 달 패가 빛나요 → 한 번 더 누르면 내요 (마우스는 바로 내요).
  *  바닥 두 장 중 고르기 · 고/스톱 · 총통 · 흔들기/폭탄은 가운데 창에서 골라요.
  *  낸 패 → 바닥 → 먹은 패로 움직이는 모습을 짧게 보여줘요 (패마다 같은 data-id 로 전 · 후 위치를 비교).
- *  화투 그림은 직접 만든 단순한 모양이에요: 달 숫자 · 달 한자 · 광(光) · 열끗 동물 · 띠 · 쌍피 표시.
+ *  화투 그림: 전통 화투 무늬를 SVG 로 그린 그림 (js/gostop-art.js) + 작은 달 숫자 · 광(光) · 쌍피 표시.
  *  판 크기: 남은 높이(Fit.room)에 맞춰 바닥 · 손패 카드 크기를 계산해요 (세로: 한 줄로 쌓기 / 가로: 왼쪽 정보 · 오른쪽 판).
  * ===================================================================== */
 makeScreen('gostop', {
@@ -24,21 +24,7 @@ const GS = {
   bots: 1, rounds: 5, sel: null, confirm: null, peek: false, busyUntil: 0, slots: new Map(), round: -1, gen: null,
   evId: null, evShown: 0, dims: null, v: null, ctx: null,
   COL: ['#777', '#1f7a3a', '#c2185b', '#d94f86', '#4a2d6b', '#3949ab', '#c62828', '#8e24aa', '#37474f', '#b07d00', '#e64a19', '#6d4c41', '#00838f'],
-  SIGN: ['', '松', '梅', '櫻', '藤', '蘭', '牡', '萩', '月', '菊', '楓', '桐', '雨'],
-  DAN: { hong: '홍단', cheong: '청단', cho: '초단' },
   KORD: { gw: 0, yl: 1, tt: 2, pi: 3 },
-  /** 열끗 동물 그림 (24×24) — 새 · 다리 · 나비 · 멧돼지 · 기러기 · 술잔 · 사슴 · 제비. 나비 · 사슴 · 멧돼지는 Tabler Icons (MIT) */
-  YL: {
-    bird: '<path fill="currentColor" d="M4.6 13.2l-3.8-2.6 1.3 5.3 2.3-.9c1.2 2.9 4 4.6 7.4 4.6 4.6 0 8-3.1 8.2-7.4l3-1.1-3.1-1.2c-.4-2.3-2.4-4-4.8-4-2.4 0-4.4 1.7-4.8 4-2.6-.6-4.6.4-5.7 3.3z"/><circle cx="17" cy="8.9" r="1" fill="#263238"/>',
-    bridge: '<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 15.5l5-5 5 5 5-5 5 5"/><path d="M7 10.5v8M12 15.5v3.5M17 10.5v8"/></g>',
-    butterfly: '<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18.176a3 3 0 1 1 -4.953 -2.449l-.025 .023a4.502 4.502 0 0 1 1.483 -8.75c1.414 0 2.675 .652 3.5 1.671a4.5 4.5 0 1 1 4.983 7.079a3 3 0 1 1 -4.983 2.25z"/><path d="M12 19v-10"/><path d="M9 3l3 2l3 -2"/></g>',
-    boar: '<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 11v.01"/><path d="M16 3l0 3.803a6.019 6.019 0 0 1 2.658 3.197h1.341a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-1.342a6.008 6.008 0 0 1 -1.658 2.473v2.027a1.5 1.5 0 0 1 -3 0v-.583a6.04 6.04 0 0 1 -1 .083h-4a6.04 6.04 0 0 1 -1 -.083v.583a1.5 1.5 0 0 1 -3 0v-2l0 -.027a6 6 0 0 1 4 -10.473h2.5l4.5 -3z"/></g>',
-    geese: '<g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 10l3 2.2 3-2.2"/><path d="M9 5.5l3 2.2 3-2.2"/><path d="M15.5 13l3 2.2 3-2.2"/></g>',
-    cup: '<path fill="currentColor" d="M2.5 8.5h19c-.5 4.6-4.5 7.6-9.5 7.6s-9-3-9.5-7.6z"/><path fill="currentColor" d="M8.6 17h6.8l1 3H7.6z"/>',
-    deer: '<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3c0 2 1 3 4 3c2 0 3 1 3 3"/><path d="M21 3c0 2 -1 3 -4 3c-2 0 -3 .333 -3 3"/><path d="M12 18c-1 0 -4 -3 -4 -6c0 -2 1.333 -3 4 -3s4 1 4 3c0 3 -3 6 -4 6"/><path d="M15.185 14.889l.095 -.18a4 4 0 1 1 -6.56 0"/><path d="M17 3c0 1.333 -.333 2.333 -1 3"/><path d="M7 3c0 1.333 .333 2.333 1 3"/><path d="M7 6c-2.667 .667 -4.333 1.667 -5 3"/><path d="M17 6c2.667 .667 4.333 1.667 5 3"/></g>',
-    swallow: '<path fill="currentColor" d="M12 6c1.1 0 1.8.9 1.8 2l7.7-2-5.9 6-1 9-2.6-3.6-2.6 3.6-1-9-5.9-6 7.7 2c0-1.1.7-2 1.8-2z"/>',
-  },
-  YLM: { 2: 'bird', 4: 'bird', 5: 'bridge', 6: 'butterfly', 7: 'boar', 8: 'geese', 9: 'cup', 10: 'deer', 12: 'swallow' },
 
   /** 화투 한 장. o: { cls, z(자리: h 손 · f 바닥 · c 먹은 패 · s 보여준 패 · p 고르는 중), st(추가 style), act } */
   card(id, o = {}) {
@@ -47,12 +33,9 @@ const GS = {
     const at = `data-id="${id}"${o.z ? ` data-z="${o.z}"` : ''}${o.act ? ` data-act="${o.act}" data-c="${id}" role="button" tabindex="0"` : ''}${o.extra || ''}`;
     const st = o.st ? `;${o.st}` : '';
     if (c.bonus) return `<div class="hw bonus ${o.cls || ''}" ${at} style="--mc:#bf360c${st}" title="${c.name}"><b class="bx">${c.bonus}</b><s class="t bl">보너스</s></div>`;
-    let mark = '';
-    if (c.kind === 'gw') mark = '<s class="t gw">光</s>';
-    else if (c.kind === 'yl') mark = `<s class="t yl"><svg viewBox="0 0 24 24" aria-hidden="true">${this.YL[this.YLM[c.m]]}</svg></s>`;
-    else if (c.kind === 'tt') mark = `<s class="t tt ${c.dan || 'bi'}">${c.dan ? this.DAN[c.dan] : ''}</s>`;
-    else if (c.pi === 2) mark = '<s class="t p2">쌍피</s>';
-    return `<div class="hw k-${c.kind}${c.pi === 2 ? ' ssang' : ''} ${o.cls || ''}" ${at} style="--mc:${this.COL[c.m]}${st}" title="${c.name}"><i class="n${c.m >= 10 ? ' n2' : ''}">${c.m}</i><b class="e">${this.SIGN[c.m]}</b>${mark}</div>`;
+    if (typeof HwatuArt !== 'undefined') HwatuArt.init();
+    const mark = c.kind === 'gw' ? '<s class="t gw">光</s>' : c.pi === 2 ? '<s class="t p2">쌍피</s>' : '';
+    return `<div class="hw hwa art k-${c.kind}${c.pi === 2 ? ' ssang' : ''} ${o.cls || ''}" ${at} data-art="${id}" style="--mc:${this.COL[c.m]}${st}" title="${c.name}"><i class="n${c.m >= 10 ? ' n2' : ''}">${c.m}</i>${mark}</div>`;
   },
   back(cls = '') { return `<div class="hw back ${cls}"></div>`; },
   fmt: n => (n > 0 ? '+' : '') + n,

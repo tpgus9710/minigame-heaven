@@ -1,0 +1,84 @@
+/* =====================================================================
+ *  ☰ 메뉴 · 패치 노트 · 버전 표시 (js/menu.js) — iOS 설정 느낌: 묶음 목록 · 색 아이콘 · 스위치
+ * ===================================================================== */
+/* 위쪽: 예전 버튼(🔊 · 신고 · 라이트 모드)은 메뉴 안으로 */
+.top-right > #snd-btn,.top-right > #rp-top,.top-right > #theme-btn{display:none!important}
+.menu-btn{position:relative;display:inline-grid;place-items:center;width:38px;height:36px;padding:0}
+.menu-btn .ic{width:20px;height:20px;margin:0}
+.menu-btn .mb-dot{position:absolute;top:-5px;right:-5px;min-width:12px;height:12px;padding:0 4px;border-radius:99px;background:var(--bad);color:#fff;
+  font:900 10px/12px 'Noto Sans KR',sans-serif;display:none;box-shadow:0 0 0 2px var(--bg)}
+.menu-btn .mb-dot:not(:empty){min-width:18px;height:18px;line-height:18px;top:-7px;right:-7px}
+.menu-btn.has .mb-dot{display:block}
+body.gaming .menu-btn{width:34px;height:32px}
+
+/* 시트 */
+.ms-ov{position:fixed;inset:0;z-index:170;display:none;background:transparent}
+.ms-ov.show{display:block}
+.ms-sheet{--ms-bg:color-mix(in srgb,var(--bg) 82%,var(--panel));position:absolute;top:58px;right:14px;width:min(360px,calc(100vw - 28px));max-height:calc(100vh - 76px);overflow:auto;
+  overscroll-behavior:contain;background:var(--ms-bg);border:1px solid var(--line);border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.45);padding:6px 14px 12px;
+  animation:msPop .16s ease-out;transform-origin:top right;-webkit-tap-highlight-color:transparent}
+@keyframes msPop{from{opacity:0;transform:scale(.96) translateY(-6px)}to{opacity:1;transform:none}}
+.ms-grab{display:none}
+.ms-head{display:flex;align-items:center;gap:8px;padding:8px 2px 10px}
+.ms-head > b{flex:1;font:400 21px/1.2 'Black Han Sans',sans-serif}
+.ms-head.nav > b{text-align:center;font-size:18px}
+.ms-x{flex:none;width:30px;height:30px;border-radius:50%;border:0;background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
+.ms-x .ic{width:16px;height:16px;margin:0}
+.ms-back{flex:none;display:inline-flex;align-items:center;gap:1px;border:0;background:none;color:var(--accent-2);font:700 15px 'Noto Sans KR',sans-serif;cursor:pointer;padding:4px 6px 4px 0}
+.ms-back .ic{width:20px;height:20px;margin:0}
+.ms-head.nav .ms-back{min-width:64px} .ms-head.nav .ms-x{margin-left:34px}
+.ms-group{background:var(--panel);border-radius:14px;overflow:hidden;margin:0 0 14px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.ms-row{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-height:50px;padding:8px 12px;border:0;background:none;color:var(--text);text-align:left;cursor:pointer;
+  font:500 16px/1.25 'Noto Sans KR',sans-serif;box-sizing:border-box}
+.ms-row + .ms-row::before{content:'';position:absolute;top:0;left:53px;right:0;height:1px;background:var(--line)}
+button.ms-row:active,label.ms-row:active{background:color-mix(in srgb,var(--text) 7%,transparent)}
+@media (hover:hover) and (pointer:fine){ button.ms-row:hover{background:color-mix(in srgb,var(--text) 5%,transparent)} }
+.ms-ic{flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--c);color:#fff}
+.ms-ic .ic{width:18px;height:18px;margin:0;stroke-width:2.2}
+.ms-t{flex:1;min-width:0}
+.ms-t small{display:block;margin-top:2px;font-size:12.5px;font-weight:400;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms-chev{flex:none;color:color-mix(in srgb,var(--muted) 70%,transparent);display:grid}
+.ms-chev .ic{width:18px;height:18px;margin:0}
+.ms-badge{flex:none;min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:var(--bad);color:#fff;font:900 12px/22px 'Noto Sans KR',sans-serif;text-align:center}
+.ms-new{flex:none;font:900 10.5px/1 'Noto Sans KR',sans-serif;font-style:normal;color:#fff;background:var(--bad);padding:4px 7px;border-radius:99px;letter-spacing:.03em}
+.ms-foot{margin:2px 0 4px;text-align:center;font-size:12.5px;color:var(--muted)}
+/* iOS 스위치 */
+.ms-sw{appearance:none;-webkit-appearance:none;flex:none;position:relative;width:51px;height:31px;margin:0;border-radius:99px;background:color-mix(in srgb,var(--muted) 35%,transparent);cursor:pointer;transition:background .2s}
+.ms-sw::after{content:'';position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.3);transition:transform .2s}
+.ms-sw:checked{background:#34c759} .ms-sw:checked::after{transform:translateX(20px)}
+.ms-sw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* 패치 노트 */
+.pn-list{padding-bottom:2px}
+.pn{margin-bottom:10px}
+.pn-h{gap:10px}
+.pn-v{flex:none;min-width:52px;padding:4px 8px;border-radius:9px;text-align:center;font:900 14px/1.2 'Noto Sans KR',sans-serif;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.pn-v.now{background:color-mix(in srgb,var(--good) 20%,transparent);color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,transparent)}
+.pn-h .ms-chev{transition:transform .18s}
+.pn.open .pn-h .ms-chev{transform:rotate(180deg)}
+.pn-b{display:none;list-style:none;margin:0;padding:2px 14px 12px 14px}
+.pn.open .pn-b{display:block}
+.pn-b li{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:14px;line-height:1.55;border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+.pn-b li:first-child{border-top:0}
+.pn-b li > i{flex:none;width:22px;font-style:normal;text-align:center}
+.pn-b li b{color:var(--accent-2)}
+
+/* 처음 화면 · 메뉴 화면 왼쪽 아래 버전 */
+.ver-tag{position:fixed;left:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:30;display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:99px;
+  border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 85%,transparent);color:var(--muted);font:700 11.5px/1 'Noto Sans KR',sans-serif;cursor:pointer;opacity:.85;
+  backdrop-filter:blur(6px)}
+.ver-tag:hover{opacity:1;color:var(--text)}
+.ver-tag i{display:none;width:7px;height:7px;border-radius:50%;background:var(--bad)}
+.ver-tag.new i{display:block}
+body.gaming .ver-tag,body.in-room .ver-tag{display:none}
+
+/* 휴대폰: 아래에서 올라오는 시트 */
+@media (max-width:640px){
+  .ms-ov{background:rgba(5,8,20,.45);backdrop-filter:blur(2px)}
+  .ms-sheet{top:auto;left:0;right:0;bottom:0;width:auto;max-height:86vh;border-radius:22px 22px 0 0;border-bottom:0;padding:4px 14px calc(14px + env(safe-area-inset-bottom,0px));
+    animation:msUp .22s cubic-bezier(.2,.8,.25,1);transform-origin:bottom center}
+  .ms-grab{display:block;width:38px;height:5px;border-radius:99px;background:color-mix(in srgb,var(--muted) 45%,transparent);margin:6px auto 2px}
+  .ms-row{min-height:52px}
+}
+@keyframes msUp{from{transform:translateY(100%)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){ .ms-sheet{animation:none} }

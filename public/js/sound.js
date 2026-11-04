@@ -1,6 +1,6 @@
 /* =====================================================================
  *  🔔 알림음 — 귓속말 · 초대 · 친구 접속 · 내 차례 · 미션 · 체스 · 고스톱 효과음 (소리 파일 없이 짧게 만들어요)
- *  설정: 위쪽 🔊 버튼(켜기 · 끄기), 내 정보 → 설정(음량 · 친구 접속 알림)
+ *  설정: 메뉴 → 소리(켜기 · 끄기), 내 정보 → 설정(음량 · 친구 접속 알림)
  * ===================================================================== */
 const Sound = {
   ctx: null,
@@ -43,6 +43,20 @@ const Sound = {
         o.connect(g); g.connect(out);
         o.start(t0 + at); o.stop(t0 + at + len + 0.2);
       }
+    } catch { /* 무시 */ }
+  },
+  /** 짧은 '톡' 소리 (핑퐁: 공이 빠를수록 높게) · f: 높이(Hz) · len: 길이(초) · k: 크기 */
+  blip(f, len = 0.04, k = 1) {
+    if (!this.on || !this.vol) return;
+    this.unlock();
+    const c = this.ctx;
+    if (!c || c.state !== 'running') return;
+    try {
+      const t0 = c.currentTime + 0.005, o = c.createOscillator(), g = c.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, this.vol * 0.22 * k), t0 + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + len + 0.06);
+      o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + len + 0.08);
     } catch { /* 무시 */ }
   },
   /** 게임에서 내 차례가 새로 왔을 때 (멀티에서만 불러요) */

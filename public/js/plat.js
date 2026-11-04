@@ -68,6 +68,7 @@ const Plat = {
     S.solo = 'plat';
     this.lives = 3; this.coins = 0; this.score = 0; this.over = false;
     this.begin(false, rand(1e9), 1);
+    setStatus('plat', TOUCH ? '왼쪽 엄지로 밀어서 이동(끝까지 밀면 달리기) · 오른쪽을 누르면 점프 · 적은 위에서 밟아요!' : '←→ 이동 · ↑/스페이스 점프 · Shift 달리기 · 적은 위에서 밟아요!');
     $('#plat-life-label').textContent = '목숨'; $('#plat-coin-label').textContent = '코인';
     show('plat'); this.hud();
     this.t0 = performance.now() + 600;
@@ -324,7 +325,8 @@ register('plat', {
   solo: () => Plat.startSolo(),
   stop: () => { Plat.over = true; },
   key: e => { if (['Space', 'ArrowUp', 'KeyW'].includes(e.code) && !e.repeat) Plat.p && (Plat.p.buffer = 0.12); },
-  pad: ['ArrowLeft', 'ArrowRight', '|', 'Space'], padLabel: { Space: '점프' },
+  // 휴대폰 · 태블릿: 왼쪽 엄지 조이스틱(끝까지 밀면 달리기) + 오른쪽 어디든 점프 (stick.js) — 키보드는 그대로
+  stick: { run: 'ShiftLeft', hint: '엄지로 밀어서 이동 · 끝까지 밀면 달리기', act: { code: 'Space', label: '점프', icon: 'arrow-up', hint: '오른쪽 어디든 점프 · 길게 누르면 높이' } },
 });
 socket.on('plat:start', d => Plat.startMulti(d));
 socket.on('plat:ghosts', d => {

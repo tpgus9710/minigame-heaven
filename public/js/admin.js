@@ -128,7 +128,7 @@ const Admin = {
   subsHTML() {
     const nNew = typeof Report !== 'undefined' ? Report.opNew : 0;
     const b = (k, ic, t, n) => `<button class="seg-btn ${this.sub === k ? 'on' : ''}" data-act="opSub" data-k="${k}">${icon(ic)}${t}${n ? `<i class="ac-dot">${n}</i>` : ''}</button>`;
-    return `<div class="op-subs">${b('rep', 'inbox', '신고함', nNew)}${b('main', 'speakerphone', '공지 · 관리', 0)}</div>`;
+    return `<div class="op-subs">${b('rep', 'inbox', '신고 · 요청', nNew)}${b('main', 'speakerphone', '공지 · 관리', 0)}</div>`;
   },
   async render() {
     const box = $('#ac-body');

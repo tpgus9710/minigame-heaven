@@ -20,6 +20,8 @@ const Volley = {
     $('#volley-levels').classList.remove('hidden');
     $$('#volley-levels .seg-btn').forEach(b => b.classList.toggle('on', +b.dataset.lv === this.lv));
     setStat('volley', 'target', '15점'); setStat('volley', 'score', '0 : 0');
+    setStatus('volley', TOUCH ? '조이스틱 이동 · 위로 밀면 점프 · 공중에서 오른쪽 = 스파이크 · 땅에서 밀며 누르면 슬라이딩'
+      : '←→ 이동 · ↑ 점프 · 공중에서 스페이스 = 스파이크 (↑↓로 방향) · 땅에서 방향키+스페이스 = 슬라이딩');
     show('volley');
     gameLoop(dt => {
       this.acc = Math.min(0.1, this.acc + dt);
@@ -44,7 +46,7 @@ const Volley = {
     Object.assign(this, { mode: 'multi', names: d.names, side: d.ids.indexOf(S.myId), mask: 0, disp: null, latest: null, msg: null, over: false });
     $('#volley-levels').classList.add('hidden');
     setStat('volley', 'target', d.target + '점'); setStat('volley', 'score', '0 : 0');
-    setStatus('volley', this.side < 0 ? '👀 관전 중이에요' : `나는 ${this.side ? '🔴 오른쪽' : '🔵 왼쪽'} 코트! ←→ 이동 · ↑ 점프 · 스페이스 스파이크`);
+    setStatus('volley', this.side < 0 ? '👀 관전 중이에요' : `나는 ${this.side ? '🔴 오른쪽' : '🔵 왼쪽'} 코트! ${TOUCH ? '조이스틱으로 이동 · 위로 밀면 점프 · 오른쪽을 누르면 스파이크' : '←→ 이동 · ↑ 점프 · 스페이스 스파이크'}`);
     show('volley'); renderScores();
     gameLoop(dt => { if (this.latest) this.render(this.latest, dt); });
   },
@@ -143,7 +145,8 @@ register('volley', {
   stop: () => { Volley.over = true; },
   key: e => { if (VB_KEYS.p.includes(e.code) && !e.repeat) Volley.press = true; Volley.sendInput(); },
   keyup: () => Volley.sendInput(),
-  pad: ['ArrowLeft', 'ArrowRight', '|', 'ArrowUp', 'Space'], padLabel: { ArrowUp: '점프', Space: '스파이크' },
+  // 휴대폰 · 태블릿: 왼쪽 엄지 조이스틱(좌우 이동 · 위로 밀면 점프 · 아래로 밀면 ↓) + 오른쪽 어디든 스파이크 (stick.js) — 키보드는 그대로
+  stick: { y: true, hint: '밀어서 이동 · 위로 밀면 점프', act: { code: 'Space', label: '스파이크', icon: 'bolt' } },
 });
 socket.on('volley:start', d => Volley.startMulti(d));
 socket.on('volley:s', st => Volley.onState(st));

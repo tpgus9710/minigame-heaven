@@ -22,7 +22,9 @@ const Dodge = {
     this.reset(false);
     $('#dodge-modes').classList.remove('hidden');
     $$('#dodge-modes .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.mode === this.mode));
-    $('#dodge-help').textContent = this.mode === 'bamboo' ? '←→ (A·D) 또는 마우스로 좌우로 피하세요. 빨간 표시가 뜬 곳에 대나무가 떨어져요!' : '방향키·WASD 또는 마우스(터치)를 누른 채 움직이세요. 총알이 점점 많아져요!';
+    $('#dodge-help').textContent = this.mode === 'bamboo'
+      ? (TOUCH ? '엄지로 좌우로 밀어서 피하세요. 빨간 표시가 뜬 곳에 대나무가 떨어져요!' : '←→ (A·D) 또는 마우스로 좌우로 피하세요. 빨간 표시가 뜬 곳에 대나무가 떨어져요!')
+      : (TOUCH ? '아래쪽을 엄지로 밀면 조이스틱 — 살짝 밀면 천천히, 끝까지 밀면 빠르게. 총알이 점점 많아져요!' : '방향키·WASD 또는 마우스를 누른 채 움직이세요. 총알이 점점 많아져요!');
     setStatus('dodge', this.mode === 'bamboo' ? '🎋 대나무 모드 — 하늘에서 떨어지는 대나무를 피하세요' : '🎯 총알 모드 — 사방에서 날아오는 총알을 피하세요');
     $('#dodge-best-label').textContent = '최고 기록';
     setStat('dodge', 'best', (+store.get('best-dodge-' + this.mode, 0)).toFixed(1) + '초');
@@ -38,7 +40,7 @@ const Dodge = {
     if (!d.pos[S.myId]) this.dead = true;                     // 관전
     for (const [id, p] of Object.entries(d.pos)) if (id !== S.myId) this.others[id] = { x: p.x, y: p.y, tx: p.x, ty: p.y };
     $('#dodge-modes').classList.add('hidden');
-    $('#dodge-help').textContent = '방향키·WASD 또는 마우스(터치)를 누른 채 움직이세요. 맞으면 탈락!';
+    $('#dodge-help').textContent = TOUCH ? '아래쪽을 엄지로 밀면 조이스틱 — 살짝 밀면 천천히, 끝까지 밀면 빠르게. 맞으면 탈락!' : '방향키·WASD 또는 마우스를 누른 채 움직이세요. 맞으면 탈락!';
     setStatus('dodge', '🎯 총알피하기 배틀 — 마지막까지 살아남으세요!');
     setStat('dodge', 'best', `${Object.keys(d.pos).length}명`); $('#dodge-best-label').textContent = '참가';
     show('dodge'); renderScores();
@@ -60,7 +62,9 @@ const Dodge = {
     const bam = this.mode === 'bamboo', sp = bam ? 330 : 230;
     let dx = (held('ArrowRight', 'KeyD') ? 1 : 0) - (held('ArrowLeft', 'KeyA') ? 1 : 0);
     let dy = bam ? 0 : (held('ArrowDown', 'KeyS') ? 1 : 0) - (held('ArrowUp', 'KeyW') ? 1 : 0);
-    if (this.pointer && !dx && !dy) {                           // 마우스를 누르고 있으면 그쪽으로
+    const v = !dx && !dy && typeof Stick !== 'undefined' && Stick.key === 'dodge' ? Stick.vec() : null;
+    if (v) { dx = v.x; dy = bam ? 0 : v.y; }                     // 터치 조이스틱: 미는 만큼 (살짝 밀면 천천히)
+    else if (this.pointer && !dx && !dy) {                      // 마우스(손가락)를 누르고 있으면 그쪽으로
       const px = this.pointer.x - this.me.x, py = bam ? 0 : this.pointer.y - this.me.y, d = Math.hypot(px, py);
       if (d > 3) { const k = Math.min(1, d / (sp * dt)); dx = (px / d) * k; dy = (py / d) * k; }
     }
@@ -170,6 +174,10 @@ const Dodge = {
   ['pointerup', 'pointercancel'].forEach(t => cv.addEventListener(t, () => { Dodge.pointer = null; }));
 })();
 ACT.dodgeMode = el => Dodge.startSolo(el.dataset.mode);
-register('dodge', { solo: () => Dodge.startSolo(), stop: () => { Dodge.over = true; }, pad: ['ArrowLeft', 'ArrowRight', '|', 'ArrowUp', 'ArrowDown'] });
+// 휴대폰 · 태블릿: 조이스틱 하나 (세로 화면은 아래 전체 · 가로 화면은 양옆 어느 쪽이든) · 미는 세기만큼 빠르게 (stick.js) — 키보드 · 마우스는 그대로
+register('dodge', {
+  solo: () => Dodge.startSolo(), stop: () => { Dodge.over = true; },
+  stick: { analog: true, full: true, y: () => Dodge.mode !== 'bamboo', hint: () => (Dodge.mode === 'bamboo' ? '엄지로 밀어서 좌우로 피하기' : '엄지로 밀어서 이동 · 살짝 밀면 천천히') },
+});
 socket.on('dodge:start', d => Dodge.startMulti(d));
 socket.on('dodge:tick', d => Dodge.onTick(d));

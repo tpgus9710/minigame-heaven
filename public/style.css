@@ -183,6 +183,7 @@ body.in-room .shell{grid-template-columns:minmax(0,1fr) 300px}
 /* 핑퐁 */
 .pong-wrap{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
 #pong-cv{border-radius:16px;box-shadow:var(--shadow);background:#0b0e1a;max-width:100%;touch-action:none;cursor:none}
+#scr-pong{touch-action:none;-webkit-user-select:none;user-select:none}            /* 판 아래를 끌어도 패들 조종 (화면이 움직이지 않게) */
 .p-side{width:220px;display:flex;flex-direction:column;gap:8px}
 .pside{background:var(--panel);border:1px solid var(--line);border-left:6px solid;border-radius:12px;padding:10px 12px}
 .pside.dead{opacity:.45} .pside.me{box-shadow:0 0 0 2px var(--accent)}
@@ -698,3 +699,43 @@ body.pad-side #vpad .tee [data-code=ArrowDown]{grid-area:d;justify-self:center}
 #reconn small{font-weight:500;color:var(--muted)}
 @media (max-width:520px){ #reconn small{display:none} }
 .tag.away{background:rgba(255,194,75,.16);color:var(--warn)}
+
+/* 🕹️ 조이스틱 패드 (stick.js) — 세로: 아래 띠 + 게임판 아래 빈 곳까지 · 가로(pad-side): 게임판 양옆 */
+#vpad.stick{bottom:0;padding:0;height:calc(var(--stk-h,150px) + env(safe-area-inset-bottom,0px));display:block;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#vpad.stick .pad-l,#vpad.stick .pad-r{position:absolute;bottom:0;top:calc(-1 * var(--stk-up,0px));width:50%;display:block;gap:0;pointer-events:auto;touch-action:none;overflow:visible;-webkit-tap-highlight-color:transparent}
+#vpad.stick .pad-l{left:0} #vpad.stick .pad-r{right:0}
+#vpad.stick .pad-r:empty{pointer-events:none}
+#vpad.stick.full .pad-l{width:100%} #vpad.stick.full .pad-r{display:none}          /* 총알피하기 세로: 아래 전체가 조이스틱 하나 */
+body.pad-side #vpad.stick{top:0;bottom:0;height:auto;padding:0}
+body.pad-side #vpad.stick .pad-l,body.pad-side #vpad.stick .pad-r,body.pad-side #vpad.stick.full .pad-l{display:block;top:var(--stk-top,56px);bottom:0;width:var(--stk-w,150px)}
+.stk-joy{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;transition:opacity .2s}
+.stk-joy.idle{opacity:.6} .stk-joy.dim{opacity:.18}
+.stk-base{position:absolute;left:calc(var(--stk-r,46px) * -1);top:calc(var(--stk-r,46px) * -1);width:calc(var(--stk-r,46px) * 2);height:calc(var(--stk-r,46px) * 2);box-sizing:border-box;border-radius:50%;
+  background:radial-gradient(circle,rgba(20,24,48,.3) 0,rgba(20,24,48,.55) 100%);border:2px solid rgba(255,255,255,.55);box-shadow:0 8px 22px rgba(0,0,0,.3),0 0 0 1px rgba(0,0,0,.12),inset 0 0 18px rgba(0,0,0,.25)}
+.stk-base s{position:absolute;width:0;height:0;border:6px solid transparent;opacity:.75}
+.stk-base .l{left:6px;top:50%;margin-top:-6px;border-right:8px solid #fff;border-left:0}
+.stk-base .r{right:6px;top:50%;margin-top:-6px;border-left:8px solid #fff;border-right:0}
+.stk-base .u{top:6px;left:50%;margin-left:-6px;border-bottom:8px solid #fff;border-top:0}
+.stk-base .d{bottom:6px;left:50%;margin-left:-6px;border-top:8px solid #fff;border-bottom:0}
+.stk-knob{position:absolute;left:calc(var(--stk-r,46px) * -.46);top:calc(var(--stk-r,46px) * -.46);width:calc(var(--stk-r,46px) * .92);height:calc(var(--stk-r,46px) * .92);border-radius:50%;
+  background:radial-gradient(circle at 36% 30%,#ffffff 0,#dfe2fb 55%,#b8bde6 100%);box-shadow:0 6px 16px rgba(0,0,0,.45),inset 0 -3px 6px rgba(0,0,0,.12)}
+.stk-joy.run .stk-knob{background:radial-gradient(circle at 36% 30%,#fff3d6 0,#ffc163 55%,#ff9a2b 100%);box-shadow:0 0 0 4px rgba(255,166,43,.45),0 6px 16px rgba(0,0,0,.45)}
+.stk-hint{position:absolute;left:0;bottom:calc(var(--stk-r,46px) + 8px);transform:translateX(-50%);width:max-content;max-width:44vw;text-align:center;font:800 calc(12px * var(--stk-s,1))/1.25 'Noto Sans KR',sans-serif;color:var(--text);
+  text-shadow:0 0 3px var(--bg),0 0 6px var(--bg),0 1px 2px var(--bg);transition:opacity .5s;pointer-events:none;word-break:keep-all;translate:var(--hx,0px) 0}
+.stk-hint small{display:block;font-weight:700;font-size:.86em;opacity:.8;margin-top:1px}
+body.pad-side .stk-hint{max-width:calc(var(--stk-w,150px) - 8px)}
+#vpad.stk-used .stk-hint{opacity:0}
+.stk-act .stk-btn{position:absolute;left:0;top:0;width:calc(var(--stk-r,46px) * 1.9);height:calc(var(--stk-r,46px) * 1.9);margin:calc(var(--stk-r,46px) * -.95) 0 0 calc(var(--stk-r,46px) * -.95);
+  border-radius:50%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff;background:rgba(18,22,46,.6);border:2px solid rgba(255,255,255,.5);
+  box-shadow:0 8px 20px rgba(0,0,0,.35);font:400 calc(16px * var(--stk-s,1))/1 'Black Han Sans',sans-serif;transition:scale .06s,background .12s;pointer-events:none}
+.stk-act .stk-btn .ic{width:calc(24px * var(--stk-s,1));height:calc(24px * var(--stk-s,1))}
+.stk-act .stk-btn small{font:inherit}
+.stk-act.on .stk-btn{scale:.93;background:rgba(124,108,255,.85);border-color:#fff}
+.stk-act .stk-hint{bottom:calc(100% + 8px);left:50%}
+
+/* v12: 섯다 화투도 전통 그림 (js/gostop-art.js) */
+.card.hwatu.hwa{background-color:#fbf6e9;background-size:100% 100%;background-repeat:no-repeat;border:0;box-shadow:0 0 0 1px rgba(0,0,0,.35),1px 2px 5px rgba(0,0,0,.35)}
+.card.hwatu.hwa .hn{position:absolute;left:3px;top:3px;min-width:15px;height:15px;padding:0 3px;box-sizing:border-box;border-radius:99px;display:grid;place-items:center;
+  font:400 10px/1 'Black Han Sans',sans-serif;color:#fff;background:rgba(24,18,18,.6)}
+.seat.mine .card.hwatu.hwa .hn{min-width:18px;height:18px;font-size:12px}
+body.gaming #scr-card .card.hwatu.hwa .hn{left:calc(var(--w) * .06);top:calc(var(--w) * .06);min-width:calc(var(--w) * .34);height:calc(var(--w) * .34);font-size:calc(var(--w) * .22)}
