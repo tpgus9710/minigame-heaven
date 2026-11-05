@@ -733,9 +733,14 @@ body.pad-side .stk-hint{max-width:calc(var(--stk-w,150px) - 8px)}
 .stk-act.on .stk-btn{scale:.93;background:rgba(124,108,255,.85);border-color:#fff}
 .stk-act .stk-hint{bottom:calc(100% + 8px);left:50%}
 
-/* v12: 섯다 화투도 전통 그림 (js/gostop-art.js) */
-.card.hwatu.hwa{background-color:#fbf6e9;background-size:100% 100%;background-repeat:no-repeat;border:0;box-shadow:0 0 0 1px rgba(0,0,0,.35),1px 2px 5px rgba(0,0,0,.35)}
+/* v12.1: 섯다 화투도 한국 화투 그림 (js/gostop-art.js) — 光은 그림에, 달 숫자만 왼쪽 위에 */
+.card.hwatu.hwa{background-color:#fff;background-size:100% 100%;background-repeat:no-repeat;border:0;box-shadow:0 0 0 1px rgba(0,0,0,.35),1px 2px 5px rgba(0,0,0,.35)}
 .card.hwatu.hwa .hn{position:absolute;left:3px;top:3px;min-width:15px;height:15px;padding:0 3px;box-sizing:border-box;border-radius:99px;display:grid;place-items:center;
   font:400 10px/1 'Black Han Sans',sans-serif;color:#fff;background:rgba(24,18,18,.6)}
 .seat.mine .card.hwatu.hwa .hn{min-width:18px;height:18px;font-size:12px}
 body.gaming #scr-card .card.hwatu.hwa .hn{left:calc(var(--w) * .06);top:calc(var(--w) * .06);min-width:calc(var(--w) * .34);height:calc(var(--w) * .34);font-size:calc(var(--w) * .22)}
+/* 화투는 세로가 가로의 1.6배 — 높이는 그대로 두고 가로만 조금 좁게 (화면 맞춤이 그대로) · 뒷면도 같은 모양 */
+.card.hwatu.hwa,.card.back.hw{width:36px;border-radius:4px}
+.seat.mine .card.hwatu.hwa,.seat.mine .card.back.hw{width:49px}
+body.gaming #scr-card .cards .card.hwatu.hwa,body.gaming #scr-card .cards .card.back.hw{--cmax:calc(var(--cd-oc) * .9);height:calc(var(--w) * 1.6);border-radius:calc(var(--w) * .08)}
+body.gaming #scr-card .seat.mine .cards .card.hwatu.hwa,body.gaming #scr-card .seat.mine .cards .card.back.hw{--cmax:calc(var(--cd-mc) * .9)}

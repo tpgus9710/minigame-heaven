@@ -11,9 +11,9 @@ const Cards = {
     if (!c) return `<div class="card back ${kind === 'seotda' ? 'hw' : ''}${cls}"></div>`;
     if (kind === 'seotda') {
       const tag = c.k === 'gwang' ? '<span class="ht gw">光</span>' : c.k === 'yeol' ? '<span class="ht yl">열</span>' : '';
-      if (typeof HwatuArt !== 'undefined') {                                    // v12: 전통 화투 그림 (js/gostop-art.js) + 작은 달 숫자
-        HwatuArt.init();
-        return `<div class="card hwatu hwa${cls}" data-art="${HwatuArt.seotda(c)}" title="${c.m}월">${tag}<span class="hn">${c.m}</span></div>`;
+      if (typeof HwatuArt !== 'undefined') {                                    // v12.1: 한국 화투 그림 (光은 그림에 있어요) + 작은 달 숫자 · 열끗 표시
+        HwatuArt.preload();
+        return `<div class="card hwatu hwa${cls}" data-art="${HwatuArt.seotda(c)}" title="${c.m}월${c.k === 'gwang' ? ' 광' : c.k === 'yeol' ? ' 열끗' : ''}">${c.k === 'yeol' ? tag : ''}<span class="hn">${c.m}</span></div>`;
       }
       return `<div class="card hwatu${cls}">${tag}<span class="he" style="--mc:${MONTH_SIGN[c.m][1]}">${MONTH_SIGN[c.m][0]}</span><span class="hm">${c.m}</span><span class="hw">월</span></div>`;
     }

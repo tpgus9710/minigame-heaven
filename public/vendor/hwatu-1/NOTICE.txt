@@ -1,0 +1,42 @@
+화투 그림 (고스톱 · 섯다) — 출처 · 라이선스
+=================================================
+
+그림:      한국 화투 SVG 48장 — Wikimedia Commons «Category:SVG Hwatu»
+           https://commons.wikimedia.org/wiki/Category:SVG_Hwatu
+           (전체 모음: https://commons.wikimedia.org/wiki/File:Hwatu_overview.svg)
+만든 사람: 낱장 SVG — Spenĉjo
+           한국 화투 디자인 — Marcus Richert
+           일부는 Louie Mantia, Jr. 의 하나후다 그림이 바탕
+라이선스:  Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+           https://creativecommons.org/licenses/by-sa/4.0/   (전문: LICENSE.txt)
+           → 이 폴더의 그림(바꾼 것 포함)도 CC BY-SA 4.0 이에요. 앱의 다른 코드에는 적용되지 않아요.
+
+카드 번호 → 원본 파일 (번호 = (달 - 1) × 4 + 순서)
+  0 ~ 3    Hwatu January   Hikari · Tanzaku · Kasu 1 · Kasu 2      (1월 송학: 광 · 홍단 · 피 · 피)
+  4 ~ 7    Hwatu February  Tane · Tanzaku · Kasu 1 · Kasu 2        (2월 매조: 열끗 · 홍단 · 피 · 피)
+  8 ~ 11   Hwatu March     Hikari · Tanzaku · Kasu 1 · Kasu 2      (3월 벚꽃: 광 · 홍단 · 피 · 피)
+  12 ~ 15  Hwatu April     Tane · Tanzaku · Kasu 1 · Kasu 2        (4월 흑싸리: 열끗 · 초단 · 피 · 피)
+  16 ~ 19  Hwatu May       Tane · Tanzaku · Kasu 1 · Kasu 2        (5월 난초: 열끗 · 초단 · 피 · 피)
+  20 ~ 23  Hwatu June      Tane · Tanzaku · Kasu 1 · Kasu 2        (6월 모란: 열끗 · 청단 · 피 · 피)
+  24 ~ 27  Hwatu July      Tane · Tanzaku · Kasu 1 · Kasu 2        (7월 홍싸리: 열끗 · 초단 · 피 · 피)
+  28 ~ 31  Hwatu August    Hikari · Tane · Kasu 1 · Kasu 2         (8월 공산: 광 · 열끗 · 피 · 피)
+  32 ~ 35  Hwatu September Tane · Tanzaku · Kasu 1 · Kasu 2        (9월 국진: 열끗 · 청단 · 피 · 피)
+  36 ~ 39  Hwatu October   Tane · Tanzaku · Kasu 1 · Kasu 2        (10월 단풍: 열끗 · 청단 · 피 · 피)
+  40 ~ 43  Hwatu November  Hikari · Kasu 2 · Kasu 1 · Kasu 3       (11월 오동: 광 · 쌍피 · 피 · 피)
+  44 ~ 47  Hwatu December  Hikari · Tane · Tanzaku · Kasu          (12월 비: 광 · 열끗 · 띠 · 쌍피)
+  원본 파일 주소: https://commons.wikimedia.org/wiki/File:Hwatu_January_Hikari.svg 처럼
+  "File:Hwatu_<달>_<종류>.svg" (공백은 _)
+
+미니게임 천국에서 바꾼 점
+- 그림은 바꾸지 않았어요. svgo 로 파일만 가볍게 했어요 (좌표 소수 둘째 자리까지 · 공백 · 쓰지 않는 값 빼기)
+- 파일 이름을 카드 번호(0 ~ 47)로 바꿨어요
+- 만든 방법: build_hwatu.py.txt (파이썬 스크립트, 참고용 — 원본 sha1 을 커먼즈 값과 맞춰 봐요)
+- 그림을 다시 바꾸면 폴더 이름을 hwatu-2 처럼 올려요 (/vendor 는 브라우저가 1년 동안 저장해 둬요)
+
+----------------------------------------------------------------------
+Hwatu card images: "SVG Hwatu" set on Wikimedia Commons
+(https://commons.wikimedia.org/wiki/Category:SVG_Hwatu) — individual SVG files by Spenĉjo,
+Korean-style hwatu design by Marcus Richert, based in part on hanafuda graphics by Louie Mantia, Jr.
+Licensed under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).
+Changes: minified with svgo (2-decimal coordinates) and renamed to card numbers 0–47; artwork unchanged.
+These files, including the changes, are distributed under CC BY-SA 4.0.

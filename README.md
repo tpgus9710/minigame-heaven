@@ -9,6 +9,7 @@
 **v11** 스도쿠 · 노노그램(싱글 · 같은 퍼즐 대결)을 추가하고, 모든 게임에 **게임 설명서**(핵심만 쏙 → 자세한 설명)를, 규칙이 어려운 게임 5종에는 실제 판에서 배우는 **따라 하기**를 넣었어요.
 **v11.1** 드리프트 카트를 휴대폰 · 태블릿에서 **조이스틱**으로 조종해요 (왼손 엄지 조이스틱 · 오른손 엄지 버튼).
 **v12.0** 점프 어드벤처 · 총알피하기 · 점프 배구도 **조이스틱**, 핑퐁이 훨씬 **빨라지고**, 고스톱 · 섯다에 **전통 화투 그림**, 위쪽 메뉴를 **하나로 정리**(소리 · 다크 모드 · 신고 · 요청 · 패치 노트), **버전 표시 · 패치 노트**가 생겼어요.
+**v12.1** 고스톱 · 섯다 화투가 **진짜 한국 화투 그림** 그대로(光 · 홍단 · 청단 글씨까지)가 되고, 고스톱의 **먹은 패가 훨씬 크게** 보여요. 넓던 기록 칸은 **[기록] 버튼**으로 옮겼어요.
 
 ## 실행 방법
 1. Node.js(LTS)를 설치합니다: https://nodejs.org
@@ -64,6 +65,16 @@ Render 같은 클라우드에서는 서버를 다시 시작하면 파일이 지�
 
 - **싱글 (40종)**: ★스도쿠 · ★노노그램 · ★고스톱 vs AI · ★체스 vs AI · ★드리프트 카트 · ★계급 전쟁 vs AI · ★궁정 음모 vs AI · ★황야의 총잡이 vs AI · ★러미 타일 vs AI · 사천성 · 리버시 vs AI · 암호 해독 vs AI · 라이어 다이스 · 블랙잭 · 요트 다이스 · 윷놀이 vs AI · 도둑잡기 vs AI · 인생 보드게임 vs AI · 세계여행 vs AI · 벽돌깨기 · 총알피하기 · 점프 어드벤처 · 좀비 웨이브 · 점프 배구 vs AI · 폭탄 배틀 vs 봇 · 탱크 대포 vs AI · 우주 슈팅 · 보석 맞추기 · 과일 합치기 · 탑 쌓기 · 두더지 잡기 · 지뢰찾기 · 2048 · 스네이크 · 산성비 타자 · 테트리스 보스전 · 사과 게임 · 오목 vs AI · 핑퐁 vs AI · 1 to 50
 - **멀티 (47종)**: ★스도쿠 대결 · ★노노그램 대결 · ★고스톱 · ★체스 · ★러미 타일 · ★황야의 총잡이 · ★궁정 음모 · ★계급 전쟁 · ★그림 릴레이 · ★드리프트 카트 · 세계여행 보드게임 · 인생 보드게임 · 마피아 · 도둑잡기 · 윷놀이 · 요트 다이스 · 블랙잭 · 라이어 다이스 · 암호 해독 · 리버시 · 사천성 대결 · 총알피하기 배틀 · 점프 레이스 · 점프 배구 · 폭탄 배틀 · 탱크 대포 · 원카드 · 과일 종치기 · OX 퀴즈 · 끝말잇기 · 두더지 잡기 대결 · 보석 맞추기 대결 · 과일 합치기 대결 · 섯다 · 포커 · 사과 게임 · 1 to 50 · 캐치마인드 · 라이어 게임 · 테트리스 배틀 · 오목 · 4인 핑퐁 · 스네이크 배틀 · 산성비 타자 대결 · 지뢰찾기 대결 · 2048 대결 · 빙고
+
+## v12.1에서 바뀐 점
+- **진짜 한국 화투 그림 (고스톱 · 섯다)** — 직접 그린 그림 대신 Wikimedia Commons 의 한국 화투 SVG 48장(CC BY-SA 4.0)을 써요(`public/vendor/hwatu-1/`).
+  빨간 테두리 · 그림 속 **光** 표시 · 1 · 2 · 3월 **홍단** · 6 · 9 · 10월 **청단** 글씨 · 흑싸리 · 홍싸리 · 공산 · 오동 봉황 · 비광까지 실제 화투와 같아요.
+  그림은 그대로 두고 파일만 가볍게(48장 1MB · 압축하면 약 430KB) 했어요. 쌍피에만 작은 「쌍피」 표시, 섯다는 달 숫자 · 열끗 표시만 더해요.
+- **먹은 패를 크게** — 고스톱 판 왼쪽(가로 화면) · 위아래(세로 화면)의 먹은 패 칸을 사람마다 똑같이 나눠 **광 · 열끗 · 띠 / 피** 두 줄로 크게 보여요.
+  먹은 패 카드 너비(맞고): 컴퓨터 27 → **73px** · 노트북 28 → 68px · 태블릿 세로 27 → 48px · 휴대폰 21 → 30px. 자리가 넉넉하면 덜 겹쳐서 그림이 더 많이 보여요(한 줄 · 두 줄 중 카드가 더 큰 쪽을 골라요).
+- **기록 칸 → [기록] 버튼** — 넓게 자리를 차지하던 기록 칸을 없애고, 안내 막대 오른쪽 **[기록]** 버튼을 누르면 버튼 바로 위에 작은 창으로 떠요(바깥을 누르거나 Esc · ✕ 로 닫기).
+- 휴대폰에서는 고스톱 위쪽 설명 글을 숨겨 판을 넓게 쓰고(규칙은 설명서), 손패는 두 줄이면 줄마다 고르게 가운데로 놓여요(6장 → 3 · 3).
+- 설명서 · 따라 하기 문장을 새 그림에 맞췄어요 (달마다 그림 목록 · 그림 출처).
 
 ## v12.0에서 바뀐 점
 - **휴대폰 · 태블릿 조이스틱 (점프 어드벤처 · 총알피하기 · 점프 배구)** — 작은 ◀ ▶ 버튼 대신 엄지를 댄 자리에 생기는 조이스틱(`public/js/stick.js`)
@@ -262,7 +273,7 @@ public/js/manual.js     게임 설명서 창 · 모음 · 처음 하는 게임 �
 public/js/tutorial.js   따라 하기 진행기 (v11, 게임별 각본: public/js/tutorial/게임.js)
 public/js/stick.js      휴대폰 · 태블릿 조이스틱 패드 (v12: 점프 어드벤처 · 총알피하기 · 점프 배구, register 의 stick 설정)
 public/js/shared/pong-core.js  핑퐁 물리 + AI (v12, 싱글 화면과 4인 핑퐁 서버가 같이 써요)
-public/js/gostop-art.js 전통 화투 그림 48장 (v12, 고스톱 · 섯다)
+public/js/gostop-art.js 화투 그림 48장 연결 (v12.1, 고스톱 · 섯다 — 그림 파일은 public/vendor/hwatu-1/)
 public/js/menu.js       위쪽 ☰ 메뉴 · 패치 노트 창 · 버전 표시 (v12, 내용: public/js/patchnotes.js · 디자인: public/css/menu.css)
 public/js/patchnotes.js 패치 노트 (맨 위가 지금 버전 · package.json 버전과 같아야 해요)
 tests/                  고스톱 · 체스 · 스도쿠 · 노노그램 규칙 · 따라 하기 각본 · 핑퐁 물리 · 버전 검사 (`npm test`)
@@ -274,6 +285,7 @@ public/js/account.js    로그인 · 회원가입 · 내 정보 · 친구 · 랭
 public/css/account.css  계정 화면 디자인
 public/models/face-1/   얼굴 인식 모델 2개 (InsightFace buffalo_s, 가중치만 float16 으로 저장해 크기 절반)
 public/vendor/ort-1.20.1/  onnxruntime-web (브라우저에서 모델 실행, MIT)
+public/vendor/hwatu-1/  한국 화투 SVG 48장 (CC BY-SA 4.0, 출처 · 바꾼 점: NOTICE.txt, 그림을 바꾸면 폴더를 hwatu-2 로)
 userdata/               내 컴퓨터에서 켰을 때 계정이 저장되는 곳 (GitHub 에 안 올라가요)
 public/fonts/           제목 글꼴 Black Han Sans (SIL OFL 1.1, 인터넷이 없어도 보여요)
 ```
@@ -297,7 +309,7 @@ public/fonts/           제목 글꼴 Black Han Sans (SIL OFL 1.1, 인터넷이 
 - 아이콘: [Tabler Icons](https://tabler.io/icons) — MIT License (`public/js/icons.js` 맨 위에 라이선스 전문)
 - 체스 말 그림: Wikimedia Commons 의 Cburnett 말 — CC BY-SA 3.0 (`public/vendor/chess-pieces-1/cburnett.svg` 맨 위에 출처 · 라이선스)
 - 체스 AI 말 위치 점수: Chess Programming Wiki 의 Simplified Evaluation Function 을 참고했어요
-- 화투 그림(v12): 백 년 넘게 써 온 전통 화투 무늬(송학 · 매조 · 벚꽃 …)를 보고 SVG 로 직접 그렸어요 (`public/js/gostop-art.js`, 특정 회사의 카드 그림을 베끼지 않았어요)
+- 화투 그림(v12.1): Wikimedia Commons «[SVG Hwatu](https://commons.wikimedia.org/wiki/Category:SVG_Hwatu)» — 낱장 SVG Spenĉjo · 한국 화투 디자인 Marcus Richert · 일부 Louie Mantia, Jr. 의 하나후다 그림 바탕 — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) (`public/vendor/hwatu-1/NOTICE.txt` · `LICENSE.txt`, 이 그림 파일들도 CC BY-SA 4.0)
 - 글꼴: Black Han Sans — SIL Open Font License 1.1 (`public/fonts/black-han-sans/LICENSE`), 본문 글꼴 Noto Sans KR · Noto Serif KR 은 Google Fonts 에서 불러와요
 - 얼굴 인식 모델: [InsightFace](https://github.com/deepinsight/insightface) buffalo_s 의 `det_500m` · `w600k_mbf` — **비상업적 연구 목적으로만** 공개된 모델 (`public/models/face-1/NOTICE.txt`)
 - 모델 실행기: [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) 1.20.1 — MIT License (`public/vendor/ort-1.20.1/LICENSE.txt`)

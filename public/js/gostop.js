@@ -3,8 +3,11 @@
  *  내 차례: 손패를 누르면 바닥의 같은 달 패가 빛나요 → 한 번 더 누르면 내요 (마우스는 바로 내요).
  *  바닥 두 장 중 고르기 · 고/스톱 · 총통 · 흔들기/폭탄은 가운데 창에서 골라요.
  *  낸 패 → 바닥 → 먹은 패로 움직이는 모습을 짧게 보여줘요 (패마다 같은 data-id 로 전 · 후 위치를 비교).
- *  화투 그림: 전통 화투 무늬를 SVG 로 그린 그림 (js/gostop-art.js) + 작은 달 숫자 · 광(光) · 쌍피 표시.
- *  판 크기: 남은 높이(Fit.room)에 맞춰 바닥 · 손패 카드 크기를 계산해요 (세로: 한 줄로 쌓기 / 가로: 왼쪽 정보 · 오른쪽 판).
+ *  화투 그림: 한국 화투 그림 48장 (js/gostop-art.js · public/vendor/hwatu-1, CC BY-SA 4.0 — 光 표시 · 홍단 · 청단 글씨까지 그림 그대로)
+ *    + 쌍피에만 작은 '쌍피' 표시.
+ *  판 크기: 남은 높이(Fit.room)에 맞춰 먹은 패 · 바닥 · 손패 카드 크기를 계산해요
+ *    (세로: 위에서부터 상대 · 바닥 · 나 · 손패 / 가로: 왼쪽은 사람마다 먹은 패를 크게, 오른쪽은 바닥 · 손패).
+ *  먹은 패는 자리가 되면 두 줄(광 · 열끗 · 띠 / 피)로 크게 보여요. 기록은 안내 막대의 [기록] 버튼으로 열어요.
  * ===================================================================== */
 makeScreen('gostop', {
   title: '🎴 고스톱', status: '손패를 내서 바닥의 같은 달 패를 먹어요. 맞고는 7점, 3인은 3점이 나면 고 또는 스톱!',
@@ -13,9 +16,10 @@ makeScreen('gostop', {
       <button class="seg-btn on" data-act="gsSolo" data-bots="1">맞고 · AI 1명</button><button class="seg-btn" data-act="gsSolo" data-bots="2">3인 · AI 2명</button>
       <span class="muted small">판 수</span><button class="seg-btn gs-gap" data-act="gsRounds" data-r="3">3판</button><button class="seg-btn on" data-act="gsRounds" data-r="5">5판</button><button class="seg-btn" data-act="gsRounds" data-r="10">10판</button></div>
     <div class="gs-wrap" id="gs-wrap">
-      <div class="gs-left"><div class="gs-opps" id="gs-opps"></div><div class="gs-log" id="gs-log"></div><div class="gs-mine" id="gs-mine"></div></div>
+      <div class="gs-left"><div class="gs-opps" id="gs-opps"></div><div class="gs-mine" id="gs-mine"></div></div>
       <div class="gs-right"><div class="gs-table" id="gs-table"><div class="gs-floor" id="gs-floor"></div><div class="gs-fx" id="gs-fx"></div></div>
         <div class="gs-bar" id="gs-bar"></div><div class="gs-hand" id="gs-hand"></div></div>
+      <div class="gs-log hidden" id="gs-log" role="dialog" aria-label="기록"></div>
       <div class="gs-dlg hidden" id="gs-dlg"></div>
     </div>`,
 });
@@ -33,9 +37,9 @@ const GS = {
     const at = `data-id="${id}"${o.z ? ` data-z="${o.z}"` : ''}${o.act ? ` data-act="${o.act}" data-c="${id}" role="button" tabindex="0"` : ''}${o.extra || ''}`;
     const st = o.st ? `;${o.st}` : '';
     if (c.bonus) return `<div class="hw bonus ${o.cls || ''}" ${at} style="--mc:#bf360c${st}" title="${c.name}"><b class="bx">${c.bonus}</b><s class="t bl">보너스</s></div>`;
-    if (typeof HwatuArt !== 'undefined') HwatuArt.init();
-    const mark = c.kind === 'gw' ? '<s class="t gw">光</s>' : c.pi === 2 ? '<s class="t p2">쌍피</s>' : '';
-    return `<div class="hw hwa art k-${c.kind}${c.pi === 2 ? ' ssang' : ''} ${o.cls || ''}" ${at} data-art="${id}" style="--mc:${this.COL[c.m]}${st}" title="${c.name}"><i class="n${c.m >= 10 ? ' n2' : ''}">${c.m}</i>${mark}</div>`;
+    if (typeof HwatuArt !== 'undefined') HwatuArt.preload();
+    const mark = c.pi === 2 ? '<s class="t p2">쌍피</s>' : '';                       // 光은 그림에 그려져 있어요
+    return `<div class="hw hwa art k-${c.kind}${c.pi === 2 ? ' ssang' : ''} ${o.cls || ''}" ${at} data-art="${id}" style="--mc:${this.COL[c.m]}${st}" title="${c.m}월 ${c.name}">${mark}</div>`;
   },
   back(cls = '') { return `<div class="hw back ${cls}"></div>`; },
   fmt: n => (n > 0 ? '+' : '') + n,
@@ -51,7 +55,7 @@ const GS = {
   /* ─────────────── 그리기 ─────────────── */
   render(v, ctx, prev) {
     const fresh = !prev || this.gen !== Table.cur;
-    if (fresh) { this.gen = Table.cur; this.round = -1; this.evId = null; this.evShown = 0; this.peek = false; this.watch(); }
+    if (fresh) { this.gen = Table.cur; this.round = -1; this.evId = null; this.evShown = 0; this.peek = false; this.logOpen = false; this.watch(); }
     const newRound = v.round !== this.round;
     const before = !fresh && !newRound ? this.snap() : null;
     if (newRound) { this.slots = new Map(); this.sel = null; this.confirm = null; this.peek = false; this.round = v.round; }
@@ -110,34 +114,36 @@ const GS = {
       ${this.caps(p)}
     </div>`;
   },
-  /** 먹은 패: 광 · 열끗 · 띠 · 피 묶음. 칸이 모자라면 겹치는 간격을 줄여요 (피부터) */
+  /** 먹은 패: 광 · 열끗 · 띠 · 피 묶음. 두 줄이면 윗줄 광 · 열끗 · 띠 / 아랫줄 피. 칸이 모자라면 겹치는 간격을 줄여요 (많은 묶음부터) */
   caps(p) {
-    const C = GostopCore.CARDS, d = this.dims || { mw: 20, panelW: 360 };
+    const C = GostopCore.CARDS, d = this.dims || { mw: 20, panelW: 360, rows: 1 };
     const g = { gw: [], yl: [], tt: [], pi: [] };
     for (const id of p.cap) { const c = C[id]; g[c.gukjin && p.gukPi ? 'pi' : c.kind].push(id); }
     for (const k in g) g[k].sort((a, b) => (C[a].m || 99) - (C[b].m || 99) || a - b);
-    const mw = d.mw, keys = ['gw', 'yl', 'tt', 'pi'], gapG = 7;
+    const mw = d.mw, gapG = Math.max(7, Math.round(mw * 0.22));
     const avail = Math.max(120, d.panelW - 18);
-    const sp = {}, nat = mw * 0.44, min = mw * 0.13;
-    for (const k of keys) sp[k] = nat;
+    const sp = {}, nat = mw * 0.6, min = mw * 0.13;                          // 자리가 넉넉하면 덜 겹쳐서 그림이 더 보여요
     const width = k => (g[k].length ? mw + (g[k].length - 1) * sp[k] : mw * 0.86);
-    let total = keys.reduce((a, k) => a + width(k), 0) + gapG * 3 + 8;
-    if (total > avail) {
-      let over = total - avail;
+    const fit = keys => {                                                     // 한 줄 안에 들어가게 겹치는 간격 줄이기
+      for (const k of keys) sp[k] = nat;
+      let over = keys.reduce((a, k) => a + width(k), 0) + gapG * (keys.length - 1) + 8 - avail;
       for (const k of keys.slice().sort((a, b) => g[b].length - g[a].length)) {
+        if (over <= 0) break;
         const n = g[k].length - 1; if (n <= 0) continue;
         const cut = Math.min(over, n * (sp[k] - min));
         sp[k] -= cut / n; over -= cut;
-        if (over <= 0) break;
       }
-    }
+    };
+    const lines = d.rows === 2 ? [['gw', 'yl', 'tt'], ['pi']] : [['gw', 'yl', 'tt', 'pi']];
+    lines.forEach(fit);
     const n = p.n, sc = p.sc;
     const label = { gw: `광 ${n.gw}`, yl: `열 ${n.yl}`, tt: `띠 ${n.tt}`, pi: `피 ${n.pi}` };
     const done = { gw: sc.gw > 0, yl: sc.yl > 0 || sc.godori > 0, tt: sc.tt > 0 || sc.hong + sc.cheong + sc.cho > 0, pi: sc.pi > 0 };
-    return `<div class="gs-caps">${keys.map(k => {
+    const group = k => {
       const ids = g[k];
       return `<div class="cg ${k}${ids.length ? '' : ' empty'}${done[k] ? ' done' : ''}" style="width:${Math.ceil(width(k))}px">${ids.map((id, i) => this.card(id, { cls: 'mini', z: 'c', st: `left:${(i * sp[k]).toFixed(1)}px` })).join('')}<i class="cgl">${label[k]}</i></div>`;
-    }).join('')}</div>`;
+    };
+    return `<div class="gs-caps${d.rows === 2 ? ' r2' : ''}" style="--cgap:${gapG}px">${lines.map(ks => `<div class="cr">${ks.map(group).join('')}</div>`).join('')}</div>`;
   },
   /** 바닥: 달마다 묶어서 자리를 지켜요 (먹혀서 빈 자리는 다음 새 달이 써요) */
   slotsFor(v) {
@@ -210,11 +216,14 @@ const GS = {
     }
     if ((v.phase === 'summary' || v.over) && v.last && this.peek) extra = '<button class="btn sm good" data-act="gsPeek">결과 다시 보기</button>';
     const mult = v.nagari ? `<span class="gs-mult" title="나가리 다음 판은 점수가 두 배씩">×${2 ** Math.min(3, v.nagari)}</span>` : '';
-    $('#gs-bar').innerHTML = `${mult}<span class="gs-msg">${msg}</span>${extra}`;
+    const logBtn = `<button class="gs-logbtn${this.logOpen ? ' on' : ''}" data-act="gsLog" title="지금까지 낸 패 · 먹은 패 기록" aria-label="기록" aria-expanded="${this.logOpen ? 'true' : 'false'}">${icon('list-details')}<span>기록</span></button>`;
+    $('#gs-bar').innerHTML = `${mult}<span class="gs-msg">${msg}</span>${extra}${logBtn}`;
   },
+  /** 기록: 안내 막대의 [기록] 버튼을 누르면 위에 작은 창으로 (판 위를 가리지 않게 평소엔 숨겨요) */
   paintLog() {
     const v = this.v, el = $('#gs-log');
-    if (!this.dims || !this.dims.side) { el.innerHTML = ''; return; }
+    el.classList.toggle('hidden', !this.logOpen);
+    if (!this.logOpen) { el.innerHTML = ''; return; }
     const C = GostopCore.CARDS, nm = j => (v.players[j] ? esc(v.players[j].name) : '?');
     const line = e => {
       switch (e.t) {
@@ -239,7 +248,19 @@ const GS = {
         default: return '';
       }
     };
-    el.innerHTML = '<small class="muted">기록</small>' + v.log.filter(e => e.t !== 'flipOnly').slice(-9).map(e => `<div>${line(e)}</div>`).join('');
+    const rows = v.log.filter(e => e.t !== 'flipOnly').slice(-40).map(line).filter(Boolean);
+    el.innerHTML = `<div class="gl-h"><b>기록</b><small class="muted">최근 ${rows.length}개</small><button class="gl-x" data-act="gsLog" aria-label="닫기">${icon('x')}</button></div>
+      <div class="gl-b">${rows.map(h => `<div>${h}</div>`).join('') || '<div class="muted">아직 없어요</div>'}</div>`;
+    // [기록] 버튼 바로 위에 띄워요 (버튼을 가리지 않게 · 위쪽 빈 곳만큼 높이)
+    const btn = $('#gs-bar .gs-logbtn'), wrap = $('#gs-wrap');
+    if (btn && wrap && wrap.offsetWidth) {
+      const W = wrap.getBoundingClientRect(), B = btn.getBoundingClientRect(), k = W.width / wrap.offsetWidth || 1;
+      el.style.top = 'auto';
+      el.style.bottom = Math.round((W.bottom - B.top) / k + 6) + 'px';
+      el.style.right = Math.round(Math.max(4, (W.right - B.right) / k)) + 'px';
+      el.style.maxHeight = Math.round(Math.max(150, Math.min(420, (B.top - W.top) / k - 12))) + 'px';
+    }
+    const b = el.querySelector('.gl-b'); if (b) b.scrollTop = b.scrollHeight;               // 맨 아래가 최근
   },
   /** 지금 보여야 할 창 종류 */
   dlgKind(v) {
@@ -332,16 +353,36 @@ const GS = {
     const side = PW >= 600 && Math.min(PW, 1320) / H >= 1.3;
     const W = Math.min(PW, side ? 1320 : 860);
     const gap = W < 420 ? 5 : 7;
-    const lw = side ? Math.round(Math.min(520, Math.max(260, W * 0.36))) : 0;
-    const panelW = side ? lw : Math.min(W, 860);
-    const mw = Math.round(Math.max(13, Math.min(side ? 30 : 27, (panelW - 20) / 16.5, H / (side ? 16 : 30))));
-    this.dims = { W, H, side, gap, lw, panelW, mw };
+    const nP = this.v ? this.v.players.length : 2;
+    const head = W < 420 ? 21 : 23, pad = 24;                                 // 사람 칸의 이름 줄 · 위아래 여백 · 테두리 · 줄 사이 (넉넉히)
+    let lw = 0, panelW, mw, rows;
+    if (side) {
+      // 가로 화면: 왼쪽 칸 전체를 사람마다 똑같이 나눠 먹은 패를 크게 (기록 칸은 없어요)
+      lw = Math.round(Math.min(600, Math.max(300, W * 0.42)));
+      panelW = lw;
+      const capH = (H - (nP - 1) * gap) / nP - head - pad;
+      [rows, mw] = this.pickRows(capH, panelW, 7, 12, 84);                    // 칸 높이를 채우게 (넓이가 모자라면 겹쳐서 맞춰요)
+    } else {
+      // 세로 화면: 먹은 패 칸이 판 높이의 44% 안에서 되도록 크게 (자리가 되면 두 줄)
+      panelW = Math.min(W, 860);
+      const capH = (H * 0.44) / nP - head - pad;
+      [rows, mw] = this.pickRows(capH, panelW, 10.5, 16.5, 60);
+    }
+    mw = Math.round(Math.max(13, mw));
+    this.dims = { W, H, side, gap, lw, panelW, mw, rows };
     wrap.style.height = H + 'px';
     wrap.classList.toggle('side', side);
     wrap.style.setProperty('--lw', lw + 'px');
     wrap.style.setProperty('--mw', mw + 'px');
     wrap.style.setProperty('--gap', gap + 'px');
     return true;
+  },
+  /** 먹은 패: 두 줄(광 · 열끗 · 띠 / 피)과 한 줄 중 카드가 더 크게 보이는 쪽 (비슷하면 두 줄 — 피가 많아져도 덜 겹쳐요)
+   *  capH = 카드 칸 높이 · W = 사람 칸 너비 · n2 · n1 = 한 줄에 필요한 카드 너비 수 · max = 가장 큰 카드 너비 */
+  pickRows(capH, W, n2, n1, max) {
+    const two = Math.min((capH - 5) / 2 / 1.6, (W - 20) / n2, max);
+    const one = Math.min(capH / 1.6, (W - 20) / n1, max);
+    return two >= 14 && two >= one * 0.85 ? [2, two] : [1, one];
   },
   /** 남은 칸에 바닥 · 손패 카드 크기를 맞춰요 (손패는 한 줄 또는 두 줄) */
   size() {
@@ -376,7 +417,8 @@ const GS = {
     const hand = $('#gs-hand');
     hand.style.height = Math.floor(best.hh) + 'px';
     const have = me ? me.hand.length + (me.flipOnly > 0 ? 1 : 0) : 0;      // 남은 패가 적으면 가운데로 모아요
-    hand.style.setProperty('--hc', Math.max(1, have > best.per ? best.per : have));
+    const used = Math.max(1, Math.ceil(have / best.per));                    // 두 줄이면 줄마다 고르게 (6장 → 3 · 3)
+    hand.style.setProperty('--hc', Math.max(1, Math.ceil(have / used)));
     // 바닥 칸 배치: 더미는 가운데, 달 묶음은 자리 번호 순서대로 (더미 칸은 건너뛰어요)
     const fl = $('#gs-floor');
     fl.style.setProperty('--fc', best.C); fl.style.setProperty('--fr', best.R);
@@ -569,6 +611,7 @@ const GS = {
 };
 Object.assign(ACT, {
   gsSolo: el => { GS.bots = +el.dataset.bots; GS.soloStart(); },
+  gsLog: () => { GS.logOpen = !GS.logOpen; GS.paintLog(); GS.paintBar(); },
   gsRounds: el => { GS.rounds = +el.dataset.r; GS.soloStart(); },
   gsCard: el => GS.tapCard(+el.dataset.c),
   gsFlip: () => { if (GS.myPlay()) GS.send({ t: 'flip' }); },
@@ -589,4 +632,10 @@ Object.assign(ACT, {
 document.addEventListener('pointerover', e => { const el = e.target.closest && e.target.closest('#gs-hand .hw[data-c]'); if (el) GS.hover(+el.dataset.c); });
 document.addEventListener('pointerout', e => { const el = e.target.closest && e.target.closest('#gs-hand .hw[data-c]'); if (el && !(e.relatedTarget && el.contains(e.relatedTarget))) GS.hover(null); });
 setInterval(() => { if (S.screen === 'gostop') GS.tickCd(); }, 250);
+// 기록 창: 바깥을 누르면 닫혀요 (누른 패는 그대로 낼 수 있어요) · Esc 로도 닫아요 · 새 게임은 닫힌 채로 시작
+document.addEventListener('pointerdown', e => {
+  if (!GS.logOpen || (e.target.closest && e.target.closest('#gs-log, .gs-logbtn'))) return;
+  GS.logOpen = false; GS.paintLog(); GS.paintBar();
+}, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && GS.logOpen) { GS.logOpen = false; GS.paintLog(); GS.paintBar(); } });
 Table.def('gostop', { core: GostopCore, render: (v, ctx, prev) => GS.render(v, ctx, prev), solo: { bots: 1, opts: { rounds: 5, solo: true } } });

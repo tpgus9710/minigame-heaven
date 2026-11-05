@@ -3,16 +3,19 @@
 #scr-gostop .gs-gap{margin-left:10px}
 .gs-wrap{--hw:56px;--fw:46px;--mw:20px;--gap:7px;position:relative;display:flex;flex-direction:column;gap:var(--gap);max-width:860px;margin:0 auto;min-height:0}
 .gs-wrap:not(.side) .gs-left,.gs-wrap:not(.side) .gs-right{display:contents}
+.gs-wrap:not(.side) .gs-opps,.gs-wrap:not(.side) .gs-mine,.gs-wrap:not(.side) .gs-bar,.gs-wrap:not(.side) .gs-hand{flex:none}   /* 모자라면 바닥만 줄어요 */
 .gs-wrap:not(.side) .gs-opps{order:1} .gs-wrap:not(.side) .gs-table{order:2} .gs-wrap:not(.side) .gs-mine{order:3}
-.gs-wrap:not(.side) .gs-bar{order:4} .gs-wrap:not(.side) .gs-hand{order:5} .gs-wrap:not(.side) .gs-log{display:none}
+.gs-wrap:not(.side) .gs-bar{order:4} .gs-wrap:not(.side) .gs-hand{order:5}
 .gs-wrap.side{display:grid;grid-template-columns:var(--lw) minmax(0,1fr);gap:0 12px;max-width:1320px}
-.gs-wrap.side .gs-left{display:flex;flex-direction:column;gap:var(--gap);min-height:0;min-width:0}
+/* 가로 화면 왼쪽: 사람마다 같은 높이로 나눠서 먹은 패를 크게 (위: 상대 · 아래: 나) */
+.gs-wrap.side .gs-left{display:grid;grid-auto-rows:minmax(0,1fr);gap:var(--gap);min-height:0;min-width:0}
+.gs-wrap.side .gs-opps,.gs-wrap.side .gs-mine{display:contents}
+.gs-wrap.side .gs-pl{min-height:0}                                   /* 잘라 내지 않아요: 바닥에서 먹은 패로 날아오는 패가 보이게 */
 .gs-wrap.side .gs-right{display:flex;flex-direction:column;gap:var(--gap);min-height:0;min-width:0}
-.gs-wrap.side .gs-log{flex:1 1 auto}
 .gs-opps{display:flex;flex-direction:column;gap:var(--gap)}
 
 /* ── 화투 ── */
-.hw{--w:44px;position:relative;width:var(--w);height:calc(var(--w) * 1.6);border-radius:calc(var(--w) * .1);flex:none;box-sizing:border-box;
+.hw{--w:44px;position:relative;width:var(--w);height:calc(var(--w) * 1.6);border-radius:calc(var(--w) * .07);flex:none;box-sizing:border-box;
   background:linear-gradient(172deg,#fffdf7 0%,#f5ecd6 100%);color:#1d1d1d;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
   box-shadow:0 0 0 1px rgba(0,0,0,.3),0 calc(var(--w) * .03 + 1px) calc(var(--w) * .08 + 1px) rgba(0,0,0,.34)}
 .hw::before{content:'';position:absolute;inset:calc(var(--w) * .055);border-radius:calc(var(--w) * .065);border:max(1px, calc(var(--w) * .028)) solid color-mix(in srgb,var(--mc,#888) 72%,#fff);pointer-events:none}
@@ -67,18 +70,19 @@
 .gs-hn{display:inline-flex;align-items:center;gap:3px;color:var(--muted);font-size:12px;font-weight:700;flex:none}
 .gs-hn i{width:9px;height:13px;border-radius:2px;background:#b71c1c;box-shadow:inset 0 0 0 1px rgba(255,255,255,.8),2px -2px 0 -1px #8e1515}
 .gs-shown{display:inline-flex;gap:2px;flex:none}
-.gs-shown .hw{--w:calc(var(--mw) * .8)}
+.gs-shown .hw{--w:min(calc(var(--mw) * .8), 18px)}                       /* 흔들기로 보여 준 패: 이름 줄 안에 작게 */
 .gs-combo{display:inline-flex;gap:3px;min-width:0;overflow:hidden}
 .gs-combo em{font-style:normal;font-size:10.5px;font-weight:800;padding:1px 5px;border-radius:6px;background:color-mix(in srgb,var(--warn) 22%,var(--panel2));color:var(--text);white-space:nowrap}
 .gs-sc{margin-left:auto;flex:none;font-size:12px;color:var(--muted)}
 .gs-sc b{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:18px;color:var(--text);margin-right:1px}
 .gs-tot{flex:none;font-weight:900;font-size:12.5px;min-width:34px;text-align:right}
 .gs-pos{color:var(--good)} .gs-neg{color:var(--bad)}
-.gs-caps{display:flex;gap:7px;min-width:0;height:calc(var(--mw) * 1.6);padding-right:4px}
+.gs-caps{display:flex;flex-direction:column;gap:5px;min-width:0;padding-right:4px}
+.gs-caps .cr{display:flex;gap:var(--cgap,7px);min-width:0;height:calc(var(--mw) * 1.6)}
 .cg{position:relative;height:100%;flex:none}
 .cg .hw{position:absolute;top:0}
 .cg.empty{border:1px dashed var(--line);border-radius:4px;box-sizing:border-box}
-.cgl{position:absolute;z-index:3;right:-5px;bottom:-4px;font-style:normal;font-size:10px;font-weight:900;line-height:1;padding:2px 4px;border-radius:6px;background:#37474f;color:#fff;pointer-events:none;white-space:nowrap}
+.cgl{position:absolute;z-index:3;right:-5px;bottom:-4px;font-style:normal;font-size:clamp(10px, calc(var(--mw) * .27), 13px);font-weight:900;line-height:1;padding:2px 5px;border-radius:6px;background:#37474f;color:#fff;pointer-events:none;white-space:nowrap}
 .cg.empty .cgl{right:auto;left:50%;bottom:50%;transform:translate(-50%,50%);background:transparent;color:var(--muted)}
 .cg.done .cgl{background:var(--good);color:#04210f}
 
@@ -108,7 +112,9 @@
 .gs-me-turn{color:var(--good);margin-right:2px}
 .gs-mult{flex:none;font:400 14px/1 'Black Han Sans',sans-serif;padding:4px 7px;border-radius:8px;background:#e53935;color:#fff}
 .gs-bar .btn{flex:none}
-.gs-hand{display:grid;grid-template-columns:repeat(var(--hc,10), var(--hw));gap:6px;justify-content:center;align-content:end;box-sizing:border-box;padding-top:calc(var(--hw) * .2)}
+/* 손패: 한 줄에 --hc 장씩, 줄마다 가운데로 (7장이면 4 · 3) */
+.gs-hand{display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-end;gap:6px;box-sizing:border-box;padding-top:calc(var(--hw) * .2);
+  padding-inline:max(0px, calc((100% - var(--hc,10) * var(--hw) - (var(--hc,10) - 1) * 6px - 2px) / 2))}
 .gs-hand .hw{--w:var(--hw);cursor:pointer;transition:translate .12s ease,box-shadow .12s ease,filter .12s}
 .gs-hand .hw.live.can{box-shadow:0 0 0 2px #43a047,0 3px 8px rgba(0,0,0,.35)}
 .gs-hand .hw.live.no{filter:brightness(.93)}
@@ -122,11 +128,23 @@
 .gs-hand .flipc:not(.live){opacity:.55}
 .gs-spec{grid-column:1 / -1;align-self:center;text-align:center;padding:8px}
 
-/* ── 기록 (가로 화면) ── */
-.gs-log{display:flex;flex-direction:column;justify-content:flex-end;gap:2px;min-height:0;overflow:hidden;padding:7px 10px;border-radius:12px;background:var(--panel);border:1px solid var(--line);font-size:12.5px;line-height:1.4;color:var(--muted)}
-.gs-log > small{margin-bottom:auto;font-weight:700}
-.gs-log b{color:var(--text)}
-.gs-log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ── 기록: 안내 막대의 [기록] 버튼 → 버튼 바로 위에 작은 창 (자리는 gostop.js paintLog 가 맞춰요) ── */
+.gs-logbtn{flex:none;display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);
+  font:700 12px/1.2 'Noto Sans KR',sans-serif;cursor:pointer}
+.gs-logbtn .ic{width:15px;height:15px;margin:0}
+.gs-logbtn.on{color:var(--text);border-color:var(--accent)}
+.gs-log{position:absolute;z-index:70;right:8px;top:8px;width:min(340px,calc(100% - 8px));max-height:min(60%,420px);transform-origin:100% 100%;animation:glIn .16s ease-out;display:flex;flex-direction:column;box-sizing:border-box;
+  border-radius:14px;background:color-mix(in srgb,var(--panel) 96%,transparent);border:1px solid var(--line);box-shadow:0 16px 40px rgba(0,0,0,.45);font-size:13px;line-height:1.45;color:var(--muted)}
+.gs-log.hidden{display:none}
+@keyframes glIn{from{opacity:0;scale:.96}}
+.gl-h{display:flex;align-items:center;gap:8px;padding:9px 10px 7px 14px;border-bottom:1px solid var(--line)}
+.gl-h b{color:var(--text);font-size:15px}
+.gl-x{margin-left:auto;width:28px;height:28px;border-radius:50%;border:0;background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
+.gl-x .ic{width:15px;height:15px;margin:0}
+.gl-b{overflow:auto;padding:6px 14px 10px;overscroll-behavior:contain}
+.gl-b div{padding:3px 0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.gl-b div:first-child{border-top:0}
+.gl-b b{color:var(--text)}
 
 /* ── 가운데 창 ── */
 .gs-dlg{position:absolute;inset:0;z-index:80;display:grid;place-items:center;padding:10px;border-radius:16px;background:rgba(8,10,22,.42);backdrop-filter:blur(1.5px)}
@@ -166,6 +184,10 @@
 @keyframes gsPulse{50%{opacity:.25;transform:scale(.7)}}
 @media (prefers-reduced-motion:reduce){ .fxt{animation-duration:.01s} .fg .hw.pick{animation:none} }
 
+/* 휴대폰 · 작은 태블릿: 위쪽 설명 글은 숨겨요 (안내 막대가 할 일을 알려 줘요 · 규칙은 설명서) → 먹은 패 칸이 더 커져요 */
+@media (max-width:760px){
+  body.gaming #scr-gostop .game-head .status{display:none}
+}
 /* 좁은 화면 */
 @media (max-width:520px){
   #scr-gostop .mode-row{gap:4px;margin-bottom:6px;flex-wrap:nowrap;align-items:center}
@@ -176,6 +198,7 @@
   .gs-ph{font-size:12px;gap:4px}
   .gs-sc b{font-size:16px}
   .gs-bar{font-size:12.5px;min-height:32px;padding:4px 8px}
+  .gs-logbtn{padding:5px 7px} .gs-logbtn span{display:none}
   .gs-box{padding:12px}
   .gs-box h3{font-size:18px}
   .hw.big{--w:62px}
@@ -190,13 +213,10 @@
   .gs-bar{min-height:30px;padding:3px 8px;font-size:12.5px}
 }
 
-/* v12: 전통 화투 그림 (js/gostop-art.js 가 카드마다 그림을 배경으로 붙여요) · 작은 달 숫자 · 光 · 쌍피 표시만 위에 */
-.hw.art{background-color:#fbf6e9;background-size:100% 100%;background-repeat:no-repeat}
+/* v12.1: 한국 화투 그림 (public/vendor/hwatu-1, js/gostop-art.js 가 카드마다 그림을 배경으로) — 光 · 홍단 · 청단 글씨까지 그림 그대로
+   쌍피만 작은 표시를 왼쪽 아래에: 먹은 패처럼 겹쳐 쌓여도 왼쪽은 보여요. 그림이 오기 전에는 흰 카드(뒷면처럼 보이지 않게) */
+.hw.art{background-color:#fff;background-size:100% 100%;background-repeat:no-repeat}
 .hw.art::before{display:none}
-.hw.art .n{left:calc(var(--w) * .05);top:calc(var(--w) * .05);min-width:calc(var(--w) * .3);height:calc(var(--w) * .3);padding:0 calc(var(--w) * .04);box-sizing:border-box;border-radius:99px;
-  display:grid;place-items:center;font:400 calc(var(--w) * .2)/1 'Black Han Sans',sans-serif;color:#fff;background:rgba(24,18,18,.6);letter-spacing:-.03em}
-.hw.art .n.n2{left:calc(var(--w) * .05);font-size:calc(var(--w) * .18)}
-.hw.art .t.gw{width:calc(var(--w) * .34);height:calc(var(--w) * .34);right:calc(var(--w) * .05);top:calc(var(--w) * .05);font-size:calc(var(--w) * .21)}
-.hw.art .t.p2{left:auto;right:calc(var(--w) * .05);bottom:calc(var(--w) * .05);padding:calc(var(--w) * .045) calc(var(--w) * .08);border-radius:99px;font-size:calc(var(--w) * .16);background:rgba(24,18,18,.78)}
-.hw.art.mini .t.p2{padding:0;width:calc(var(--w) * .36);height:calc(var(--w) * .16)}
-.hw.big.art .n{font-size:calc(var(--w) * .18)}
+.hw.art .t.p2{left:calc(var(--w) * .08);right:auto;bottom:calc(var(--w) * .08);padding:calc(var(--w) * .04) calc(var(--w) * .07);border-radius:99px;font-size:calc(var(--w) * .15);background:rgba(24,18,18,.8);
+  box-shadow:0 0 0 max(1px, calc(var(--w) * .02)) rgba(255,255,255,.9)}
+.hw.art.mini .t.p2{padding:0;width:calc(var(--w) * .34);height:calc(var(--w) * .14)}

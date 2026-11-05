@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""한국 화투 48장 SVG → public/vendor/hwatu-1/{번호}.svg
+
+그림: Wikimedia Commons «Category:SVG Hwatu» (낱장 SVG: Spenĉjo · 한국 화투 디자인: Marcus Richert
+      · 일부 Louie Mantia, Jr. 의 하나후다 그림 바탕), CC BY-SA 4.0
+쓰는 법: python3 -I build_hwatu_kr.py 원본폴더 출력폴더 svgo경로 [소수자리]
+  원본폴더 = verification.json(커먼즈 sha1) + mMM-KK.svg 48장 (MM = 달, KK = 그 달의 순서)
+  번호 = (달 - 1) × 4 + (순서 - 1)   · 11월 = 오동(광 · 쌍피 · 피 · 피) · 12월 = 비(광 · 열끗 · 띠 · 쌍피)
+바뀐 점: 그림은 그대로, svgo 로 파일만 가볍게(좌표 소수 자리 줄이기 · 공백 빼기) · 파일 이름을 카드 번호로
+"""
+import sys, json, hashlib, pathlib, shutil, subprocess, re, tempfile
+src, out, svgo = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), sys.argv[3]
+prec = int(sys.argv[4]) if len(sys.argv) > 4 else 2
+meta = json.load(open(src / 'verification.json', encoding='utf-8'))
+assets = {a['cardId']: a for a in meta['assets']}
+assert len(assets) == 48, len(assets)
+tmp = pathlib.Path(tempfile.mkdtemp(prefix='hwk-', dir=pathlib.Path(__file__).resolve().parent))
+for m in range(1, 13):
+    for k in range(1, 5):
+        cid = f'm{m:02d}-{k:02d}'
+        raw = (src / f'{cid}.svg').read_bytes()
+        assert hashlib.sha1(raw).hexdigest() == assets[cid]['sha1'], f'sha1 다름: {cid}'
+        s = raw.decode('utf-8')
+        assert not re.search(r'<script|<foreignObject|\son\w+=|javascript:|href="(?!#)', s, re.I), f'위험한 내용: {cid}'
+        (tmp / f'{(m - 1) * 4 + k - 1}.svg').write_text(s, encoding='utf-8')
+cfg = tmp / 'svgo.config.js'
+cfg.write_text("module.exports={multipass:true,floatPrecision:%d,js2svg:{indent:0,pretty:false},plugins:[{name:'preset-default',params:{overrides:{removeViewBox:false}}}]};" % prec)
+subprocess.run([svgo, '--config', str(cfg), '-q', '-f', str(tmp), '-o', str(tmp)], check=True)
+out.mkdir(parents=True, exist_ok=True)
+for old in out.glob('*.svg'):
+    old.unlink()
+tot = 0
+for i in range(48):
+    s = (tmp / f'{i}.svg').read_text(encoding='utf-8')
+    assert 'viewBox="0 0 103.2 168.2"' in s and 'preserveAspectRatio="none"' in s, f'viewBox 없음: {i}'
+    assert not re.search(r'<script|<foreignObject|\son\w+=|javascript:', s, re.I)
+    (out / f'{i}.svg').write_text(s, encoding='utf-8')
+    tot += len(s.encode('utf-8'))
+shutil.rmtree(tmp)
+print(f'48장 → {out} ({tot:,} bytes, 소수 {prec}자리)')
