@@ -136,7 +136,7 @@ function addPlayer(room, socket, rawName) {
   const name = acc ? acc.name : cleanName(rawName);
   const isHost = room.players.length === 0;
   room.players.push({ id: socket.id, name, isHost, isReady: isHost, score: 0, chips: 1000000, role: assignRole(room), lastChat: 0,
-    uid: acc ? acc.uid : null, lv: acc ? acc.lv : 0, av: acc ? acc.av : null, color: acc ? acc.color : null, op: acc ? acc.op : '' });
+    uid: acc ? acc.uid : null, lv: acc ? acc.lv : 0, av: acc ? acc.av : null, color: acc ? acc.color : null, op: acc ? acc.op : '', fr: acc ? acc.fr : -1, tt: acc ? acc.tt : '' });
   socket.join(room.code);
   socket.data.code = room.code;
   socket.emit('joined', { code: room.code, myId: socket.id });

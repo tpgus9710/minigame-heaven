@@ -15,7 +15,7 @@ const ACC_WHY = {
   notfriend: '친구에게만 초대를 보낼 수 있어요.', noroom: '먼저 방을 만들거나 들어가 주세요.', offline: '친구가 지금 접속해 있지 않아요.',
   here: '이미 같은 방에 있어요.', timeout: '서버가 응답하지 않아요. 연결을 확인해 주세요.', sure: '탈퇴를 확인해 주세요.',
   unknown: '지금 접속 중이거나, 같은 방에 있거나, 같이 게임한 사람에게만 바로 신청할 수 있어요. 친구 코드로 신청해 주세요.',
-  empty: '보낼 내용을 입력해 주세요.',
+  empty: '보낼 내용을 입력해 주세요.', locked: '아직 열리지 않았어요.',
 };
 const FACE_TIP = {
   none: '얼굴이 보이지 않아요. 화면 가운데를 봐 주세요', many: '한 사람만 화면에 나오게 해 주세요', small: '조금 더 가까이 와 주세요',
@@ -50,13 +50,31 @@ function ago(t) {
   if (s < 86400 * 7) return Math.floor(s / 86400) + '일 전';
   const d = new Date(t); return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
-/** 아바타 (이모지 또는 이름 첫 글자 + 색) */
-function avatarOf(u, cls = '') {
+/** 아바타 (이모지 또는 이름 첫 글자 + 색) + 레벨 테두리 (10레벨마다 · js/shared/titles.js · 모양은 css/flair.css)
+ *  u.fr: 고른 테두리 (없으면 레벨에 맞춰) · o.p: 0~1 이면 테두리가 경험치 막대 (내 아바타)
+ *  큰 아바타(xl · lobby) · 'anim' 클래스만 테두리가 움직여요 — 목록의 작은 아바타는 가만히 */
+function avatarOf(u, cls = '', o = {}) {
   const bg = AV_COLORS[((u && u.color) ?? 0) % AV_COLORS.length];
   const face = u && u.av >= 0 && u.av < AV_EMOJI.length ? AV_EMOJI[u.av] : esc(((u && u.name) || '?')[0]);
-  return `<span class="ac-av ${cls}" style="background:${bg}">${face}</span>`;
+  const lv = Math.max(1, Math.min(99, (u && +u.lv) || 1)), top = Titles.tierOf(lv);
+  const t = u && Number.isInteger(u.fr) && u.fr >= 0 && u.fr <= top ? u.fr : top;
+  let fx = '<i class="av-r"></i>';
+  if (o.p != null) fx += '<i class="av-q"></i>';
+  if (t >= 5) fx += '<i class="av-o"></i>';
+  if (t >= 6) fx += `<i class="av-s n${Math.min(3, t - 5)}"></i>`;
+  const bd = { 3: 'star', 7: 'diamond', 8: 'sparkles' }[t];
+  if (bd) fx += `<i class="av-b">${icon(bd)}</i>`;
+  if (t === 9) fx += `<i class="av-c">${icon('crown')}</i>`;
+  if (lv % 10 >= 5 && t === top && !bd && t < 9) fx += `<i class="av-p">${icon('star')}</i>`;      // 5레벨마다 작은 별
+  const p = o.p != null ? `;--p:${(Math.max(0, Math.min(1, +o.p || 0)) * 100).toFixed(1)}%` : '';
+  return `<span class="ac-av ${cls} ft${t}${o.p != null ? ' prog' : ''}" style="background:${bg}${p}">${face}${fx}</span>`;
 }
-const lvTag = lv => `<span class="lv">Lv.${lv}</span>`;
+const lvTag = lv => `<span class="lv ft${Titles.tierOf(lv)}">Lv.${lv}</span>`;
+/** 칭호 이름표 (r1 일반 · r2 희귀 · r3 영웅 · r4 전설) · attrs: 누를 수 있게 할 때 */
+function titleTag(id, cls = '', attrs = '') {
+  const t = id && Titles.byId[id];
+  return t ? `<span class="hon r${t.r} ${cls}" title="${esc(t.d)}"${attrs}>${esc(t.n)}</span>` : '';
+}
 function gameLabel(key) {
   const [base] = String(key).split(':');
   const solo = SOLO_GAMES.find(g => g[0] === base);
@@ -97,6 +115,7 @@ const Acct = {
     if (!me) this.fr = null;
     else if (fresh || was !== me.id) this.loadFriends();
     this.renderAll();
+    if (me) Flair.check(me);                                     // 새 테두리 · 새 칭호 축하 (js/flair.js)
   },
   onLogin(r) {
     this.setToken(r.token);
@@ -140,7 +159,7 @@ const Acct = {
     const el = $('#acct-chip'); if (!el) return;
     const m = this.me;
     el.innerHTML = m
-      ? `${avatarOf(m, 'sm')}<span class="ac-chip-name">${esc(m.name)}</span>${lvTag(m.lv)}${m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : ''}${dmDot(m.dm)}`
+      ? `${avatarOf(m, 'sm', { p: Flair.prog(m) })}<span class="ac-chip-name">${esc(m.name)}</span>${lvTag(m.lv)}${m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : ''}${dmDot(m.dm)}`
       : `${icon('face-id')}<span class="ac-chip-name">얼굴 로그인</span>`;
     el.classList.toggle('in', !!m);
     el.title = m ? '내 정보 · 기록 · 친구' : '얼굴로 로그인 / 회원가입';
@@ -157,13 +176,14 @@ const Acct = {
     }
     const pct = Math.round(100 * (m.xp - m.cur) / Math.max(1, m.next - m.cur));
     const on = this.fr ? this.fr.friends.filter(f => f.on).length : 0;
-    el.innerHTML = `<div class="ac-home">${avatarOf(m, 'lg')}
-      <div class="ac-home-t"><b>${esc(m.name)}님 반가워요!</b> ${lvTag(m.lv)}
+    el.innerHTML = `<div class="ac-home"><span class="ac-home-av" data-act="acOpen" data-tab="ttl" role="button" tabindex="0" title="테두리 · 칭호">${avatarOf(m, 'lg anim', { p: Flair.prog(m) })}</span>
+      <div class="ac-home-t"><b>${esc(m.name)}님 반가워요!</b> ${lvTag(m.lv)} ${titleTag(m.tt, 'link', ' data-act="acOpen" data-tab="ttl" role="button" tabindex="0"')}
         <div class="xpbar"><i style="width:${pct}%"></i></div>
         <small>다음 레벨까지 ${(m.next - m.xp).toLocaleString()} XP · 멀티 ${m.plays}판 ${m.wins}승 · 싱글 ${m.sp}판</small>
         ${this.fr ? `<button class="ac-online-link" data-act="acOpen" data-tab="fr"><i></i>지금 접속 중인 회원 ${this.fr.onlineN || 0}명</button>` : ''}</div>
       <div class="ac-home-btns">
         <button class="btn sm ghost" data-act="acOpen" data-tab="rec">${icon('chart-bar')}기록</button>
+        <button class="btn sm ghost" data-act="acOpen" data-tab="ttl">${icon('medal')}칭호${Flair.unseen(m) ? '<i class="ac-dot">N</i>' : ''}</button>
         <button class="btn sm ghost" data-act="acOpen" data-tab="fr">${icon('users')}친구${on ? `<i class="ac-on">${on}</i>` : ''}${m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : ''}${dmDot(m.dm)}</button>
         <button class="btn sm ghost" data-act="acOpen" data-tab="rank">${icon('trophy')}랭킹</button></div></div>
       ${this.dailyHTML(m.daily, true)}`;
@@ -171,12 +191,12 @@ const Acct = {
   /** 대기실 참가자 카드: 계정 아바타 */
   lobbyAvatar(p) {
     if (!p.uid) return null;
-    return avatarOf({ name: p.name, av: p.av, color: p.color }, 'lobby');
+    return avatarOf({ name: p.name, av: p.av, color: p.color, lv: p.lv, fr: p.fr }, 'lobby');
   },
   /** 대기실 참가자 카드: 레벨 · 친구 표시 · 친구 신청 버튼 */
   lobbyTags(p) {
     if (!p.uid) return '';
-    let t = `<span class="tag lvtag">Lv.${p.lv || 1}</span>`;
+    let t = `<span class="tag lvtag ft${Titles.tierOf(p.lv || 1)}">Lv.${p.lv || 1}</span>${p.tt ? titleTag(p.tt, 'tag-h') : ''}`;
     const m = this.me;
     if (!m || p.uid === m.id) return t;
     const fr = this.fr;
@@ -440,12 +460,12 @@ const Acct = {
     const m = this.me;
     const pct = Math.round(100 * (m.xp - m.cur) / Math.max(1, m.next - m.cur));
     const tab = (k, ic, label, extra = '') => `<button class="ac-tab ${this.ui.tab === k ? 'on' : ''}" data-act="acTab" data-tab="${k}">${icon(ic)}${label}${extra}</button>`;
-    return `<div class="ac-head">${avatarOf(m, 'xl')}
-        <div class="ac-head-t"><h2>${esc(m.name)} ${lvTag(m.lv)} ${typeof opBadge === 'function' ? opBadge(m.role) : ''}</h2>
+    return `<div class="ac-head"><span class="ac-head-av" data-act="acTab" data-tab="ttl" role="button" tabindex="0" title="테두리 · 칭호">${avatarOf(m, 'xl')}</span>
+        <div class="ac-head-t"><h2>${esc(m.name)} ${lvTag(m.lv)} ${typeof opBadge === 'function' ? opBadge(m.role) : ''} ${titleTag(m.tt)}</h2>
           <div class="xpbar"><i style="width:${pct}%"></i></div>
           <small>${m.xp.toLocaleString()} XP · 다음 레벨까지 ${(m.next - m.xp).toLocaleString()} XP</small></div>
         <div class="ac-code-chip" data-act="acCopyCode" title="눌러서 복사"><small>친구 코드</small><b>${esc(m.code)}</b></div></div>
-      <div class="ac-tabs">${tab('rec', 'chart-bar', '기록')}${tab('fr', 'users', '친구', (m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : '') + dmDot(m.dm))}${tab('rank', 'trophy', '랭킹')}${m.role ? tab('op', 'shield-check', '운영', typeof Report !== 'undefined' && Report.opNew ? `<i class="ac-dot">${Report.opNew}</i>` : '') : ''}${tab('set', 'settings', '설정')}</div>`;
+      <div class="ac-tabs">${tab('rec', 'chart-bar', '기록')}${tab('ttl', 'medal', '칭호', Flair.unseen(m) ? '<i class="ac-dot">N</i>' : '')}${tab('fr', 'users', '친구', (m.reqs ? `<i class="ac-dot">${m.reqs}</i>` : '') + dmDot(m.dm))}${tab('rank', 'trophy', '랭킹')}${m.role ? tab('op', 'shield-check', '운영', typeof Report !== 'undefined' && Report.opNew ? `<i class="ac-dot">${Report.opNew}</i>` : '') : ''}${tab('set', 'settings', '설정')}</div>`;
   },
   /** 내 정보가 바뀌었을 때 위쪽(이름 · 레벨 · 탭)만 다시 그리기 — 입력 중인 내용은 그대로 */
   refreshHead() {
@@ -466,6 +486,7 @@ const Acct = {
     clearInterval(this.frPoll); this.frPoll = null;
     if (t === 'fr') this.frPoll = setInterval(() => { if (this.ui.view === 'me' && this.ui.tab === 'fr' && !document.hidden) this.loadFriends(); }, 15000);
     else if (t === 'rank') this.renderRank();
+    else if (t === 'ttl') Flair.renderTab();
     else if (t === 'op') Admin.render();
     else this.renderSettings();
   },
@@ -554,7 +575,8 @@ const Acct = {
     if (socket.connected && g !== this.busyG) { this.busyG = g; socket.emit('acct:busy', { g }); }
     if (b === this.wasBusy) return;
     this.wasBusy = b;
-    if (b) this.stashCards(); else this.flushMissed();
+    if (b) { this.stashCards(); if (Flair.cur) Flair.close(); }           // 게임이 시작되면 축하 화면도 닫아요
+    else this.flushMissed();
   },
   /** 게임을 시작하면 떠 있던 알림 카드는 접어 둬요 (안 읽은 귓속말은 게임이 끝나면 다시 알려 줘요) */
   stashCards() {
@@ -737,7 +759,7 @@ const Acct = {
     const list = r.ok ? r.list : [];
     const medal = i => ['🥇', '🥈', '🥉'][i] || i + 1;
     $('#ac-body').innerHTML = head + (list.length
-      ? `<div class="ac-list rank">${list.map((x, i) => `<div class="ac-row ${this.me && x.id === this.me.id ? 'mine' : ''}"><span class="rk">${medal(i)}</span><span class="ac-who" data-act="acCard" data-uid="${esc(x.id)}" role="button" tabindex="0" title="프로필 보기">${avatarOf(x)}<span class="grow"><b>${esc(x.name)}</b> ${lvTag(x.lv)}</span></span><b>${esc(val(x))}</b></div>`).join('')}</div>
+      ? `<div class="ac-list rank">${list.map((x, i) => `<div class="ac-row ${this.me && x.id === this.me.id ? 'mine' : ''}"><span class="rk">${medal(i)}</span><span class="ac-who" data-act="acCard" data-uid="${esc(x.id)}" role="button" tabindex="0" title="프로필 보기">${avatarOf(x)}<span class="grow"><b>${esc(x.name)}</b> ${lvTag(x.lv)} ${titleTag(x.tt, 'sm')}</span></span><b>${esc(val(x))}</b></div>`).join('')}</div>
         ${r.me && r.me.rank > 50 ? `<p class="small muted center">내 순위 ${r.me.rank}등 · ${esc(val({ v: r.me.v }))}</p>` : ''}`
       : `<p class="muted center">${r.ok ? '아직 기록이 없어요.' : esc(whyText(r))}</p>`);
     const sel2 = $('#ac-rank-g');
@@ -845,10 +867,13 @@ const Acct = {
     if (this.me && this.me.role === 'owner' && r.rel !== 'me' && u.op !== 'owner')
       btns.push(u.op ? `<button class="btn sm ghost" data-act="opRevoke" data-uid="${esc(u.id)}" data-name="${esc(u.name)}">${icon('user-minus')}운영자 해제</button>`
         : `<button class="btn sm ghost" data-act="opGrant" data-uid="${esc(u.id)}" data-name="${esc(u.name)}">${icon('user-shield')}운영자로 지정</button>`);
+    const ttls = (u.ttl || []).slice(0, 12).map(id => titleTag(id)).join('');
     this.body(`<div class="cd-head">${avatarOf(u, 'xl')}<div class="cd-t"><h2>${esc(u.name)} ${lvTag(u.lv)} ${opBadge(u.op)}</h2>
+        ${u.tt ? `<div class="cd-hon">${titleTag(u.tt)}<small>${esc(Titles.TIERS[Titles.tierOf(u.lv)].n)} 테두리</small></div>` : `<div class="cd-hon"><small>${esc(Titles.TIERS[Titles.tierOf(u.lv)].n)} 테두리</small></div>`}
         <div class="xpbar"><i style="width:${pct}%"></i></div>
         <small>${st ? `<span class="st on">${esc(st)}</span>` : ''}${u.streak > 1 ? `<span class="cd-streak">${icon('flame')}${u.streak}일 연속 출석</span>` : ''}</small></div></div>
       <div class="ac-tiles">${tile(u.plays, '멀티 판')}${tile(u.wins, '승리')}${tile(rate + '%', '승률')}${tile(u.sp, '싱글 판')}</div>
+      ${ttls ? `<h4>${icon('medal')}칭호 <small class="muted">${(u.ttl || []).length} / ${u.nT || Titles.LIST.length}</small></h4><div class="cd-hons">${ttls}${(u.ttl || []).length > 12 ? `<small class="muted">외 ${(u.ttl || []).length - 12}개</small>` : ''}</div>` : ''}
       ${fav ? `<h4>${icon('heart')}자주 하는 게임</h4><div class="cd-favs">${fav}</div>` : ''}
       ${recent ? `<h4>${icon('history')}최근 경기</h4><div class="ac-list">${recent}</div>` : '<p class="muted small">아직 경기 기록이 없어요.</p>'}
       <p class="small muted cd-meta">친구 ${u.friends}명 · ${new Date(u.created).toLocaleDateString('ko-KR')} 가입</p>
@@ -873,11 +898,14 @@ const Acct = {
   showGain(g) {
     const box = $('#ov-xp'); if (!box) return;
     const bits = [];
-    if (g.xp) bits.push(`<b class="xp">+${g.xp} XP</b>`);
-    else if (g.short) bits.push('<span>짧은 판이라 경험치는 없어요</span>');
+    const ring = !!g.xp && g.x0 != null && g.x1 != null && !!this.me;           // v12.2: 아바타 테두리가 차오르는 경험치
+    if (g.xp && !ring) bits.push(`<b class="xp">+${g.xp} XP</b>`);
+    else if (!g.xp && g.short) bits.push('<span>짧은 판이라 경험치는 없어요</span>');
     if (g.best) bits.push('<span class="best">🏅 최고 기록 갱신!</span>');
     if (g.first) bits.push('<span>📌 첫 기록 저장!</span>');
-    if (g.up) bits.push(`<span class="up">🎉 레벨 업! Lv.${g.lv}</span>`);
+    if (g.ws >= 2) bits.push(`<span class="ws">${icon('flame')}${g.ws}연승 중</span>`);
+    if (g.up && !ring) bits.push(`<span class="up">🎉 레벨 업! Lv.${g.lv}</span>`);
+    if (ring) return Flair.gain(box, g, bits.join(''));
     box.innerHTML = bits.join('');
     box.classList.toggle('show', bits.length > 0);
   },
@@ -1061,6 +1089,8 @@ socket.on('fr:ping', d => {
   frTimer = setTimeout(() => Acct.loadFriends(), 500);
 });
 socket.on('fr:invited', d => Acct.invited(d));
+socket.on('fr:feat', d => Flair.feat(d));                 // 친구가 새 테두리 · 칭호를 받았어요
+socket.on('fr:cheered', d => Flair.cheered(d));
 socket.on('dm:msg', m => Acct.onDM(m));
 socket.on('acct:daily', d => Acct.onDaily(d));
 socket.on('fr:online', u => Acct.friendOnline(u));
