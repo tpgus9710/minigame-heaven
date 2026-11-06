@@ -376,35 +376,45 @@ body.gaming #scr-relay .rly-pages{max-height:max(180px,calc(var(--avail-h,100vh)
 }
 
 /* ═════════════ 🔤 끝말잇기 (#scr-word) ═════════════
- * 휴대폰에서 화면 키보드가 아래를 가려도 지금 단어 · 입력 칸이 보이게: [참가자 한 줄] [단어] [안내 · 시간] [입력 칸] 을 위쪽에, 이어진 단어는 맨 아래 두 줄까지 */
+ * 휴대폰에서 화면 키보드가 아래를 가려도 지금 단어 · 입력 칸이 보이게: [참가자 한 줄] [단어 카드] [시간] [판정 한 줄] [입력 칸] 을 위쪽에, 이어진 단어는 맨 아래 */
 body.gaming #scr-word .wd-wrap{gap:10px}
 body.gaming #scr-word .wd-input input{flex:1 1 0;width:0;min-width:0}
 body.gaming #scr-word .wd-input .btn{flex:none}
 body.gaming #scr-word .wd-chain{max-height:62px;overflow:hidden}
-body.gaming #scr-word .wd-vote{padding:7px 10px}
 @media (max-width:600px){
+  body.gaming #scr-word .game-head .status{display:none}
   body.gaming #scr-word .wd-wrap{gap:8px}
   body.gaming #scr-word .wd-players{flex-wrap:nowrap;overflow-x:auto;justify-content:safe center;gap:5px;scrollbar-width:none}
   body.gaming #scr-word .wd-players::-webkit-scrollbar{display:none}
   body.gaming #scr-word .wd-p{flex:none;flex-direction:row;gap:5px;align-items:baseline;padding:3px 9px;border-radius:10px;font-size:13px}
-  body.gaming #scr-word .wd-p span{font-size:11px;letter-spacing:-1px}
+  body.gaming #scr-word .wd-p span{font-size:11px;letter-spacing:-1px;gap:4px}
+  body.gaming #scr-word .wd-p i{font-size:11px;letter-spacing:0;padding:0 5px}
+  body.gaming #scr-word .wd-card{padding:8px 8px 8px;border-radius:18px}
   body.gaming #scr-word .wd-word{font-size:44px;line-height:1.2;letter-spacing:2px}
-  body.gaming #scr-word .wd-hint{font-size:13px;min-height:19px;line-height:1.45}
+  body.gaming #scr-word .wd-next{min-height:26px;margin-top:2px;font-size:13px}
+  body.gaming #scr-word .wd-next b{font-size:18px} body.gaming #scr-word .wd-next small{font-size:13px}
+  body.gaming #scr-word .wd-feed{min-height:40px;font-size:14px;line-height:1.4}
+  body.gaming #scr-word .wd-feed small{font-size:12.5px}
   body.gaming #scr-word .wd-input input{font-size:19px;padding:10px 12px}
   body.gaming #scr-word .wd-input .btn{padding:10px 14px;font-size:16px}
   body.gaming #scr-word .wd-chain{max-height:56px;gap:5px}
-  body.gaming #scr-word .wd-chain span{padding:2px 10px;font-size:13px}
+  body.gaming #scr-word .wd-chain a{padding:2px 10px;font-size:13px}
+  body.gaming #scr-word .wd-src{font-size:11px}
 }
 @media (max-height:520px){
   body.gaming #scr-word .wd-wrap{gap:6px}
   body.gaming #scr-word .wd-players{flex-wrap:nowrap;overflow-x:auto;justify-content:safe center;gap:5px;scrollbar-width:none}
   body.gaming #scr-word .wd-p{flex:none;flex-direction:row;gap:5px;align-items:baseline;padding:2px 9px;font-size:13px}
   body.gaming #scr-word .wd-p span{font-size:11px}
-  body.gaming #scr-word .wd-word{font-size:40px;line-height:1.15}
-  body.gaming #scr-word .wd-hint{font-size:13px;min-height:18px}
+  body.gaming #scr-word .wd-card{padding:4px 8px 6px}
+  body.gaming #scr-word .wd-word{font-size:38px;line-height:1.15}
+  body.gaming #scr-word .wd-next{min-height:22px;margin-top:0}
+  body.gaming #scr-word .wd-feed{min-height:22px;font-size:13px}
+  body.gaming #scr-word .wd-feed{flex-direction:row;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:0 8px}
   body.gaming #scr-word .wd-input input{font-size:18px;padding:7px 12px}
   body.gaming #scr-word .wd-input .btn{padding:7px 14px;font-size:16px}
   body.gaming #scr-word .wd-chain{max-height:26px}
+  body.gaming #scr-word .wd-src{display:none}
 }
 
 /* ═════════════ ⭕ OX 퀴즈 (#scr-ox) ═════════════ */
@@ -420,6 +430,7 @@ body.gaming #scr-ox .ox-reveal p{margin:4px 0;line-height:1.45}
   body.gaming #scr-ox .ox-btns{gap:12px}
   body.gaming #scr-ox .ox-btn{aspect-ratio:1.6;border-radius:20px;font-size:52px}
   body.gaming #scr-ox .ox-count{min-height:18px;font-size:13px}
+  body.gaming #scr-ox .ox-lock{font-size:18px;padding:11px 14px}
   body.gaming #scr-ox .ox-reveal{padding:8px 12px;border-radius:14px}
   body.gaming #scr-ox .ox-reveal b{font-size:21px}
   body.gaming #scr-ox .ox-reveal p{font-size:13.5px}
@@ -427,17 +438,18 @@ body.gaming #scr-ox .ox-reveal p{margin:4px 0;line-height:1.45}
 }
 /* 낮은 화면: O · X 버튼 높이를 남는 높이에 맞춰요 */
 @media (max-height:760px) and (min-aspect-ratio:1/1){
-  body.gaming #scr-ox .ox-btn{aspect-ratio:auto;height:clamp(84px,calc(var(--avail-h,100vh) - 330px),186px);max-width:300px}
+  body.gaming #scr-ox .ox-btn{aspect-ratio:auto;height:clamp(84px,calc(var(--avail-h,100vh) - 392px),186px);max-width:300px}
 }
 /* 휴대폰 가로: [문제] [시간] [⭕ ❌ | 정답 풀이] [고른 사람 수] */
 @media (max-height:520px){
-  body.gaming #scr-ox .ox-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"q q" "bar bar" "btns rev" "cnt cnt";gap:6px 12px;max-width:none}
+  body.gaming #scr-ox .ox-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"q q" "bar bar" "btns rev" "lock rev" "cnt cnt";gap:6px 12px;max-width:none}
+  body.gaming #scr-ox .ox-lock{grid-area:lock;font-size:16px;padding:7px 12px;width:100%;max-width:none}
   body.gaming #scr-ox .ox-q{grid-area:q;padding:8px 14px;font-size:18px;line-height:1.4;border-radius:14px}
   body.gaming #scr-ox .ox-bar{grid-area:bar;height:7px}
   body.gaming #scr-ox .ox-btns{grid-area:btns}
   body.gaming #scr-ox .ox-count{grid-area:cnt;min-height:16px;font-size:12.5px}
   body.gaming #scr-ox .ox-reveal{grid-area:rev;width:min(320px,40vw);align-self:stretch;display:flex;flex-direction:column;justify-content:center;padding:6px 12px;overflow:hidden}
-  body.gaming #scr-ox .ox-btn{height:clamp(64px,calc(var(--avail-h,100vh) - 206px),150px);font-size:48px;border-radius:18px}
+  body.gaming #scr-ox .ox-btn{height:clamp(56px,calc(var(--avail-h,100vh) - 252px),150px);font-size:48px;border-radius:18px}
   body.gaming #scr-ox .ox-reveal b{font-size:19px}
   body.gaming #scr-ox .ox-reveal p{margin:2px 0;font-size:13px;line-height:1.4}
   body.gaming #scr-ox .ox-reveal small{font-size:12px}
@@ -627,7 +639,7 @@ body.gaming #scr-bingo #bingo-called span{min-width:30px;padding:3px 6px;font-si
  * 그림판(.sketch)은 좌표를 그림판 크기 비율로 바꾸니 CSS 로 크기를 바꿔도 그대로 그려져요.
  * 캐치마인드 정답 칸(#catch-guess, draw.js): 채팅창이 접히는 1100px 이하 화면에서만 보여요 (넓은 화면은 오른쪽 채팅으로). */
 #catch-guess{display:none}
-@media (max-width:1100px){ body.in-room.gaming #scr-catch #catch-guess:not(.hidden){display:block} }
+@media (max-width:1100px), (pointer:coarse) and (max-width:1400px){ body.in-room.gaming #scr-catch #catch-guess:not(.hidden){display:block} }
 #catch-guess{margin-top:8px;padding:8px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
 #catch-guess .gb-log{font-size:13px;line-height:1.4;color:var(--muted);max-height:4.2em;overflow:hidden;margin:0 2px 6px}
 #catch-guess .gb-log:empty{display:none}
@@ -644,7 +656,8 @@ body.gaming #scr-bingo #bingo-called span{min-width:30px;padding:3px 6px;font-si
   body.gaming #scr-catch > .scorebar{grid-area:score}
   body.gaming #scr-catch #catch-word{grid-area:word;margin:0 0 8px;font-size:18px;padding:8px 10px}
   body.gaming #scr-catch .canvas-box{display:contents}
-  body.gaming #scr-catch #catch-cv{grid-area:cv;justify-self:center;align-self:start;max-height:min(var(--cv-h,9999px),calc(var(--avail-h,500px) - var(--dr-rsv,104px)))}
+  body.gaming #scr-catch #catch-cvw{grid-area:cv;justify-self:center;align-self:start;margin:0}
+  body.gaming #scr-catch #catch-cv{max-height:min(var(--cv-h,9999px),calc(var(--avail-h,500px) - var(--dr-rsv,104px)))}
   body.gaming #scr-catch #catch-tools{grid-area:side;align-self:start;margin:0;justify-content:flex-start}
   body.gaming #scr-catch #catch-guess{grid-area:side;align-self:start;margin:0}
   body.gaming #scr-catch #catch-guess .gb-log{max-height:none}
@@ -663,7 +676,7 @@ body.gaming #scr-bingo #bingo-called span{min-width:30px;padding:3px 6px;font-si
   body.gaming :is(#scr-catch,#scr-liar) .tools{gap:4px;padding:6px}
 }
 /* 좁은 화면에서는 '토론은 오른쪽 채팅으로' 안내가 맞지 않아요 (채팅은 💬 버튼) */
-@media (max-width:1100px){ body.in-room.gaming #scr-liar .side-col > .small{display:none} }
+@media (max-width:1100px), (pointer:coarse) and (max-width:1400px){ body.in-room.gaming #scr-liar .side-col > .small{display:none} }
 @media (min-aspect-ratio:1/1){
   body.gaming #scr-catch #catch-guess .gb-row{flex-direction:column}
   body.gaming #scr-catch #catch-guess .btn{width:100%}

@@ -7,13 +7,20 @@ const Snake = {
     Object.assign(this, { w, h, cell });
     const cv = $('#snake-cv'); cv.width = w * cell; cv.height = h * cell;
   },
+  /** 싱글 판 크기: 화면 모양에 맞춰요 (세로 휴대폰이면 세로로 긴 판 · 칸 수는 비슷하게 약 520칸) → 칸이 커져서 잘 보여요 */
+  soloDims() {
+    const W = Math.max(280, window.innerWidth - 24), H = Math.max(260, window.innerHeight - (window.innerWidth <= 760 ? 170 : 190));
+    const ar = W / H, N = 520, h = Math.round(Math.sqrt(N / ar)), w = Math.round(N / Math.max(1, h));
+    return [Math.max(14, Math.min(30, w)), Math.max(12, Math.min(32, h))];
+  },
   startSolo() {
     stopLocal();
     this.solo = true; S.solo = 'snake';
-    this.size(26, 20, 24);
-    this.me = { body: [[8, 10], [7, 10], [6, 10], [5, 10]], dir: 1, queue: [], grow: 0 };
+    const [w, h] = this.soloDims(), y = Math.floor(h / 2), x = Math.max(4, Math.floor(w / 3));
+    this.size(w, h, 24);
+    this.me = { body: [[x, y], [x - 1, y], [x - 2, y], [x - 3, y]], dir: 1, queue: [], grow: 0 };
     this.food = []; this.addFood(); this.score = 0; this.speed = 130; this.dead = false;
-    $('#snake-status').textContent = '방향키(또는 WASD)로 움직여요. 사과를 먹으면 길어지고 빨라져요!';
+    $('#snake-status').textContent = TOUCH ? '화면 아무 데나(빈 곳도) 밀어서 방향을 바꿔요. 사과를 먹으면 길어지고 빨라져요!' : '방향키(또는 WASD)로 움직여요. 사과를 먹으면 길어지고 빨라져요!';
     $('#snake-tlabel').textContent = '최고 기록';
     $('#snake-time').textContent = store.get('best-snake', 0);
     show('snake'); renderScores(); this.hud(4);
@@ -57,7 +64,7 @@ const Snake = {
     stopLocal();
     this.solo = false;
     this.size(d.w, d.h, 18);
-    $('#snake-status').textContent = '벽이나 다른 뱀 몸에 부딪히면 탈락! 머리끼리 부딪히면 둘 다 탈락이에요.';
+    $('#snake-status').textContent = (TOUCH ? '화면 아무 데나 밀어서 방향을 바꿔요. ' : '') + '벽이나 다른 뱀 몸에 부딪히면 탈락! 머리끼리 부딪히면 둘 다 탈락이에요.';
     $('#snake-tlabel').textContent = '남은 시간';
     show('snake'); renderScores();
     this.draw([], []);
@@ -111,17 +118,21 @@ const Snake = {
     } else socket.emit('snake:dir', d);
   },
 };
-(() => {   // 화면 밀기(스와이프)
-  let p0 = null;
-  const cv = $('#snake-cv');
-  cv.addEventListener('pointerdown', e => { p0 = { x: e.clientX, y: e.clientY }; });
-  cv.addEventListener('pointerup', e => {
-    if (!p0) return;
-    const dx = e.clientX - p0.x, dy = e.clientY - p0.y; p0 = null;
-    if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+/* 화면 밀기(스와이프): 판 밖 빈 곳(양옆 검은 부분)을 밀어도 돼요. 손가락을 떼기 전에, 22px 움직이는 순간 바로 방향을 바꾸고
+ * 손가락을 떼지 않고 이어서 다른 쪽으로 밀면 또 바꿔요 (예전: 판 안에서만 · 손을 뗄 때 바뀌어서 늦었어요) */
+TouchArea.add('snake', {
+  mouse: true, p: null,
+  down(e) { this.p = { x: e.clientX, y: e.clientY }; },
+  move(e) {
+    const p = this.p; if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 22) return;
     Snake.turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0));
-  });
-})();
+    this.p = { x: e.clientX, y: e.clientY };
+  },
+  up() { this.p = null; },
+  cancel() { this.p = null; },
+});
 register('snake', {
   solo: () => Snake.startSolo(),
   stop: () => { Snake.dead = true; },

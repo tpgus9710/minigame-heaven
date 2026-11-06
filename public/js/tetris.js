@@ -1,5 +1,8 @@
 /* =====================================================================
  *  🧱 테트리스
+ *  터치 화면 조작 (TetTouch, 아래):
+ *   · 손가락(기본): 화면 어디든 끌면 이동 · 톡 누르면 회전 · 아래로 끌면 천천히 · 아래로 휙 쓸면 바로 내리기 · 위로 쓸면 회전
+ *   · 버튼: 왼손 ◀ ▶ (아래 ▼) · 오른손 큰 ⟳ (위에 따로 ⤓) — 자주 누르는 회전과 바로 내리기를 떨어뜨려 잘못 누르지 않게
  * ===================================================================== */
 const Tetris = {
   SHAPES: { I: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], J: [[1, 0, 0], [1, 1, 1], [0, 0, 0]], L: [[0, 0, 1], [1, 1, 1], [0, 0, 0]],
@@ -15,7 +18,9 @@ const Tetris = {
     this.bossHp = 20;
     $('#boss-box').classList.toggle('hidden', !solo);
     $('#tetris-title .tt').textContent = solo ? '테트리스 보스전' : '테트리스 배틀';
-    $('#tetris-status').textContent = solo ? '2줄 이상 지우면 보스에게 데미지! 보스는 12초마다 방해 줄을 보내요.' : '2줄 이상 지우면 상대에게 공격! 마지막까지 살아남으세요.';
+    $('#tetris-status').textContent = TOUCH && TetTouch.mode === 'swipe' ? '끌면 이동 · 톡 누르면 회전 · 아래로 휙 쓸면 바로 내려요'
+      : solo ? '2줄 이상 지우면 보스에게 데미지! 보스는 12초마다 방해 줄을 보내요.' : '2줄 이상 지우면 상대에게 공격! 마지막까지 살아남으세요.';
+    TetTouch.paint();
     outSet.clear();
     show('tetris'); renderScores(); this.hud();
     this.running = true; this.last = performance.now();
@@ -125,9 +130,63 @@ const Tetris = {
     m.forEach((row, r) => row.forEach((v, cc) => { if (v) this.cell(n, cc + ox, r + oy, this.COLORS[this.next], 22); }));
   },
 };
-register('tetris', { solo: () => Tetris.start(true), stop: () => { Tetris.running = false; },
-  // 터치 화면: ◀ ▼ ▶ (누르고 있으면 계속) | 돌리기 · 바로 내리기
-  pad: ['ArrowLeft', 'ArrowDown', 'ArrowRight', '|', 'ArrowUp', 'Space'], padLabel: { ArrowUp: '⟳', Space: '⤓' }, padRepeat: ['ArrowLeft', 'ArrowRight', 'ArrowDown'],
+/* ── 터치 조작 ── */
+const TetTouch = {
+  g: null,
+  get mode() { return store.get('tetCtl', 'swipe') === 'btn' ? 'btn' : 'swipe'; },
+  set mode(v) { store.set('tetCtl', v === 'btn' ? 'btn' : 'swipe'); },
+  /** 화면에서 한 칸의 크기 (px) — 손가락이 한 칸만큼 움직이면 블록도 한 칸 */
+  cell() { const r = $('#tetris-cv').getBoundingClientRect(); return Math.max(14, r.width / 10 || 24); },
+  down(e) {
+    if (!Tetris.running) return;
+    const t = performance.now();
+    this.g = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: t, cx: e.clientX, cy: e.clientY, axis: null, moved: false, done: false, rot: false, hist: [[e.clientX, e.clientY, t]] };
+  },
+  move(e) {
+    const g = this.g; if (!g || e.pointerId !== g.id || g.done || !Tetris.running) return;
+    const x = e.clientX, y = e.clientY, t = performance.now(), cs = this.cell();
+    g.hist.push([x, y, t]); if (g.hist.length > 6) g.hist.shift();
+    const dx = x - g.x0, dy = y - g.y0;
+    if (!g.axis && Math.hypot(dx, dy) > 10) g.axis = Math.abs(dx) >= Math.abs(dy) ? 'h' : dy > 0 ? 'v' : 'u';   // 처음 움직인 방향으로만
+    if (g.axis === 'h') {
+      const step = cs * 0.85;
+      while (x - g.cx >= step) { g.cx += step; if (Tetris.move(1, 0)) { g.moved = true; this.buzz(); } }
+      while (g.cx - x >= step) { g.cx -= step; if (Tetris.move(-1, 0)) { g.moved = true; this.buzz(); } }
+    } else if (g.axis === 'v') {
+      if (dy > cs * 1.6 && this.speed(g) > 1.0) return this.drop(g);               // 휙! → 바로 내리기
+      while (y - g.cy >= cs) {                                                        // 천천히 끌면 한 칸씩
+        g.cy += cs; g.moved = true;
+        if (Tetris.move(0, 1)) Tetris.score += 1; else { Tetris.lock(); g.done = true; break; }
+        Tetris.acc = 0;
+      }
+    } else if (g.axis === 'u' && !g.rot && dy < -cs * 1.2) { g.rot = true; g.moved = true; Tetris.rotate(); this.buzz(); }
+    Tetris.render();
+  },
+  cancel() { this.g = null; },
+  up(e) {
+    const g = this.g; if (!g || e.pointerId !== g.id) return;
+    this.g = null;
+    if (!Tetris.running || g.done) return;
+    const dt = performance.now() - g.t0, d = Math.hypot(e.clientX - g.x0, e.clientY - g.y0);
+    if (g.axis === 'v' && e.clientY - g.y0 > this.cell() && this.speed(g) > 0.8) return this.drop(g);   // 짧게 휙 쓸고 뗐을 때
+    if (!g.moved && d < 14 && dt < 400) { Tetris.rotate(); this.buzz(); Tetris.render(); }               // 톡 → 회전
+  },
+  /** 최근 손가락 속도 (아래 방향, px/ms) */
+  speed(g) { const a = g.hist[0], b = g.hist[g.hist.length - 1]; return (b[1] - a[1]) / Math.max(8, b[2] - a[2]); },
+  drop(g) { g.done = true; g.moved = true; Tetris.hardDrop(); this.buzz(16); Tetris.render(); },
+  buzz(ms = 7) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch { /* 무시 */ } },
+  /** 옆 칸의 [손가락 | 버튼] 표시 */
+  paint() { $$('#scr-tetris .t-seg button').forEach(b => b.classList.toggle('on', b.dataset.m === this.mode)); },
+};
+TouchArea.add('tetris', TetTouch);                                // 화면 어디든 (판 바깥 빈 곳까지)
+ACT.tetCtl = el => {
+  TetTouch.mode = el.dataset.m; TetTouch.paint(); updatePad(); Fit.schedule();
+  toast(TetTouch.mode === 'btn' ? '버튼으로 조작해요. ◀ ▶ 이동 · ⟳ 회전 · ⤓ 바로 내리기' : '손가락으로 조작해요. 끌면 이동 · 톡 회전 · 아래로 휙 바로 내리기');
+};
+register('tetris', { solo: () => Tetris.start(true), stop: () => { Tetris.running = false; TetTouch.g = null; },
+  // 버튼 조작일 때만 패드 (왼손 ◀ ▶ / ▼ · 오른손 ⤓ / ⟳) — 손가락 조작이면 패드 없이 판을 크게
+  get pad() { return TetTouch.mode === 'btn' ? ['ArrowLeft', 'ArrowRight', 'ArrowDown', '|', 'Space', 'ArrowUp'] : null; },
+  padLabel: { ArrowUp: '⟳', Space: '⤓' }, padRepeat: ['ArrowLeft', 'ArrowRight', 'ArrowDown'],
   key: e => {
   if (!Tetris.running) return;
   const k = e.key;

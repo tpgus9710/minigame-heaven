@@ -1,0 +1,185 @@
+/* ═════════════ 🎓 인생 게임 (#scr-life) ═════════════
+ * 화면 높이를 다 쓰는 틀(.lf-wrap, 높이는 life.js 가 재요)
+ *  · .side   : [판 | 룰렛 · 참가자]  (노트북 · 태블릿 가로 · 폴드 펼친 화면)
+ *  · .bottom : [판 / 룰렛 · 참가자 한 줄] (휴대폰 · 폴드 커버 · 태블릿 세로)
+ * 판(SVG)은 칸 안을 꽉 채우고, 보이는 곳은 카메라(viewBox)가 정해요. */
+.lf-wrap{position:relative;display:grid;gap:10px;height:min(640px,calc(var(--avail-h,100vh) - 150px));min-height:300px}
+.lf-wrap.bottom{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+.lf-wrap.side{grid-template-columns:minmax(0,1fr) clamp(250px,24vw,320px);grid-template-rows:minmax(0,1fr)}
+body.gaming #scr-life > .scorebar{display:none}
+
+/* ── 판 ── */
+.lf-stage{position:relative;min-width:0;min-height:0;border-radius:20px;overflow:hidden;background:#0c2230;
+  box-shadow:0 16px 40px rgba(0,0,0,.42),inset 0 0 0 1px rgba(255,255,255,.06)}
+.lf-board{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.lf-board:active{cursor:grabbing}
+.lf-bgr{fill:#0c2230}
+.lf-road line{stroke:#2a3544;stroke-width:30;stroke-linecap:round}
+.lf-lane line{stroke:rgba(255,255,255,.26);stroke-width:2;stroke-dasharray:7 9}
+.lf-lane-tag rect{opacity:.92;stroke:rgba(255,255,255,.35);stroke-width:1}
+.lf-lane-tag text{font-family:'Black Han Sans','Noto Sans KR',sans-serif;font-size:12.5px;fill:#fff;text-anchor:middle;dominant-baseline:middle;letter-spacing:.5px}
+.lf-tile{cursor:pointer}
+.lf-tile .b{stroke:rgba(255,255,255,.42);stroke-width:1.5}
+.lf-tile .hl{fill:rgba(255,255,255,.15)}
+.lf-tile text{text-anchor:middle;dominant-baseline:middle;pointer-events:none}
+.lf-tile .ic{font-size:17px}
+.lf-tile.big .ic{font-size:22px}
+.lf-tile .lb{font-family:'Black Han Sans','Noto Sans KR',sans-serif;font-size:11.5px;fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.25);stroke-width:2px}
+.lf-tile .lb.sm{font-size:10px}
+.lf-tile.big .lb{font-size:12.5px}
+.lf-tile .amt{font-family:'Black Han Sans','Noto Sans KR',sans-serif;font-size:14px;fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.25);stroke-width:2px}
+.lf-tile .amt.sm{font-size:11.5px}
+.lf-tile .tg{font-size:11px}
+.lf-tile.big .b{stroke:#fff;stroke-width:2.5} .lf-tile .ring{fill:none;stroke:rgba(255,255,255,.32);stroke-width:1.2}
+.lf-tile.t-pay .b{fill:#1f9d55} .lf-tile.t-life .b{fill:#e67e22} .lf-tile.t-money.gain .b{fill:#2874c8} .lf-tile.t-money.loss .b{fill:#c0392b}
+.lf-tile.t-kids .b{fill:#138d75} .lf-tile.t-baby .b{fill:#d9577f} .lf-tile.t-pet .b{fill:#a0632f} .lf-tile.t-promo .b{fill:#0f9b8e} .lf-tile.t-cut .b{fill:#6b2f3a}
+.lf-tile.t-tax .b{fill:#455a64} .lf-tile.t-stock .b{fill:#5b3fc4} .lf-tile.t-boom .b{fill:#7c4dff} .lf-tile.t-crash .b{fill:#3b2a73} .lf-tile.t-lucky .b{fill:#c99a06}
+.lf-tile.t-sue .b{fill:#6a1b9a} .lf-tile.t-change .b{fill:#0277bd} .lf-tile.t-disaster .b{fill:#8d4b16} .lf-tile.t-house2 .b{fill:#00897b}
+.lf-tile.t-start .b{fill:#1e7e48} .lf-tile.t-career .b{fill:#3949ab} .lf-tile.t-marry .b{fill:#c2185b} .lf-tile.t-house .b{fill:#87522a} .lf-tile.t-retire .b{fill:#b7860b}
+.lf-tile.hit .b{animation:lfHit .5s}
+@keyframes lfHit{40%{stroke:#fff;stroke-width:5}}
+.lf-car{transition:transform .15s linear;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6));pointer-events:none}
+.lf-car .body{stroke:rgba(0,0,0,.55);stroke-width:1.5}
+.lf-car .ring{fill:none;stroke:#fff;stroke-width:2;opacity:0}
+.lf-car.turn .ring{animation:lfRing 1.3s infinite;transform-box:fill-box;transform-origin:center}
+.lf-car.turn .body{stroke:#fff;stroke-width:2.2}
+@keyframes lfRing{0%{transform:scale(.75);opacity:.9}100%{transform:scale(1.55);opacity:0}}
+.lf-float{font-family:'Black Han Sans',sans-serif;font-size:21px;text-anchor:middle;paint-order:stroke;stroke:#08121c;stroke-width:5px;animation:lfFloat 1.5s ease-out forwards;pointer-events:none}
+.lf-float.gain{fill:#45e39a} .lf-float.loss{fill:#ff6b6b} .lf-float.loan{fill:#ffb74d} .lf-float.life{fill:#ffc078} .lf-float.gold{fill:#ffd54f}
+@keyframes lfFloat{from{transform:translateY(6px);opacity:0}15%{opacity:1}to{transform:translateY(-36px);opacity:0}}
+
+.lf-cam{position:absolute;top:10px;right:10px;z-index:3;width:44px;height:44px;border-radius:13px;background:rgba(8,14,24,.8);border:1px solid rgba(255,255,255,.2);
+  font-size:21px;line-height:1;color:#fff;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+.lf-cam.hidden{display:none}
+.lf-msg{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:2;background:rgba(7,13,22,.88);border:1px solid rgba(255,255,255,.14);color:#f4f6fb;
+  font-weight:700;padding:8px 16px;border-radius:16px;font-size:14px;line-height:1.45;max-width:calc(100% - 24px);width:max-content;text-align:center;pointer-events:none;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);word-break:keep-all;overflow-wrap:anywhere}
+.lf-msg:empty{display:none}
+.lf-msg.tip{background:rgba(28,36,70,.95);border-color:var(--accent)}
+
+/* ── 고르기 창 (판 위에) ── */
+.lf-dec{position:absolute;inset:0;z-index:5;background:rgba(4,9,16,.7);backdrop-filter:blur(3px);display:flex;padding:12px;overflow:auto;border-radius:20px}
+.lf-dec.hidden{display:none}
+.lf-dec-in{margin:auto;display:flex;flex-direction:column;align-items:center;gap:11px;max-width:100%}
+.lf-dec-t{font-family:'Black Han Sans',sans-serif;font-size:clamp(18px,2.4vw,25px);color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);text-align:center;word-break:keep-all}
+.lf-sub{margin:0;color:#c9d3e3;font-size:13px;text-align:center;line-height:1.5;word-break:keep-all}
+.lf-sub b{color:#ffd54f}
+.lf-cards{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.lf-card{position:relative;width:172px;min-height:188px;border-radius:16px;border:0;cursor:pointer;padding:26px 12px 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  color:#1c2333;background:linear-gradient(180deg,#ffffff,#eef1f7);box-shadow:0 12px 26px rgba(0,0,0,.45);transition:transform .15s,box-shadow .15s;animation:pop .25s backwards;font-family:inherit;text-align:center}
+.lf-card:hover{transform:translateY(-5px);box-shadow:0 18px 32px rgba(0,0,0,.5),0 0 0 3px #5ce1ff}
+.lf-card:active{transform:translateY(-1px)}
+.lf-card:nth-child(2){animation-delay:.06s} .lf-card:nth-child(3){animation-delay:.12s}
+.lf-card .stripe{position:absolute;top:11px;left:14px;right:14px;height:8px;border-radius:5px;background:#64748b}
+.lf-card.fork .stripe{background:var(--lc)} .lf-card.job .stripe{background:#3949ab} .lf-card.home .stripe{background:#87522a}
+.lf-card.estate.rich .stripe{background:#b7860b} .lf-card.estate.farm .stripe{background:#2e8b57}
+.lf-card .ic{font-style:normal;font-size:30px;line-height:1.1}
+.lf-card b{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:23px;line-height:1.15;word-break:keep-all}
+.lf-card span{font-weight:700;font-size:12.5px;color:#374151;line-height:1.45;word-break:keep-all}
+.lf-card span b{font-family:inherit;font-size:inherit;font-weight:900;color:#b45309}
+.lf-card .sal{color:#15803d;font-size:15px;font-weight:900}
+.lf-card .skill{font-weight:500;color:#4b5563;font-size:12px;background:#e8ecf5;border-radius:8px;padding:4px 7px}
+.lf-card .price{font-family:'Black Han Sans',sans-serif;font-size:20px;color:#87522a}
+.lf-card .sell{font-size:12.5px;color:#15803d;font-weight:900}
+.lf-card .rv{font-size:11px;color:#6b7280}
+.lf-ins{display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;border-radius:999px;padding:8px 14px;
+  font-family:inherit;font-weight:700;font-size:14px;cursor:pointer}
+.lf-ins small{font-weight:500;color:#c9d3e3;font-size:12px}
+.lf-ins i{width:20px;height:20px;border-radius:6px;border:2px solid #fff;flex:none;display:flex;align-items:center;justify-content:center}
+.lf-ins.on{background:rgba(63,207,155,.22);border-color:var(--good)}
+.lf-ins.on i{background:var(--good);border-color:var(--good)}
+.lf-ins.on i::after{content:'✓';color:#063;font-style:normal;font-weight:900;font-size:13px}
+.lf-nums{display:grid;grid-template-columns:repeat(5,54px);gap:8px}
+.lf-num{height:54px;border-radius:14px;border:0;background:#fff;color:#1c2333;font-family:'Black Han Sans',sans-serif;font-size:24px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  line-height:1;box-shadow:0 6px 14px rgba(0,0,0,.35);transition:transform .12s}
+.lf-num:hover:not(:disabled){transform:translateY(-3px)}
+.lf-num:disabled{background:#2f394c;color:#7d879c;cursor:not-allowed;box-shadow:inset 0 0 0 2px var(--oc,#555)}
+.lf-num small{font-family:'Noto Sans KR',sans-serif;font-size:9px;font-weight:700;color:#aab3c6;max-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.lf-who{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:520px}
+.lf-whobtn{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:110px;padding:10px 14px;border-radius:14px;border:0;border-top:5px solid var(--pc);background:#fff;color:#1c2333;
+  cursor:pointer;font-family:inherit;box-shadow:0 8px 18px rgba(0,0,0,.4)}
+.lf-whobtn b{font-size:16px} .lf-whobtn span{font-size:12px;color:#4b5563;font-weight:700} .lf-whobtn i{display:none}
+.lf-whobtn:hover{transform:translateY(-3px)}
+
+/* ── 참가자 자세히 (판 위에) ── */
+.lf-sheet{position:absolute;inset:0;z-index:6;background:rgba(4,9,16,.55);display:flex;align-items:flex-end;justify-content:center;padding:10px;overflow:auto;border-radius:20px}
+.lf-sheet.hidden{display:none}
+.lf-sheet-in{background:var(--panel);color:var(--text);border:1px solid var(--line);border-top:5px solid var(--pc);border-radius:18px;padding:12px 16px 14px;width:min(470px,100%);
+  box-shadow:0 18px 44px rgba(0,0,0,.5);animation:pop .2s;font-size:14px;line-height:1.5}
+.lf-sheet-h{display:flex;align-items:center;gap:8px;font-size:17px}
+.lf-sheet-h .dot{width:13px;height:13px;border-radius:4px;background:var(--pc);flex:none}
+.lf-sheet-h em{font-style:normal;font-size:12px;background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:1px 9px}
+.lf-x{margin-left:auto;border:0;background:var(--panel2);color:var(--text);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:15px}
+.lf-sheet-money{margin:4px 0 8px;color:var(--muted)} .lf-sheet-money b{color:var(--text);font-size:16px} .lf-sheet-money b.bad{color:var(--bad)}
+.lf-sheet-job{display:flex;gap:10px;align-items:center;background:var(--panel2);border-radius:12px;padding:8px 10px}
+.lf-sheet-job em{font-style:normal;font-size:28px}
+.lf-sheet-job small{display:block;color:var(--muted);font-size:12.5px}
+.lf-sheet-l{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13.5px}
+.lf-sheet-c{margin-top:8px;font-size:13.5px} .lf-sheet-c ul{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.lf-sheet .ok{color:var(--good);font-weight:700;font-size:12px} .lf-sheet .no{color:var(--muted);font-size:12px}
+
+/* ── 룰렛 · 버튼 ── */
+.lf-panel{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0}
+.lf-wrap.side .lf-panel{overflow-y:auto;scrollbar-width:thin}
+.lf-spin{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px 12px;display:flex;align-items:center;gap:12px;flex:none}
+.lf-wrap.side .lf-spin{flex-direction:column;padding:14px 12px 12px;gap:10px}
+.lf-wheel-wrap{--lf-wh:92px;position:relative;width:var(--lf-wh);height:var(--lf-wh);flex:none}
+.lf-wrap.side .lf-wheel-wrap{--lf-wh:168px}
+.lf-wheel{width:100%;height:100%;transition:transform 1.15s cubic-bezier(.12,.7,.18,1);filter:drop-shadow(0 6px 12px rgba(0,0,0,.45))}
+.lf-wheel text{font-family:'Black Han Sans',sans-serif;font-size:21px;fill:#fff;text-anchor:middle;dominant-baseline:middle;paint-order:stroke;stroke:rgba(0,0,0,.25);stroke-width:2px}
+.lf-pointer{position:absolute;top:calc(var(--lf-wh) * -.04);left:50%;transform:translateX(-50%);width:0;height:0;border-left:calc(var(--lf-wh) * .065) solid transparent;
+  border-right:calc(var(--lf-wh) * .065) solid transparent;border-top:calc(var(--lf-wh) * .14) solid #fff;filter:drop-shadow(0 3px 3px rgba(0,0,0,.55));z-index:2}
+.lf-hub{position:absolute;left:32%;top:32%;width:36%;height:36%;border-radius:50%;border:3px solid #f8e7a1;background:radial-gradient(circle at 35% 30%,#3b4d66,#121a26);
+  color:#fff;font-family:'Black Han Sans',sans-serif;font-size:calc(var(--lf-wh) * .12);letter-spacing:1px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.5);padding:0}
+.lf-hub.big{font-size:calc(var(--lf-wh) * .2);letter-spacing:0}
+.lf-hub:disabled{cursor:default}
+.lf-hub.ready{animation:lfHub 1s infinite}
+@keyframes lfHub{50%{box-shadow:0 0 0 6px rgba(248,231,161,.35),0 4px 10px rgba(0,0,0,.5)}}
+.lf-why{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:900;color:#ffd54f;text-shadow:0 1px 3px #000;pointer-events:none}
+.lf-acts{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;align-items:stretch;justify-content:center;min-height:46px}
+.lf-wrap.side .lf-acts{width:100%}
+.lf-go{font-size:18px;padding:12px 14px;display:flex;align-items:center;justify-content:center;gap:8px}
+.lf-go small{opacity:.75;font-size:11px;font-weight:700}
+.lf-wait{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-weight:700;font-size:14px;text-align:center}
+.lf-wait i{width:11px;height:11px;border-radius:3px;flex:none}
+
+/* ── 참가자 ── */
+.lf-players{display:flex;gap:8px;min-width:0}
+.lf-wrap.bottom .lf-players{overflow-x:auto;scrollbar-width:none;padding-bottom:1px}
+.lf-wrap.bottom .lf-players::-webkit-scrollbar{display:none}
+.lf-wrap.side .lf-players{flex-direction:column}
+.lf-p{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--pc);border-radius:12px;padding:8px 11px;transition:box-shadow .2s,opacity .2s;cursor:pointer;min-width:0}
+.lf-wrap.bottom .lf-p{flex:1 0 124px;padding:6px 9px;border-left-width:4px}
+.lf-p.turn{box-shadow:0 0 0 2px var(--pc),0 8px 20px rgba(0,0,0,.3)}
+.lf-p.retired{opacity:.8}
+.lf-p-top{display:flex;align-items:center;gap:6px;min-width:0;font-size:14px}
+.lf-p-top b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.lf-p-top .dot{width:11px;height:11px;border-radius:3px;background:var(--pc);flex:none}
+.lf-p-top em{font-style:normal;font-size:10.5px;background:#b7860b;color:#fff;padding:1px 7px;border-radius:99px;margin-left:auto;font-weight:900;flex:none;white-space:nowrap}
+.lf-p-money{font-family:'Black Han Sans',sans-serif;font-size:21px;line-height:1.25;margin-top:1px}
+.lf-p-money small{font-family:'Noto Sans KR',sans-serif;font-size:11px;color:var(--muted);margin-left:3px}
+.lf-p-money.up{animation:moneyUp 1s} .lf-p-money.down{animation:moneyDown 1s}
+.lf-p-job{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lf-p-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.lf-p-tags span{font-size:11px;background:var(--panel2);border:1px solid var(--line);padding:0 6px;border-radius:99px;white-space:nowrap}
+.lf-p-tags span.debt{background:rgba(255,93,115,.14);border-color:rgba(255,93,115,.4);color:#ff8a9a}
+.lf-wrap.bottom .lf-p-money{font-size:17px}
+.lf-wrap.bottom .lf-p-top{font-size:12.5px}
+.lf-wrap.bottom .lf-p-job{font-size:11px}
+.lf-wrap.bottom .lf-p-tags{flex-wrap:nowrap;overflow:hidden;gap:2px;margin-top:2px}
+.lf-wrap.bottom .lf-p-tags span{font-size:10px;padding:0 4px}
+
+/* 작은 화면: 카드 · 숫자를 조금 작게 */
+@media (max-width:620px),(max-height:560px){
+  .lf-card{width:128px;min-height:150px;padding:22px 8px 10px;gap:3px}
+  .lf-card b{font-size:18px} .lf-card .ic{font-size:24px} .lf-card span{font-size:11.5px} .lf-card .skill{font-size:11px;padding:3px 5px}
+  .lf-card .price{font-size:17px} .lf-card .sal{font-size:13px}
+  .lf-cards{gap:8px} .lf-dec{padding:8px} .lf-dec-in{gap:8px} .lf-dec-t{font-size:17px}
+  .lf-nums{grid-template-columns:repeat(5,46px);gap:6px} .lf-num{height:46px;font-size:20px}
+  .lf-msg{font-size:12.5px;padding:6px 12px;bottom:8px}
+  .lf-ins{font-size:12.5px;padding:6px 11px} .lf-ins small{display:none}
+}
+@media (max-height:500px){ .lf-card{min-height:118px} .lf-card .skill{display:none} }
+
+/* 휴대폰 · 폴드 커버: 제목 아래 설명 줄은 숨겨서 판을 조금 더 크게 */
+@media (max-width:620px) and (max-height:940px){ body.gaming #scr-life .game-head .status{display:none} }

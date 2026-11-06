@@ -158,8 +158,27 @@ body.in-room .shell{grid-template-columns:minmax(0,1fr) 300px}
 .tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px;padding:8px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
 .sw{width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;padding:0}
 .sw.on{border-color:var(--text)}
+.sw.era{width:34px;height:34px;border-radius:10px;background:#fff;border-color:#c9cdd8;color:#5b6170;display:grid;place-items:center}
+.sw.era .ic{width:20px;height:20px} .sw.era.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,108,255,.35)}
+.szs{display:contents}
 .szb{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;display:grid;place-items:center}
-.szb.on{border-color:var(--accent)} .szb i{display:block;border-radius:50%;background:var(--text)}
+.szb.on{border-color:var(--accent)} .szb i{display:block;border-radius:50%;background:var(--text);max-width:28px;max-height:28px}
+.szb.e{width:40px;height:40px} .szb.e i{background:#fff;border:2px dashed #8a90a0}
+.sk-undo .ic,.tools .btn .ic{width:16px;height:16px}
+/* 캐치마인드: 그림판 + 그 위 말풍선 (누가 뭐라고 맞혔는지) */
+.cv-wrap{position:relative;width:fit-content;max-width:100%;margin:0 auto;line-height:0}
+.cv-wrap > .sketch{display:block}
+.cm-feed{position:absolute;left:8px;top:8px;right:8px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;pointer-events:none;line-height:1.3;z-index:2}
+.cm-bub{max-width:min(82%,440px);padding:5px 12px 6px;border-radius:15px 15px 15px 5px;background:hsla(var(--h,230),55%,22%,.8);color:#fff;font-size:16px;font-weight:700;
+  box-shadow:0 4px 14px rgba(0,0,0,.22);backdrop-filter:blur(2px);overflow-wrap:anywhere;animation:cmIn .28s cubic-bezier(.2,1.5,.4,1) both}
+.cm-bub b{color:hsl(var(--h,230),95%,78%);margin-right:7px;font-weight:800}
+.cm-bub.mine{background:hsla(var(--h,230),55%,26%,.86)}
+.cm-bub.sys{background:rgba(22,140,96,.9);font-size:15px}
+.cm-bub.out{animation:cmOut .45s ease forwards}
+@keyframes cmIn{from{opacity:0;transform:translateY(-8px) scale(.85)}}
+@keyframes cmOut{to{opacity:0;transform:translateY(-6px)}}
+@media (max-width:600px){ .cm-feed{left:6px;top:6px;gap:4px} .cm-bub{font-size:14px;padding:4px 10px 5px} }
+@media (prefers-reduced-motion:reduce){ .cm-bub,.cm-bub.out{animation:none} }
 .word-box{font-family:'Black Han Sans';font-size:26px;letter-spacing:2px}
 .side-col{flex:1;min-width:240px;display:flex;flex-direction:column;gap:12px}
 .role-card{text-align:center;padding:18px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
@@ -376,6 +395,8 @@ body.in-room .chat{display:flex}
 
 /* 터치용 가상 패드 */
 #vpad{position:fixed;left:0;right:0;bottom:14px;display:flex;justify-content:space-between;padding:0 14px;z-index:40;pointer-events:none}
+/* 터치 판 (core.js TouchArea: 테트리스 · 스네이크 · 탑 쌓기): 화면 어디를 끌어도 스크롤 · 확대 대신 게임 조작 */
+body.tarea.gaming,body.tarea.gaming :is(.shell,#main,.screen.active){touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #vpad .pad-l,#vpad .pad-r{display:flex;gap:10px;pointer-events:auto}
 #vpad button{width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(20,24,48,.55);color:#fff;font-size:20px;font-family:'Black Han Sans';touch-action:none;user-select:none}
 #vpad button.on{background:rgba(124,108,255,.8)}
@@ -464,22 +485,46 @@ body.in-room .chat{display:flex}
 .ox-btn:hover:not(:disabled){transform:translateY(-3px)} .ox-btn.chosen{border-color:var(--accent);box-shadow:0 0 0 4px rgba(124,108,255,.35)}
 .ox-btn.right{border-color:var(--good);background:rgba(63,207,155,.18)} .ox-btn.wrong{opacity:.4}
 .ox-count{text-align:center;color:var(--muted);min-height:20px}
+.ox-lock{align-self:center;width:min(100%,540px);font-size:20px;padding:13px 18px;border-radius:16px}
+.ox-lock:disabled{opacity:.55;cursor:default;transform:none;filter:none} .ox-lock.done{opacity:1;background:var(--panel2);color:var(--good);border:2px solid var(--good);box-shadow:none}
+.ox-reveal .ox-picks{display:block;margin-bottom:2px;color:var(--text)}
 .ox-reveal{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:16px 20px;text-align:center;animation:pop .3s}
 .ox-reveal b{font-family:'Black Han Sans';font-size:26px} .ox-reveal p{margin:6px 0;color:var(--muted)} .ox-reveal.good{border-color:var(--good)} .ox-reveal.bad{border-color:var(--bad)}
 
 /* 🔤 끝말잇기 */
-.wd-wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.wd-wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
 .wd-players{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-.wd-p{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:6px 14px;display:flex;flex-direction:column;align-items:center}
-.wd-p.turn{border-color:var(--good)} .wd-p.out{opacity:.4} .wd-p span{font-size:13px}
-.wd-word{text-align:center;font-family:'Black Han Sans';font-size:clamp(44px,8vw,72px);letter-spacing:4px}
+.wd-p{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:6px 14px;display:flex;flex-direction:column;align-items:center;gap:1px;transition:border-color .2s,box-shadow .2s,opacity .2s}
+.wd-p.turn{border-color:var(--good);box-shadow:0 0 0 3px rgba(63,207,155,.18)} .wd-p.out{opacity:.4} .wd-p.bot b{color:var(--muted)}
+.wd-p span{font-size:13px;display:flex;align-items:center;gap:6px} .wd-p i{font-style:normal;font-weight:800;font-size:12px;color:var(--muted);background:var(--panel2);border-radius:99px;padding:0 7px}
+.wd-card{position:relative;background:var(--panel);border:2px solid var(--line);border-radius:22px;padding:14px 12px 12px;text-align:center;transition:border-color .2s,box-shadow .2s}
+.wd-card.mine{border-color:var(--good);box-shadow:0 0 0 4px rgba(63,207,155,.15)}
+.wd-word{font-family:'Black Han Sans';font-size:clamp(44px,8vw,72px);letter-spacing:4px;line-height:1.15;word-break:keep-all;overflow-wrap:anywhere}
 .wd-word em{font-style:normal;color:var(--warn);text-decoration:underline;text-underline-offset:8px}
-.wd-hint{text-align:center;color:var(--muted);min-height:22px}
-.wd-vote{text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
-.wd-input{display:flex;gap:8px} .wd-input input{flex:1;font-size:22px;padding:12px 16px;border-radius:12px;border:2px solid var(--line);background:var(--panel2);color:var(--text);font-family:inherit;text-align:center}
+.wd-next{display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;min-height:30px;margin-top:6px;color:var(--muted);font-size:14px}
+.wd-next b{font-family:'Black Han Sans';font-weight:400;font-size:20px;color:#2b2100;background:var(--warn);border-radius:10px;padding:1px 10px;line-height:1.35}
+.wd-next span{font-size:12px} .wd-next small{font-size:14px}
+/* 도장: 단어 위에 알약 모양으로 찍고, 그동안 밑의 단어는 흐리게 (글자끼리 겹쳐 보이지 않게) */
+.wd-stamp{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%) rotate(-6deg);font-family:'Black Han Sans';font-size:clamp(26px,5.5vw,40px);line-height:1.25;
+  color:#fff;background:var(--bad);border-radius:16px;padding:3px 18px 5px;box-shadow:0 12px 30px rgba(0,0,0,.35);pointer-events:none;opacity:0;white-space:nowrap;z-index:2}
+.wd-stamp.info{background:var(--accent)}
+.wd-stamp.show{animation:wdStamp 1.4s ease-out}
+.wd-word,.wd-next{transition:opacity .25s}
+.wd-card.stamping .wd-word,.wd-card.stamping .wd-next{opacity:.1;transition:opacity .12s}
+@keyframes wdStamp{0%{opacity:0;transform:translate(-50%,-50%) rotate(-6deg) scale(1.8)}14%{opacity:1;transform:translate(-50%,-50%) rotate(-6deg) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) rotate(-6deg) scale(1.04)}}
+.wd-feed{text-align:center;min-height:46px;font-size:16px;line-height:1.45;color:var(--muted);display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 6px}
+.wd-feed b{color:var(--text)} .wd-feed.bad{color:var(--bad)} .wd-feed.good{color:var(--good)}
+.wd-feed small{display:block;color:var(--muted);font-size:14px;font-weight:400} .wd-feed small a{color:var(--text);font-weight:700}
+.wd-feed.shake,.wd-input input.shake{animation:shake .25s 2}
+.wd-input{display:flex;gap:8px} .wd-input input{flex:1;font-size:22px;padding:12px 16px;border-radius:14px;border:2px solid var(--line);background:var(--panel2);color:var(--text);font-family:inherit;text-align:center;min-width:0}
 .wd-input input:focus{outline:none;border-color:var(--accent)} .wd-input input:disabled{opacity:.5}
-.wd-chain{display:flex;flex-wrap:wrap;gap:6px;justify-content:center} .wd-chain span{background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:3px 12px;font-size:14px}
-.wd-chain span:first-child{border-color:var(--accent);color:var(--accent-2)}
+.wd-input input.mine{border-color:var(--good);background:var(--panel)}
+.wd-chain{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-height:96px;overflow:hidden}
+.wd-chain a{background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:3px 12px;font-size:14px;color:var(--text);text-decoration:none}
+.wd-chain a:first-child{border-color:var(--accent);color:var(--accent-2);font-weight:700}
+.wd-chain a.start{border-style:dashed;color:var(--muted);background:transparent}
+.wd-chain a:hover{border-color:var(--accent)}
+.wd-src{text-align:center;font-size:12px;color:var(--muted);opacity:.8}
 
 /* ═════════════ 인터넷 접속: 초대 배너 · 연결 상태 ═════════════ */
 .invite-banner{margin:18px auto 0;max-width:560px;background:var(--panel);border:2px solid var(--accent);border-radius:16px;padding:14px 18px;line-height:1.7;box-shadow:var(--shadow);animation:pop .3s}
@@ -604,11 +649,14 @@ body.gaming .scorebar{margin-bottom:8px}
 body.gaming .screen.active{animation:none;display:flow-root;overflow-x:clip}   /* 맨 아래 문단의 여백이 화면 밖으로 새지 않게 (Fit 이 높이에 넣어서 재요) · 판이 잠깐 넓어도 휴대폰 화면이 옆으로 커지지 않게 */
 body.gaming .game-cv,body.gaming #omok-cv,body.gaming #tetris-cv,body.gaming #pong-cv,body.gaming #snake-cv,body.gaming #bo-cv,
 body.gaming .sketch{max-height:var(--cv-h,none);max-width:100%;width:auto;height:auto}
+/* 자리가 남으면 캔버스를 키워요 (core.js Fit.grow 가 --cv-grow = 캔버스 높이를 정해요 · --ar = 캔버스 가로/세로) */
+body.gaming .screen.cv-grow :is(.game-cv,#tetris-cv,#snake-cv,#pong-cv,#omok-cv){width:calc(var(--cv-grow) * var(--ar,1))!important;height:auto!important;max-width:none!important;max-height:none!important}
 .chat-tgl{display:none;position:relative;align-items:center;gap:4px}
 .chat-tgl .ic{width:18px;height:18px;margin:0}
 .chat-tgl i.dot{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:var(--bad);color:#fff;font-size:10px;font-style:normal;display:none;place-items:center}
 .chat-tgl.unread i.dot{display:grid}
-@media (max-width:1100px){
+/* 게임 중 채팅: 1100px 이하 · 1400px 이하 터치 화면(폴드 펼친 화면 · 태블릿)은 💬 버튼으로 접어 두고 게임 판을 넓게 */
+@media (max-width:1100px), (pointer:coarse) and (max-width:1400px){
   body.in-room.gaming .chat-tgl{display:inline-flex}
   body.in-room.gaming:not(.chat-open) .chat{display:none}
   body.in-room.gaming.chat-open .chat{display:flex;position:fixed;left:10px;right:10px;bottom:10px;height:min(58vh,440px);max-width:520px;margin-left:auto;z-index:140;box-shadow:0 20px 50px rgba(0,0,0,.55)}
@@ -618,7 +666,7 @@ body.gaming .sketch{max-height:var(--cv-h,none);max-width:100%;width:auto;height
   body.gaming .topbar{padding:6px 10px}
   body.gaming .brand{font-size:18px}
   body.gaming .shell{padding:6px 8px 8px}
-  body.gaming .game-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:6px 8px;margin-bottom:6px}
+  body.gaming .game-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:6px 6px;margin-bottom:6px}
   body.gaming .game-head .gh-title{min-width:0;grid-column:1}
   body.gaming .game-head h2{font-size:18px;gap:6px}
   body.gaming .game-head h2 .gi.sm{width:26px;height:26px;border-radius:8px}
@@ -630,8 +678,9 @@ body.gaming .sketch{max-height:var(--cv-h,none);max-width:100%;width:auto;height
   body.gaming .game-head .stat b{font-size:16px}
   body.gaming .game-head > .btn{padding:6px 11px;font-size:14px;border-radius:11px}
   body.gaming .game-head .gh-title{grid-row:1;grid-column:1}
-  body.gaming .game-head .chat-tgl{grid-row:1;grid-column:2}
-  body.gaming .game-head [data-act=leaveGame]{grid-row:1;grid-column:3}
+  body.gaming .game-head .chat-tgl,body.gaming .game-head .gh-rank{grid-row:1;grid-column:2}   /* 채팅(방) · 순위(싱글)는 함께 보이지 않아요 */
+  body.gaming .game-head .gh-man{grid-row:1;grid-column:3}
+  body.gaming .game-head [data-act=leaveGame]{grid-row:1;grid-column:4}
   body.gaming .game-head .stats{grid-row:2}
   body.gaming .scorebar{flex-wrap:nowrap;overflow-x:auto;gap:5px;margin-bottom:6px;min-height:0;scrollbar-width:none}
   body.gaming .scorebar::-webkit-scrollbar{display:none}
@@ -666,7 +715,7 @@ body.chat-open .chat-x{display:inline-grid;place-items:center}
 body.gaming{overflow-x:hidden}
 body.gaming .shell{grid-template-columns:minmax(0,1fr)}
 body.gaming.in-room .shell{grid-template-columns:minmax(0,1fr) 300px}
-@media (max-width:1100px){ body.gaming.in-room .shell{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:1100px), (pointer:coarse) and (max-width:1400px){ body.gaming.in-room .shell{grid-template-columns:minmax(0,1fr)} }
 body.gaming main{min-width:0}
 body.gaming .screen.active .center[style*="overflow"]{overflow:visible!important}
 /* 결과창 · 게임 선택 창: 작은 화면에서도 안에서 스크롤 */

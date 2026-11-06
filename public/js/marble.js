@@ -36,8 +36,25 @@ const Marble = {
         <div class="mb-info" id="mb-info">칸을 누르면 정보를 볼 수 있어요.</div><div class="mb-card hidden" id="mb-card"></div></div>`;
     this.disp = {}; this.lastRolls = null; this.lastCard = null; this.money = {};
   },
+  /** 판 크기: 남는 높이 · 너비 안에서 가장 크게 (폴드 펼친 화면 · 태블릿에서 판이 작게 남지 않게)
+   *  세로 화면 = [판 / 참가자 줄] · 가로 화면 = [판 | 옵션 · 참가자 (300px 이상)] */
+  fit() {
+    const sec = $('#scr-marble'), board = $('#mb-board');
+    if (!sec || !sec.classList.contains('active') || typeof Fit === 'undefined') return;
+    const land = matchMedia('(min-aspect-ratio:1/1)').matches, wrap = land ? board : $('#scr-marble .mb-wrap');
+    const z = +(sec.dataset.z || 1) || 1;
+    const H = Math.floor(Fit.room(sec) - (wrap.getBoundingClientRect().top - sec.getBoundingClientRect().top) / z - 6);
+    const maxW = land ? sec.clientWidth - 300 - 14 : wrap.clientWidth;
+    const ok = v => { sec.style.setProperty('--mb-bw', v + 'px'); return wrap.offsetHeight <= H; };
+    let lo = 280, hi = Math.max(lo, Math.min(1150, maxW));
+    if (ok(hi)) return;
+    if (!ok(lo)) return;
+    while (hi - lo > 2) { const m = (lo + hi) >> 1; if (ok(m)) lo = m; else hi = m; }
+    ok(lo);
+  },
+  fitSoon() { cancelAnimationFrame(this.fitRaf); this.fitRaf = requestAnimationFrame(() => { this.fit(); setTimeout(() => this.fit(), 260); }); },
   render(v, ctx, prev) {
-    if (!prev || !$('#mb-board .mb-center')) this.build();
+    if (!prev || !$('#mb-board .mb-center')) { this.build(); this.fitSoon(); }
     this.v = v; this.ctx = ctx;
     $('#mb-solo').classList.toggle('hidden', ctx.mode !== 'solo');
     const B = MarbleCore.BOARD, byId = Object.fromEntries(v.players.map(p => [p.id, p]));
@@ -149,7 +166,8 @@ $('#mb-board').addEventListener('click', e => {
   if (v.phase === 'travel' && v.turnId === Marble.ctx.me && i !== 24) return Marble.ctx.send({ t: 'travel', to: i });
   Marble.info(i);
 });
-window.addEventListener('resize', () => { if (isScreen('marble') && Marble.v) Marble.v.players.forEach((p, k) => { const tk = $(`.mb-token[data-id="${p.id}"]`); if (tk) Marble.place(tk, Marble.disp[p.id], k); }); });
+window.addEventListener('resize', () => { if (isScreen('marble') && Marble.v) { Marble.fitSoon(); Marble.v.players.forEach((p, k) => { const tk = $(`.mb-token[data-id="${p.id}"]`); if (tk) Marble.place(tk, Marble.disp[p.id], k); }); } });
+window.addEventListener('orientationchange', () => setTimeout(() => { if (isScreen('marble')) Marble.fitSoon(); }, 250));
 // 판 크기가 바뀌면(화면 맞춤 · 제목 줄 크기 변화 등) 말도 다시 놓아요
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => { if (isScreen('marble') && Marble.v) Marble.v.players.forEach((p, k) => { const tk = $(`.mb-token[data-id="${p.id}"]`); if (tk && !tk.dataset.walking) Marble.place(tk, Marble.disp[p.id], k); }); }).observe($('#mb-board'));
 Object.assign(ACT, {
@@ -164,3 +182,4 @@ Table.def('marble', {
   core: MarbleCore, render: (v, ctx, prev) => Marble.render(v, ctx, prev), solo: { bots: 2, opts: { rounds: 20 } },
   key: (e, ctx) => { if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat && ctx.view.turnId === ctx.me && ctx.view.phase === 'roll') ctx.send({ t: 'roll' }); },
 });
+$('#scr-marble').dataset.fitSelf = '1';   // 판 크기를 스스로 재요 → 화면 맞춤(Fit)이 전체를 키우지 않게

@@ -2,10 +2,12 @@
  *  🖼️ 노노그램 (싱글: 5×5 · 10×10 · 15×15 그림 퍼즐 + 가르쳐 주는 힌트 / 멀티: 같은 퍼즐 먼저 풀기 대결)
  *  규칙 · 퍼즐: shared/nonogram-core.js · 멀티 서버: games/puzzle.js
  *  칸을 누르면 칠하고, 「X 표시」 모드(마우스 오른쪽 버튼)로는 빈칸 표시를 해요. 누른 채 끌면 한 줄을 한 번에.
+ *  정답 확인(싱글 · 기본 켬): 틀린 칸은 바로 알려 주고 끌기는 거기서 멈춰요. 목숨 3개 — 3번 틀리면 실패
+ *  (예전에는 틀린 칸을 고쳐 주기만 해서 아무 데나 쭉 칠하면 저절로 풀리는 문제가 있었어요)
  * ===================================================================== */
 makeScreen('nonogram', {
   title: '🖼️ 노노그램', status: '줄 옆 숫자만큼 이어서 칠해요. 숫자가 여러 개면 덩어리 사이에 빈칸이 하나 이상 있어요.',
-  stats: [['time', '시간'], ['miss', '실수']],
+  stats: [['time', '시간'], ['miss', '목숨']],
   body: `<div class="mode-row" id="ng-solo"><span class="muted small">크기</span>
       <button class="seg-btn" data-act="ngLevel" data-l="s5">5×5</button><button class="seg-btn on" data-act="ngLevel" data-l="s10">10×10</button><button class="seg-btn" data-act="ngLevel" data-l="s15">15×15</button>
       <button class="seg-btn ng-gap" data-act="ngNew">새 퍼즐</button></div>
@@ -24,6 +26,8 @@ const NG = {
   check: (() => { try { return localStorage.getItem('ngCheck') !== '0'; } catch { return true; } })(),
   autoX: (() => { try { return localStorage.getItem('ngAutoX') !== '0'; } catch { return true; } })(),
   LEVEL_NAME: { s5: '입문 5×5', s10: '보통 10×10', s15: '어려움 15×15' },
+  LIVES: 3,                                                            // 정답 확인을 켰을 때 실수할 수 있는 횟수
+  hearts() { const n = Math.max(0, this.LIVES - this.miss); return '❤️'.repeat(n) + '🤍'.repeat(this.LIVES - n); },
   startSolo(level) {
     stopLocal();
     if (level) this.level = level;
@@ -103,7 +107,8 @@ const NG = {
     const sec = this.solo ? Math.floor(((this.doneAt || Date.now()) - this.t0) / 1000) + this.hints * 30 : secLeft(this.endAt);
     setStat('nonogram', 'time', `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
     const lab = $('#nonogram-time-label'); if (lab) lab.textContent = this.solo ? '시간' : '남은 시간';
-    setStat('nonogram', 'miss', this.solo && this.check ? this.miss : '-');
+    const ml = $('#nonogram-miss-label'); if (ml) ml.textContent = this.solo && this.check ? '목숨' : '실수';
+    setStat('nonogram', 'miss', this.solo && this.check ? this.hearts() : '-');
   },
   msg(html) { $('#ng-msg').innerHTML = html; },
   hover(i) {
@@ -135,8 +140,11 @@ const NG = {
     if (!d.dir) d.dir = r === sr ? 'row' : c === sc ? 'col' : Math.abs(c - sc) >= Math.abs(r - sr) ? 'row' : 'col';
     // 처음 끈 방향의 한 줄로만 (손이 조금 비뚤어져도)
     const tr = d.dir === 'row' ? sr : r, tc = d.dir === 'row' ? c : sc;
-    const a = d.dir === 'row' ? Math.min(sc, tc) : Math.min(sr, tr), b = d.dir === 'row' ? Math.max(sc, tc) : Math.max(sr, tr);
-    for (let k = a; k <= b; k++) this.apply(d.dir === 'row' ? sr * w + k : k * w + sc);
+    const a = d.dir === 'row' ? sc : sr, b = d.dir === 'row' ? tc : tr, st = b >= a ? 1 : -1;
+    for (let k = a; ; k += st) {                                        // 시작 칸 → 손가락 쪽으로 차례대로 (틀린 칸에서 멈춰요)
+      this.apply(d.dir === 'row' ? sr * w + k : k * w + sc);
+      if (k === b || d.stop) break;
+    }
     d.last = i;
     this.hover(tr * w + tc);
     this.paint();
@@ -148,19 +156,34 @@ const NG = {
     this.autoMark();
     this.paint();
     if (!this.solo) this.send();
+    if (this.solo && this.check && this.miss >= this.LIVES) return this.fail();
     this.checkWin();
   },
-  /** 한 칸 바꾸기 (끌기를 시작한 칸과 같은 상태인 칸만) */
+  /** 한 칸 바꾸기 (끌기를 시작한 칸과 같은 상태인 칸만).
+   *  정답 확인을 켰으면 틀린 칸은 정답으로 보여 주고 목숨 하나를 잃어요. 끌기는 거기서 멈춰요 — 아무 데나 쭉 칠해서 풀 수 없게 */
   apply(i) {
-    const d = this.drag; if (!d || this.grid[i] !== d.from) return;
+    const d = this.drag; if (!d || d.stop || this.grid[i] !== d.from) return;
     let to = d.to;
     if (this.solo && this.check && this.sol) {
       const s = this.sol[i];
-      if (to === 1 && s === '0') { to = 2; this.miss++; this.flash(i); this.msg(`이 칸은 칠하는 칸이 아니에요. X로 바꿨어요. (실수 ${this.miss})`); }
-      else if (to === 2 && s === '1') { to = 1; this.miss++; this.flash(i); this.msg(`이 칸은 칠해야 하는 칸이에요. 칠해 뒀어요. (실수 ${this.miss})`); }
+      if ((to === 1 && s === '0') || (to === 2 && s === '1')) {
+        to = s === '1' ? 1 : 2;
+        d.stop = true; this.miss++; this.flash(i); Sound.play('bad');
+        const left = this.LIVES - this.miss;
+        this.msg(`${s === '1' ? '이 칸은 칠해야 하는 칸이에요.' : '이 칸은 빈칸이에요.'} ${left > 0 ? `목숨 ${this.hearts()} — 다음엔 숫자를 한 번 더 세어 보세요.` : '목숨을 다 썼어요…'}`);
+      }
     }
     d.batch.push([i, this.grid[i]]);
     this.grid[i] = to;
+  },
+  /** 정답 확인을 켜고 3번 틀리면 실패 (기록 없음) */
+  fail() {
+    if (this.done) return;
+    this.done = true; this.doneAt = Date.now();
+    this.paint();
+    $('#ng-board').classList.add('lost');
+    this.msg('💔 3번 틀렸어요. 이번 퍼즐은 실패! <b>새 퍼즐</b>로 다시 도전해요.');
+    after(1300, () => showResult({ title: '💔 3번 틀렸어요!', subtitle: `${this.LEVEL_NAME[this.level]} · 정답 확인을 켜면 실수는 3번까지예요. 끄면 목숨 없이 풀 수 있어요 (틀린 칸도 직접 찾아야 해요).`, solo: 'nonogram', win: false }));
   },
   flash(i) { const el = this.cells[i]; if (!el) return; el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 700); },
   /** 단서와 딱 맞은 줄의 나머지 빈칸은 X (켜 두었을 때) */
@@ -231,7 +254,7 @@ const NG = {
     const narrow = window.innerWidth <= 760 && !(window.innerHeight <= 520 && window.innerWidth > window.innerHeight);
     const W = wrap.clientWidth - (narrow ? 0 : $('.ng-side').offsetWidth + 18);
     const k = 0.62, sideH = narrow ? $('.ng-side').offsetHeight + 10 : 0;
-    let cs = Math.floor(Math.min(46, (W - 8) / (this.w + this.rc * k), (H - sideH - 8) / (this.h + this.cc * k)));
+    let cs = Math.floor(Math.min(68, (W - 8) / (this.w + this.rc * k), (H - sideH - 8) / (this.h + this.cc * k)));
     cs = Math.max(16, cs);
     board.style.setProperty('--cs', cs + 'px');
     for (let t = 0; t < 3; t++) {                                    // 글자 폭 때문에 조금 넘치면 한 칸씩 줄여요
@@ -269,3 +292,4 @@ register('nonogram', {
 });
 socket.on('pz:start', d => { if (d.game === 'nonogram') NG.startMulti(d); });
 LOBBY_OPTIONS.nonogram = [{ key: 'ngLevel', label: '🖼️ 크기', def: 's10', values: [['s5', '5×5'], ['s10', '10×10'], ['s15', '15×15']] }];
+$('#scr-nonogram').dataset.fitSelf = '1';   // 판 크기를 스스로 재요 → 화면 맞춤(Fit)이 전체를 키우지 않게

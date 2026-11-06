@@ -57,6 +57,11 @@ module.exports = H => {
     events: {
       draw(room, me, d, socket) { if (room.game.drawerId === me.id) H.relayDraw(room, socket, d); },
       'draw:clear'(room, me) { if (room.game.drawerId === me.id) emit(room, 'draw:clear'); },
+      /** 한 획 되돌리기: 그리는 사람만 · 다른 사람 화면에서도 그 획을 지워요 */
+      'draw:undo'(room, me, k, socket) {
+        if (room.game.drawerId !== me.id || !Number.isFinite(+k)) return;
+        socket.to(room.code).emit('draw:undo', { k: Math.floor(Math.max(0, Math.min(1e9, +k))) });
+      },
       'catch:skip'(room, me) {
         const g = room.game;
         if (g.solved || g.drawerId !== me.id) return;

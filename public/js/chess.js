@@ -79,7 +79,7 @@ const CH = {
     if (!this.watching) this.watch();
   },
   /** 판 크기를 남은 높이 · 너비에 맞춰요 (core.js fitSquare) */
-  fit() { fitSquare($('#scr-chess'), $('#scr-chess .ch-wrap'), '--sz', 232, 680); },
+  fit() { fitSquare($('#scr-chess'), $('#scr-chess .ch-wrap'), '--sz', 232, 1000); },
   watch() {
     this.watching = true;
     const again = () => { if (S.screen !== 'chess' || !this.v) return; cancelAnimationFrame(this.raf); this.raf = requestAnimationFrame(() => this.fit()); };
@@ -261,3 +261,4 @@ Object.assign(ACT, {
   chResign: () => { if (CH.ctx && confirm('정말 기권할까요? 상대가 이겨요.')) CH.ctx.send({ t: 'resign' }); },
 });
 Table.def('chess', { core: ChessCore, render: (v, ctx, prev) => CH.render(v, ctx, prev), solo: { bots: 1, opts: { level: 'normal', color: 'white', undo: true } } });
+$('#scr-chess').dataset.fitSelf = '1';   // 판 크기를 스스로 재요 → 화면 맞춤(Fit)이 전체를 키우지 않게

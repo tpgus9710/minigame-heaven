@@ -63,6 +63,8 @@ function show(id) {
   if (document.activeElement && document.activeElement.tagName === 'BUTTON') document.activeElement.blur();   // 스페이스가 버튼을 다시 누르지 않게
   if (typeof updatePad === 'function') updatePad();
   document.body.classList.toggle('in-room', !!S.code);
+  document.body.classList.toggle('in-solo', !!S.solo);                         // 싱글로 하는 중 (순위 버튼 · board.js)
+  document.body.classList.toggle('tarea', typeof TouchArea !== 'undefined' && !!TouchArea.on[id]);   // 화면을 끌어도 페이지가 움직이지 않게
   window.scrollTo({ top: 0 });
   if (typeof RoomList !== 'undefined') { if (id === 'multi') RoomList.start(); else RoomList.stop(); }
   if (typeof Manual !== 'undefined') Manual.seen(id);                 // 처음 하는 게임이면 설명서 안내
@@ -79,13 +81,56 @@ const isScreen = id => S.screen === id;
  *  1) 게임 화면에서는 위쪽 막대 · 제목 줄을 작게 (style.css 의 body.gaming)
  *  2) 그림판(캔버스)이 있으면 남는 높이에 맞게 줄이고
  *  3) 그래도 넘치면 화면 전체를 비율대로 줄여요 (너비는 넓혀서 다시 배치하니 글자가 덜 작아져요)
+ *  4) 반대로 자리가 남으면 게임 캔버스를 키워요 (폴드 펼친 화면 · 태블릿 · 큰 모니터에서 판이 작게 남지 않게: grow)
+ *  5) 캔버스가 없는 화면(카드 · 보드게임)은 화면 전체를 비율대로 키워요 (zoomUp: 터치 화면 최대 1.5배 · 마우스 1.3배)
  *  게임 내용이 바뀌어 넘치게 되면 0.4초 안에 다시 맞춰요. */
 const MENU_IDS = new Set(['home', 'single', 'multi', 'lobby']);
 var Fit = {
   ZMIN: 0.5, cur: null, raf: 0, last: null, timer: null,
   now() { cancelAnimationFrame(this.raf); this.raf = 0; this.fit(); },
   schedule() { if (!this.raf) this.raf = requestAnimationFrame(() => { this.raf = 0; this.fit(); }); },
-  reset(sec) { sec.style.zoom = ''; sec.style.width = ''; sec.style.margin = ''; sec.style.removeProperty('--cv-h'); sec.style.removeProperty('--avail-h'); sec.style.removeProperty('--pad-side'); delete sec.dataset.z; },
+  reset(sec) { sec.style.zoom = ''; sec.style.width = ''; sec.style.margin = ''; sec.style.removeProperty('--cv-h'); sec.style.removeProperty('--avail-h'); sec.style.removeProperty('--pad-side'); sec.style.removeProperty('--cv-grow'); sec.classList.remove('cv-grow'); delete sec.dataset.z; },
+  /** 키워도 되는 게임 캔버스 (그림판 · 카트 · 작은 캔버스는 빼고) */
+  GROW: '.game-cv, #tetris-cv, #snake-cv, #pong-cv, #omok-cv',
+  /** 자리가 남으면 캔버스를 키워요: 캔버스 높이(--cv-grow)를 이분 탐색 — 화면을 넘지 않는 가장 큰 값 (6% 넘게 커질 때만) */
+  grow(sec, H, fits) {
+    const cvs = [...sec.querySelectorAll(this.GROW)].filter(c => c.offsetHeight >= 120 && c.offsetParent && !c.closest('.no-fit, .no-grow'));
+    if (!cvs.length) return false;
+    const h0 = Math.max(...cvs.map(c => c.getBoundingClientRect().height));
+    for (const c of cvs) c.style.setProperty('--ar', (c.width / Math.max(1, c.height)).toFixed(4));
+    const set = v => sec.style.setProperty('--cv-grow', Math.floor(v) + 'px');
+    sec.classList.add('cv-grow');
+    let lo = h0, hi = Math.max(h0, H);
+    set(hi);
+    if (!fits()) {
+      set(lo);
+      if (!fits()) lo = 0;
+      else for (let i = 0; i < 9 && hi - lo > 2; i++) { const m = (lo + hi) / 2; set(m); if (fits()) lo = m; else hi = m; }
+      if (lo < h0 * 1.06) { sec.classList.remove('cv-grow'); sec.style.removeProperty('--cv-grow'); return true; }
+      set(lo);
+    }
+    return true;
+  },
+  /** 화면 전체 키우기: 내용이 남는 높이의 86%도 안 차면, 너비를 줄여(W/z) 다시 배치하면서 z배로 — 남는 높이의 93% 안에서 가장 크게 (조금 늘어나도 바로 다시 맞추지 않게) */
+  zoomUp(sec, H, W) {
+    if (sec.dataset.fitOverflow === 'ok' || sec.dataset.fitSelf || this.visH(sec) > H * 0.86) return;   // fitSelf: 판 크기를 스스로 재는 화면 (체스 · 스도쿠 · 노노그램 · 세계여행)
+    // 다시 배치되는 너비(W/z)가 640px 아래로 내려가지 않게 (휴대폰 · 접은 화면은 키우지 않아요: 이미 맞춰 둔 배치가 깨지지 않게)
+    const ZMAX = Math.min(matchMedia('(pointer:coarse)').matches ? 1.5 : 1.3, W / 640);
+    if (ZMAX < 1.06) return;
+    // 제목 줄의 「나가기」 버튼이 아랫줄로 떨어지지 않는 만큼만 (버튼 하나만 아래로 떨어지면 지저분해요)
+    const head = sec.querySelector('.game-head'), leave = head && head.querySelector('[data-act=leaveGame]'), title = head && head.querySelector('.gh-title');
+    const sameRow = () => leave.getBoundingClientRect().top < title.getBoundingClientRect().bottom - 4;
+    const row0 = !!(leave && title) && sameRow();
+    const headOk = () => !row0 || sameRow();
+    const ok = () => this.visH(sec) <= H * 0.93 && sec.scrollWidth <= sec.clientWidth + 1 && headOk();
+    let lo = 1, hi = ZMAX;
+    this.zoom(sec, hi, W / hi);
+    if (ok()) lo = hi;
+    else for (let i = 0; i < 7; i++) { const z = (lo + hi) / 2; this.zoom(sec, z, W / z); if (ok()) lo = z; else hi = z; }
+    lo = Math.floor(lo * 0.96 * 100) / 100;                       // 4% 여유: 시간 · 점수 글자가 바뀌어 조금 넓어져도 버튼이 아랫줄로 떨어지지 않게
+    if (lo < 1.06) { sec.style.zoom = ''; sec.style.width = ''; delete sec.dataset.z; return; }
+    this.zoom(sec, lo, W / lo); sec.style.margin = '0 auto';
+  },
   fit() {
     const sec = document.querySelector('.screen.active');
     const gaming = !!sec && !MENU_IDS.has(sec.id.replace(/^scr-/, ''));
@@ -135,6 +180,7 @@ var Fit = {
     // 화면 높이 · 너비 안에 들어오는지 (높이를 정해 둔 화면은 안에서 넘친 내용까지: visH)
     const fits = () => this.visH(sec) <= H + 1 && sec.scrollWidth <= sec.clientWidth + 1;
     let ok = fits();
+    const roomy = ok;
     if (!ok) {                                                   // 1) 그림판은 높이에 맞게
       const cvs = [...sec.querySelectorAll('canvas')].filter(c => c.offsetHeight >= 120 && c.offsetParent && !c.closest('.no-fit'));
       if (cvs.length) {
@@ -160,6 +206,7 @@ var Fit = {
       if (za && za >= zb) this.zoom(sec, za, W / za);
       else { this.zoom(sec, zb, W); sec.style.margin = '0 auto'; }
     }
+    if (roomy && !this.grow(sec, H, fits)) this.zoomUp(sec, H, W); // 4) 자리가 남으면 캔버스를 · 5) 없으면 화면 전체를 키워요
     this.last = { sec, h: sec.offsetHeight, w: sec.scrollWidth, vis: this.visH(sec), H, W, iw: window.innerWidth, ih: window.innerHeight };
     if (typeof Stick !== 'undefined' && Stick.g) Stick.layout();               // 조이스틱 자리도 바뀐 화면에 맞게 (stick.js)
   },
@@ -300,9 +347,9 @@ const GAME_INFO = {
   halli: { icon: '🔔', name: '과일 종치기', desc: '같은 과일이 5개면 종을 땡!', cat: '파티', players: '2~6명',
     rules: '할리갈리 방식! 차례대로 카드를 한 장씩 펼쳐요(스페이스). 펼쳐진 카드에서 <b>같은 과일이 딱 5개</b>가 되면 가장 먼저 🔔 종(Enter)을 친 사람이 펼쳐진 카드를 모두 가져가요. 잘못 치면 모두에게 한 장씩! 카드가 다 떨어지면 탈락.' },
   ox: { icon: '⭕', name: 'OX 퀴즈', desc: '상식 퀴즈, O일까 X일까', cat: '파티', players: '2~8명',
-    rules: '문제마다 10초 안에 ⭕ 또는 ❌를 골라요. 맞히면 10점 + <b>빨리 고를수록 보너스</b>(최대 5점). 15문제가 끝나면 점수가 가장 높은 사람이 우승!' },
-  word: { icon: '🔤', name: '끝말잇기', desc: '앞 사람 끝 글자로 단어 잇기', cat: '파티', players: '2~8명',
-    rules: '앞 단어의 <b>끝 글자로 시작하는 단어</b>를 입력해요 (두음법칙 OK, 2글자 이상, 이미 나온 단어 X). 제한 시간은 점점 짧아져요. 이상한 단어는 다른 사람들이 👎로 거절할 수 있어요. 실패하면 ❤️를 하나 잃고, 다 잃으면 탈락!' },
+    rules: '문제마다 10초 안에 ⭕ 또는 ❌를 고르고 <b>확정</b>해요(확정 전에는 바꿀 수 있어요). 누가 뭘 골랐는지는 정답 공개 때까지 비밀! 맞히면 10점 + <b>빨리 확정할수록 보너스</b>(최대 5점). 모두 확정하면 바로 정답 공개. 15문제가 끝나면 점수가 가장 높은 사람이 우승!' },
+  word: { icon: '🔤', name: '끝말잇기', desc: '국어사전으로 판정하는 단어 잇기', cat: '파티', players: '1~8명 · 봇 가능',
+    rules: '앞 단어의 <b>끝 글자로 시작하는 단어</b>를 입력해요 (두음법칙 OK, 2글자 이상, 이미 나온 단어 X). 맞는 말인지는 <b>국어사전</b>(표준국어대사전 · 우리말샘 49만 단어)이 판정해요. 사전에 없는 말은 모두에게 ✗로 보이고, 시간 안에 다시 내면 돼요. 시간이 다 되면 ❤️를 하나 잃고 새 단어로 다시 시작, 다 잃으면 탈락! 혼자면 🤖 봇과 할 수 있어요.' },
   mole: { icon: '🔨', name: '두더지 잡기 대결', desc: '먼저 때리는 사람이 임자', cat: '파티', players: '1~8명',
     rules: '모두 <b>같은 두더지 판</b>을 봐요. 두더지가 올라오면 먼저 클릭한 사람이 점수! 🐹 +1 · 황금 두더지 +3 · 💣 폭탄 -3. 1분 동안 점수가 가장 높은 사람이 우승.' },
   gem: { icon: '💎', name: '보석 맞추기 대결', desc: '1분 동안 보석 점수 대결', cat: '퍼즐', players: '1~8명',
@@ -311,8 +358,8 @@ const GAME_INFO = {
     rules: '과일을 떨어뜨려 <b>같은 과일끼리 닿으면 한 단계 큰 과일</b>로 합쳐져요. 모두 같은 순서로 과일이 나와요. 2분이 지나거나 선을 넘기면 끝! 점수가 가장 높은 사람이 우승.' },
   marble: { icon: '🌍', name: '세계여행 보드게임', desc: '도시를 사고 건물을 지어 통행료로 부자 되기', cat: '보드·카드', players: '2~4명 · 봇 가능',
     rules: '부루마블 방식! 주사위를 굴려 도시를 사고 <b>별장·빌딩·호텔·랜드마크</b>를 지어요. 남의 땅에 서면 통행료, 같은 색 도시를 다 모으면 통행료 2배! 황금열쇠 · 무인도(더블이면 탈출) · 사회복지기금 · 세계여행(원하는 칸으로 이동). 돈이 모자라면 건물과 땅을 팔고, 그래도 안 되면 파산. 정한 라운드가 끝나면 총자산 1등이 우승!' },
-  life: { icon: '🎓', name: '인생 보드게임', desc: '룰렛으로 달리는 인생 역전 레이스', cat: '보드·카드', players: '2~6명 · 봇 가능',
-    rules: '룰렛(1~10)을 돌려 인생길을 달려요. 첫 갈림길에서 <b>대학(학자금 대출, 고소득 직업)</b>과 <b>바로 취업</b> 중 선택! 월급날은 지나가기만 해도 월급을 받고, 결혼 · 출산이면 모두가 축하금을 줘요. 집을 사면 은퇴 때 더 비싸게 팔 수 있고, 보람 카드 점수는 은퇴 때 공개돼요. 두 번째 갈림길은 안정의 길과 모험의 길(투자 · 창업). 모두 은퇴하면 <b>현금+집+보람 카드+자녀-대출×1.25</b> 총재산 1등이 우승!' },
+  life: { icon: '🎓', name: '인생 게임', desc: '원작 규칙: 직업 · 결혼 · 집 · 주식 · 은퇴', cat: '보드·카드', players: '2~6명 · 봇 가능',
+    rules: '룰렛(1~10)을 돌려 인생길을 달려요. <b>대학(학자금 대출 → 전문직)</b>이냐 <b>바로 취업</b>이냐! 직업마다 월급과 <b>특기</b>가 있어요 (의사는 병원비, 회계사는 세금, 경찰관은 룰렛 10 과속 벌금을 받아요). 월급날은 지나가면 월급, 딱 멈추면 보너스 50%. 결혼 · 아기 · 반려동물 · 집(보험) · 주식(그 숫자가 나올 때마다 배당) · 소송 · 행운의 룰렛! 은퇴할 때 <b>🏰 억만장자 저택</b>(가장 부자면 보람 카드 4장)과 <b>🌾 전원 마을</b> 중 선택. <b>현금 + 보람 카드 + 가족</b>이 가장 많은 사람이 우승!' },
   mafia: { icon: '🔪', name: '마피아', desc: '밤에는 암살, 낮에는 토론과 투표', cat: '파티', players: '4~12명 · 봇 가능',
     rules: '직업을 몰래 받아요: <b>마피아 · 의사 · 경찰 · 군인(7명 이상) · 시민</b>. 밤에는 마피아가 한 명을 노리고(마피아끼리만 채팅), 의사는 한 명을 지키고, 경찰은 한 명을 조사해요. 낮에는 채팅으로 토론한 뒤 투표! 최다 득표자는 최후 변론을 하고, 찬반 투표로 처형이 결정돼요. 죽은 사람은 유령끼리만 대화할 수 있어요. 마피아를 모두 찾으면 시민 승리, 마피아 수가 시민 수와 같아지면 마피아 승리!' },
   thief: { icon: '🃏', name: '도둑잡기', desc: '조커를 떠넘겨라! 카드 뽑기 눈치 싸움', cat: '보드·카드', players: '2~6명 · 봇 가능',
@@ -331,6 +378,8 @@ const GAME_INFO = {
     rules: '흑과 백이 번갈아 돌을 놓아요. 놓을 때 <b>상대 돌을 내 돌 사이에 끼우면</b>(가로 · 세로 · 대각선) 그 돌들이 모두 내 색으로 뒤집혀요. 하나라도 뒤집을 수 있는 칸에만 둘 수 있고, 둘 곳이 없으면 자동으로 넘어가요. 둘 다 더 이상 둘 곳이 없으면 돌이 많은 쪽이 승리! 모서리는 절대 뒤집히지 않아요.' },
   shisen: { icon: '🀄', name: '사천성 대결', desc: '같은 판으로 3분 점수 대결', cat: '퍼즐', players: '1~8명',
     rules: '모두 똑같은 판으로 시작해요. 같은 그림 두 장을 <b>두 번 이하로 꺾인 선</b>으로 이을 수 있으면 사라져요. 선은 빈칸이나 판 바깥으로만 지나갈 수 있어요. 3초 안에 계속 맞히면 콤보 점수! 힌트(-30점)와 섞기도 있어요. 3분 뒤 점수가 가장 높은 사람이 우승!' },
+  pinball: { icon: '🎯', name: '핀볼 점수 대결', desc: '같은 핀볼 판으로 4분 점수 대결', cat: '액션', players: '1~8명', isNew: true,
+    rules: '모두 같은 핀볼 판에서 공 3개로 점수를 겨뤄요. 화면 <b>왼쪽 · 오른쪽</b>을 누르면 플리퍼(키보드 ← →), 공이 발사대에 있으면 <b>길게 눌렀다 떼서 발사</b>! 범퍼 · 드롭 타깃 · 궤도 · 스피너로 점수를 쌓고, 드롭 타깃을 다 쓰러뜨려 구멍에 2번 넣으면 <b>멀티볼</b> — 궤도 · 스피너로 <b>잭팟</b>! 4분이 지나거나 모두 공을 다 쓰면 점수가 가장 높은 사람이 우승.' },
   sudoku: { icon: '🔢', name: '스도쿠 대결', desc: '같은 퍼즐을 누가 먼저 푸나', cat: '퍼즐', players: '1~8명', isNew: true,
     rules: '모두 같은 스도쿠를 받아요. 가로줄 · 세로줄 · 3×3 칸마다 1~9가 한 번씩 들어가게 채워서 <b>가장 먼저 다 맞게 채운 사람이 우승</b>! 위쪽 점수는 채운 칸 %예요(맞았는지는 끝날 때까지 비밀). 시간이 다 되면 맞은 칸이 많은 순서로 순위가 정해져요. 메모 · 되돌리기 가능, 힌트는 없어요.' },
   nonogram: { icon: '🖼️', name: '노노그램 대결', desc: '같은 그림 퍼즐 먼저 칠하기', cat: '퍼즐', players: '1~8명', isNew: true,
@@ -353,6 +402,7 @@ const GAME_INFO = {
     rules: '방향키(또는 WASD)로 달리고 <b>Shift를 누른 채 꺾으면 드리프트</b>! 드리프트를 길게 하고 놓으면 순간 대시, 스피드전에서는 드리프트로 <b>부스터 게이지</b>가 차서 부스터를 얻어요(Ctrl 또는 E로 사용). 아이템전에서는 아이템 상자를 지나 바나나 · 물풍선 · 미사일 · 실드 · 부스터를 얻어요. 출발 신호 직전에 가속하면 출발 부스터! 벽에 끼면 R 키로 트랙 복귀. 정한 바퀴 수를 가장 먼저 도는 사람이 우승!' },
 };
 const SOLO_GAMES = [   // [키, 아이콘, 이름, 설명, NEW 표시, 분류]
+  ['pinball', '🎯', '핀볼', '플리퍼로 튕겨 미션 · 멀티볼 · 잭팟!', true, '액션'],
   ['sudoku', '🔢', '스도쿠', '쉬움 · 보통 · 어려움 · 이유를 알려 주는 힌트', true, '퍼즐'],
   ['nonogram', '🖼️', '노노그램', '숫자만큼 칠해서 그림 완성 · 5×5~15×15', true, '퍼즐'],
   ['gostop', '🎴', '고스톱 vs AI', '맞고(AI 1명) · 3인 고스톱(AI 2명)', true, '보드·카드'],
@@ -370,7 +420,7 @@ const SOLO_GAMES = [   // [키, 아이콘, 이름, 설명, NEW 표시, 분류]
   ['yacht', '🎲', '요트 다이스', '혼자 점수 도전 · AI 대결', false, '보드·카드'],
   ['yut', '🥢', '윷놀이 vs AI', '잡고 업고 지름길로!', false, '보드·카드'],
   ['thief', '🃏', '도둑잡기 vs AI', '조커를 떠넘기는 카드 게임', false, '보드·카드'],
-  ['life', '🎓', '인생 보드게임 vs AI', '대학? 취업? 룰렛 인생 레이스', false, '보드·카드'],
+  ['life', '🎓', '인생 게임 vs AI', '원작 규칙: 직업 · 결혼 · 집 · 주식 · 은퇴', false, '보드·카드'],
   ['marble', '🌍', '세계여행 vs AI', '부루마블 방식 · AI 1~3명', false, '보드·카드'],
   ['breakout', '🧱', '벽돌깨기', '공을 모아 쏘는 스와이프 벽돌깨기', false, '액션'],
   ['dodge', '🎯', '총알피하기', '총알 모드 · 대나무 모드', false, '액션'],
@@ -404,7 +454,7 @@ const avColor = id => AV_COLORS[[...String(id)].reduce((a, c) => a + c.charCodeA
 const EMOJIS = ['👍', '😂', '😱', '🔥', '👏', '💰', '😭', '🤔', '😎', '🙏'];
 
 /* 메뉴 카드 + 분류 칩 */
-const UPDATED = new Set(['davinci', 'yacht']);   // 이번에 크게 바뀐 게임
+const UPDATED = new Set(['life', 'word']);   // 이번에 크게 바뀐 게임
 function fillGrid(sel, list) {
   const grid = $(sel);
   list = list.slice().sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));   // 새 게임을 앞쪽에
@@ -836,13 +886,15 @@ function addChat(d) {
   while (box.children.length > 200) box.firstChild.remove();
   box.scrollTop = box.scrollHeight;
   // 게임 중 좁은 화면에서는 채팅창이 접혀 있어요 → 💬 버튼에 새 메시지 표시
-  if (!d.system && d.id !== S.myId && document.body.classList.contains('gaming') && !document.body.classList.contains('chat-open') && window.innerWidth <= 1100) {
+  if (!d.system && d.id !== S.myId && document.body.classList.contains('gaming') && !document.body.classList.contains('chat-open') && CHAT_FLOAT.matches) {
     chatUnread++;
     $$('.chat-tgl').forEach(b => { b.classList.add('unread'); const i = b.querySelector('.dot'); if (i) i.textContent = chatUnread > 9 ? '9+' : chatUnread; });
   }
   if (d.emoji && !d.system) floatEmoji(d.msg, d.name);
 }
 let chatUnread = 0;
+/** 게임 중 채팅이 💬 버튼으로 접히는 화면 (style.css 와 같은 기준: 1100px 이하 · 1400px 이하 터치 화면) */
+const CHAT_FLOAT = matchMedia('(max-width:1100px), (pointer:coarse) and (max-width:1400px)');
 ACT.chatToggle = () => {
   const open = document.body.classList.toggle('chat-open');
   if (open) { chatUnread = 0; $$('.chat-tgl').forEach(b => b.classList.remove('unread')); const i = $('#chat-input'); if (i && !TOUCH) i.focus(); $('#chat-log').scrollTop = 1e9; }
@@ -939,6 +991,7 @@ function updatePad() {
   const g = Games[S.screen];
   const stick = TOUCH && g && g.stick && typeof Stick !== 'undefined';           // 조이스틱 패드를 쓰는 게임 (stick.js)
   if (typeof Stick !== 'undefined') { if (stick) return Stick.on(g, S.screen); Stick.off(); }
+  padEl.dataset.game = S.screen || '';                                          // 게임마다 패드 배치를 따로 (테트리스: 왼손 · 오른손 묶음)
   if (!TOUCH || !g || !g.pad) { padEl.classList.add('hidden'); return; }
   const cut = g.pad.indexOf('|'), L = cut < 0 ? g.pad : g.pad.slice(0, cut), R = cut < 0 ? [] : g.pad.slice(cut + 1);
   const btn = c => `<button data-code="${c}">${(g.padLabel && g.padLabel[c]) || PAD_LABEL[c] || c}</button>`;
@@ -947,6 +1000,33 @@ function updatePad() {
   padEl.innerHTML = `<div class="pad-l${cross(L)}">${L.map(btn).join('')}</div><div class="pad-r${cross(R)}">${R.map(btn).join('')}</div>`;
   padEl.classList.remove('hidden');
 }
+/** 터치 판: 이 게임 화면이 보이는 동안 화면 어디를 눌러도 — 게임 판 바깥 빈 곳(양옆 검은 부분 · 아래 여백)까지 — 게임 조작으로 받아요.
+ *  손가락이 판 밖으로 나가도 조작이 끊기지 않아요. 버튼 · 입력칸 · 제목 줄 · 점수 막대 · 채팅 · 창 · 패드는 원래대로 눌려요.
+ *  게임 파일에서 TouchArea.add('화면', { down, move, up, cancel, mouse }) — mouse: true 면 마우스도 받아요 */
+const TouchArea = {
+  on: {}, cur: null,
+  add(screen, h) { this.on[screen] = h; },
+  SKIP: 'button, a, input, select, textarea, label, .game-head, .scorebar, .topbar, #vpad, .chat, .overlay, .modal, #ac-invites, .man-hint, .toast, .ac-modal, #fl-cele',
+  pick(e) {
+    const h = this.on[S.screen], t = e.target;
+    if (!h || (e.pointerType === 'mouse' && !h.mouse) || !(t instanceof Element) || t.closest(this.SKIP)) return null;
+    if ($('#overlay') && $('#overlay').classList.contains('show')) return null;
+    const sec = document.getElementById('scr-' + S.screen);
+    return sec && (sec.contains(t) || t === document.body || t === document.documentElement || t.matches('.shell, #main')) ? h : null;
+  },
+};
+document.addEventListener('pointerdown', e => {
+  const c0 = TouchArea.cur;
+  if (c0 && c0.screen === S.screen && performance.now() - c0.t < 4000) return;     // 손가락 하나만 (4초 넘게 남은 건 놓친 것으로 보고 새로)
+  const h = TouchArea.pick(e); if (!h) { TouchArea.cur = null; return; }
+  TouchArea.cur = { h, id: e.pointerId, t: performance.now(), screen: S.screen };
+  if (e.pointerType !== 'mouse') e.preventDefault();
+  h.down(e);
+}, { passive: false });
+document.addEventListener('pointermove', e => { const c = TouchArea.cur; if (c && c.id === e.pointerId) { c.t = performance.now(); if (c.h.move) c.h.move(e); } }, { passive: false });
+window.addEventListener('blur', () => { const c = TouchArea.cur; TouchArea.cur = null; if (c && c.h.cancel) c.h.cancel(); });
+document.addEventListener('pointerup', e => { const c = TouchArea.cur; if (c && c.id === e.pointerId) { TouchArea.cur = null; if (c.h.up) c.h.up(e); } });
+document.addEventListener('pointercancel', e => { const c = TouchArea.cur; if (c && c.id === e.pointerId) { TouchArea.cur = null; if (c.h.cancel) c.h.cancel(e); } });
 const fakeKey = (code, repeat = false) => ({ code, key: code === 'Space' ? ' ' : code, repeat, preventDefault() {} });
 let padRep = null, padRepCode = null;               // 누르고 있으면 되풀이 (register 의 padRepeat: 테트리스 옆으로 · 아래로)
 const padRepStop = () => { clearTimeout(padRep); clearInterval(padRep); padRep = null; padRepCode = null; };

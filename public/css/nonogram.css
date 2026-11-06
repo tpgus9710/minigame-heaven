@@ -29,6 +29,7 @@
 .ng-grid .nc.oops{animation:ngOops .7s ease}
 @keyframes ngOops{0%,60%{background:#ff8a80}100%{background:transparent}}
 .ng-board.win .ng-grid{border-color:var(--good)}
+.ng-board.lost .ng-grid{border-color:var(--bad);opacity:.75}
 .ng-board.win .nc{border-color:transparent!important}
 .ng-board.win .nc.f::before{inset:0;border-radius:0;animation:ngWin .6s ease both}
 @keyframes ngWin{from{transform:scale(.4);opacity:.3}to{transform:none;opacity:1}}

@@ -1,0 +1,20 @@
+/* ═════════════ 🎯 핀볼 (#scr-pinball) ═════════════
+ * 판(캔버스)은 화면 맞춤(Fit)이 남는 높이에 맞춰 키워요. 넓은 가로 화면에서는 양옆에 미션 · 기록 패널을 둬요.
+ * 터치는 화면 어디든(양옆 빈 곳 포함) 왼쪽 절반 = 왼쪽 플리퍼 · 오른쪽 절반 = 오른쪽 플리퍼 (pinball.js) */
+.pb-wrap{display:flex;justify-content:center;align-items:center;gap:16px}
+#pb-cv{border-radius:18px;border-color:#2a2f5e;background:#0a0f24;box-shadow:0 18px 50px rgba(0,0,0,.5),0 0 0 1px rgba(124,108,255,.25);-webkit-tap-highlight-color:transparent}
+.pb-side{display:none;width:220px;flex:none;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;font-size:13px;line-height:1.5}
+@media (min-width:900px) and (min-aspect-ratio:1/1){ .pb-side{display:block} }
+.pb-side h4{margin:0 0 8px;font-size:15px}
+.pb-side h4 small{font-weight:500;color:var(--muted);margin-left:4px;font-size:12px}
+.pb-mis b{display:block;font-size:14px;margin-bottom:6px;word-break:keep-all}
+.pb-bar{height:8px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.pb-bar i{display:block;height:100%;background:linear-gradient(90deg,#7c6cff,#ff5fd2);border-radius:99px;transition:width .3s}
+.pb-mis small{color:var(--muted)}
+.pb-rank{margin:10px 0 4px;color:var(--muted)} .pb-rank b{color:var(--warn)}
+.pb-tips{margin:8px 0 0;padding-left:16px;color:var(--muted)} .pb-tips li{margin:2px 0;word-break:keep-all} .pb-tips b{color:var(--text)}
+.pb-big{font-family:'Black Han Sans',sans-serif;font-size:30px;line-height:1.2;letter-spacing:.5px}
+.pb-st{margin:2px 0 8px;color:var(--muted)}
+.pb-keys{margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.6}
+/* 휴대폰 · 폴드 커버: 제목 아래 설명 줄은 숨겨서 판을 더 크게 (설명은 설명서에) */
+@media (max-width:620px) and (max-height:940px){ body.gaming #scr-pinball .game-head .status{display:none} }

@@ -196,7 +196,7 @@ const SU = {
     after(1200, () => showResult({ title: '🎉 스도쿠 완성!', subtitle: `${this.LEVEL_NAME[this.level]} · ${t(sec)}${this.hints ? ` (힌트 ${this.hints}번 포함)` : ''} · 실수 ${this.miss}번 · 최고 기록 ${t(best)}${!prev || sec < prev ? ' 🏅 신기록!' : ''}`, solo: 'sudoku', win: true, rec: { k: this.level, v: sec } }));
   },
   /* ── 판 크기: 남은 높이 · 너비에 맞춰요 (core.js fitSquare) ── */
-  fit() { fitSquare($('#scr-sudoku'), $('#su-wrap'), '--sz', 240, 640); },
+  fit() { fitSquare($('#scr-sudoku'), $('#su-wrap'), '--sz', 240, 960); },
   watch() {
     const again = () => { if (S.screen === 'sudoku') { cancelAnimationFrame(this.raf); this.raf = requestAnimationFrame(() => this.fit()); } };
     window.addEventListener('resize', again);
@@ -231,3 +231,4 @@ register('sudoku', {
 });
 socket.on('pz:start', d => { if (d.game === 'sudoku') SU.startMulti(d); });
 LOBBY_OPTIONS.sudoku = [{ key: 'suLevel', label: '🔢 난이도', def: 'normal', values: [['easy', '쉬움'], ['normal', '보통'], ['hard', '어려움']] }];
+$('#scr-sudoku').dataset.fitSelf = '1';   // 판 크기를 스스로 재요 → 화면 맞춤(Fit)이 전체를 키우지 않게

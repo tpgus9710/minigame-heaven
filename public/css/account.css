@@ -122,7 +122,7 @@
 .res{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--panel);border:1px solid var(--line);color:var(--muted);vertical-align:1px}
 .res.win{background:color-mix(in srgb,var(--good) 22%,var(--panel));border-color:transparent;color:var(--good)}
 .res.best{background:color-mix(in srgb,var(--warn) 22%,var(--panel));border-color:transparent;color:var(--warn)}
-.ac-list.rank .rk{width:28px;text-align:center;font-family:'Black Han Sans';font-size:17px;color:var(--muted)}
+.ac-list.rank .rk,.ac-list.bdr .rk{width:28px;text-align:center;font-family:'Black Han Sans';font-size:17px;color:var(--muted)}   /* bdr: 순위표 (board.js) */
 .ac-rank-head{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .ac-rank-head select{font:inherit;font-size:14px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text)}
 .ac-add{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -280,3 +280,24 @@
   .ac-daily{margin-top:10px;padding:10px 12px}
   .cd-favs{grid-template-columns:1fr}
 }
+
+/* ── 🏆 순위표 (board.js): 게임 화면 「순위」 버튼 · 순위표 창 · 결과창 TOP 5 ── */
+.gh-rank{display:none;align-items:center;gap:6px}
+body.in-solo .gh-rank{display:inline-flex}
+.gh-rank .ic{width:17px;height:17px;color:#f5b301}
+body.gaming .game-head .gh-rank{padding:6px 10px;font-size:14px;border-radius:11px}
+@media (max-width:560px){ .gh-rank .gh-mt{display:none} body.gaming .game-head .gh-rank{padding:6px 8px} }
+.bd-modal{text-align:left;position:relative;width:min(560px,100%)}
+.bd-head{display:flex;align-items:center;gap:12px;margin:0 36px 12px 0} .bd-head h2{margin:0;font-size:22px} .bd-head p{margin:2px 0 0}
+.bd-subs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.bd-list .ac-row{min-height:44px}
+.bd-me{margin:10px 2px 0;text-align:center;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px} .bd-me .ic{width:16px;height:16px}
+.ov-board{display:none;margin:4px 0 12px;text-align:left}
+.ov-board.show{display:block;animation:pop .3s}
+.ov-board .ob-h{display:flex;align-items:center;gap:6px;margin:0 2px 6px;font-size:14.5px} .ov-board .ob-h .ic{width:17px;height:17px;color:#f5b301}
+.ov-board .ob-me{margin-left:auto;font-size:13.5px;color:var(--muted)} .ov-board .ob-me b{color:var(--text)}
+.ov-board .ac-list{gap:4px} .ov-board .ac-row{min-height:38px;padding:5px 10px;border-radius:11px}
+.ov-board .ac-row .ac-av.sm{width:26px;height:26px}
+.ov-board .ob-gap{margin-top:2px;border-style:dashed}
+.ov-board .ob-all{display:flex;margin:8px auto 0}
+@media (max-height:700px){ .ov-board .ac-row:nth-child(n+4):not(.mine){display:none} }

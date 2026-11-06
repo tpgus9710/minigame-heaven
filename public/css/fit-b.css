@@ -738,11 +738,11 @@ body.gaming #scr-rummi .rm-set .rm-why{bottom:-13px}
 
 /* ═══════════════ ⚫ 리버시 ═══════════════ */
 /* 판 크기 = 남는 높이(--avail-h)에서 위 · 아래 것들을 뺀 만큼 (정사각형), 좁은 화면에선 정보 칸이 판 아래 두 칸으로 */
-body.gaming #scr-reversi .rv-board{--rvk:128px;min-width:0;width:min(600px,100%,calc(var(--avail-h,800px) - var(--rvk)))}
+body.gaming #scr-reversi .rv-board{--rvk:128px;min-width:0;width:min(960px,100%,calc(var(--avail-h,800px) - var(--rvk)))}
 @media (max-width:960px) and (min-height:521px){
   body.gaming #scr-reversi .rv-board{--rvk:266px}
   body.gaming #scr-reversi .rv-wrap{flex-direction:column;flex-wrap:nowrap;align-items:center;gap:8px}
-  body.gaming #scr-reversi .rv-side{width:min(600px,100%,calc(var(--avail-h,800px) - var(--rvk,266px)));display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  body.gaming #scr-reversi .rv-side{width:min(960px,100%,calc(var(--avail-h,800px) - var(--rvk,266px)));display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
   body.gaming #scr-reversi .rv-players{display:contents}
   body.gaming #scr-reversi .rv-bar{grid-column:1 / -1;height:7px}
   body.gaming #scr-reversi .rv-msg{grid-column:1 / -1;font-size:12.5px;padding:6px 10px;line-height:1.4;text-align:center}

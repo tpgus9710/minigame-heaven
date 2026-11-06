@@ -10,6 +10,8 @@
 <link rel="stylesheet" href="/fonts/black-han-sans/font.css">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/css/board.css">
+<link rel="stylesheet" href="/css/life.css">
+<link rel="stylesheet" href="/css/pinball.css">
 <link rel="stylesheet" href="/css/kart.css">
 <link rel="stylesheet" href="/css/relay.css">
 <link rel="stylesheet" href="/css/dalmuti.css">
@@ -153,7 +155,10 @@
     <div class="scorebar" data-scores></div>
     <div class="banner big" id="catch-word">…</div>
     <div class="canvas-box">
-      <canvas class="sketch" id="catch-cv" width="900" height="520"></canvas>
+      <div class="cv-wrap" id="catch-cvw">
+        <canvas class="sketch" id="catch-cv" width="900" height="520"></canvas>
+        <div class="cm-feed" id="catch-feed" aria-live="polite"></div>
+      </div>
       <div class="tools hidden" id="catch-tools" data-sketch="catch"></div>
     </div>
   </section>
@@ -196,6 +201,7 @@
         <div class="t-box"><small>점수</small><b id="t-score">0</b></div>
         <div class="t-box"><small>줄 / 레벨</small><b id="t-lines">0 / 1</b></div>
         <div class="t-box keys"><kbd>←</kbd><kbd>→</kbd> 이동 · <kbd>↑</kbd> 회전<br><kbd>↓</kbd> 빠르게 · <kbd>Space</kbd> 바로 내리기</div>
+        <div class="t-box t-ctl"><small>터치 조작</small><div class="t-seg"><button data-act="tetCtl" data-m="swipe">손가락</button><button data-act="tetCtl" data-m="btn">버튼</button></div></div>
       </div>
     </div>
   </section>
@@ -363,12 +369,13 @@
 <script src="/js/gem.js"></script>
 <script src="/js/fruit.js"></script>
 <script src="/js/stack.js"></script>
+<script src="/js/pinball.js"></script>
 <script src="/js/mole.js"></script>
 <script src="/js/onecard.js"></script>
 <script src="/js/halli.js"></script>
 <script src="/js/ox.js"></script>
-<script src="/js/word.js"></script>
 <script src="/js/table.js"></script>
+<script src="/js/word.js"></script>
 <script src="/js/shared/marble-core.js"></script>
 <script src="/js/marble.js"></script>
 <script src="/js/shared/life-core.js"></script>
@@ -414,6 +421,7 @@
 <script src="/js/shared/titles.js"></script>
 <script src="/js/flair.js"></script>
 <script src="/js/account.js"></script>
+<script src="/js/board.js"></script>
 <script src="/js/admin.js"></script>
 <script src="/js/report.js"></script>
 <script src="/js/manual.js"></script>

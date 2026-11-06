@@ -28,7 +28,7 @@ const REC_FMT = {
   stack: v => v + '층', breakout: v => v + '단계', zombie: v => '스테이지 ' + v, plat: v => '스테이지 ' + v,
 };
 /** 랭킹에서 고를 수 있는 싱글 기록 */
-const REC_GAMES = [['g2048', ''], ['fruit', ''], ['gem', ''], ['apple', ''], ['race', ''], ['mine:easy', ''], ['mine:normal', ''], ['mine:hard', ''],
+const REC_GAMES = [['pinball', ''], ['g2048', ''], ['fruit', ''], ['gem', ''], ['apple', ''], ['race', ''], ['mine:easy', ''], ['mine:normal', ''], ['mine:hard', ''],
   ['dodge:bullet', ''], ['dodge:bamboo', ''], ['snake', ''], ['stack', ''], ['breakout', ''], ['shisen', ''], ['rain', ''], ['mole', ''],
   ['shooter', ''], ['tetris', ''], ['zombie', ''], ['plat', ''], ['yacht', '']];
 
@@ -885,10 +885,12 @@ const Acct = {
   onResult(d) {
     const box = $('#ov-xp'); if (!box) return;
     box.innerHTML = ''; box.className = 'ov-xp';
+    if (typeof Board !== 'undefined') Board.clearMini();
     if (d.solo) {
       if (d.tut) return;                                                    // 따라 하기 판은 기록하지 않아요
-      if (!this.me) { box.innerHTML = `<button class="ac-hint-btn" data-act="acLogin">${icon('face-id')}로그인하면 기록 · 레벨이 남아요</button>`; return; }
-      ask('acct:solo', { g: d.solo, win: d.win === true, rec: d.rec }).then(r => { if (r.ok) { this.showGain(r); this.setMe(r.me); } });
+      const bk = typeof Board !== 'undefined' && d.rec ? Board.keyOf(d) : '';   // 기록 게임이면 결과창에 순위 TOP 5 (board.js)
+      if (!this.me) { box.innerHTML = `<button class="ac-hint-btn" data-act="acLogin">${icon('face-id')}로그인하면 기록 · 레벨이 남아요</button>`; if (bk) Board.mini(bk); return; }
+      ask('acct:solo', { g: d.solo, win: d.win === true, rec: d.rec }).then(r => { if (r.ok) { this.showGain(r); this.setMe(r.me); } if (bk) Board.mini(bk, r.ok && r.best); });
       return;
     }
     if (this.gain && Date.now() - this.gain.at < 8000) this.showGain(this.gain);

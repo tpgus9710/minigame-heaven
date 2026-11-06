@@ -260,9 +260,19 @@ const Plat = {
       } else if (t === 'I' || t === 'U') {
         c.fillStyle = t === 'I' ? '#f2b631' : '#9b7a4a'; c.beginPath(); c.roundRect(x + 1, y + 1, T - 2, T - 2, 5); c.fill();
         if (t === 'I') { c.fillStyle = '#fff6c9'; c.font = 'bold 20px sans-serif'; c.textAlign = 'center'; c.fillText('★', x + T / 2, y + 23); }
-      } else if (t === 'S') {
-        c.fillStyle = '#cfd6e6';
-        for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(x + i * 8, y + T); c.lineTo(x + i * 8 + 4, y + 12); c.lineTo(x + i * 8 + 8, y + T); c.fill(); }
+      } else if (t === 'S') {                                        // 가시: 어두운 받침 · 진한 테두리 · 붉은 끝 · 붉은 빛 (밝은 하늘 · 언덕 위에서도 잘 보이게)
+        c.save();
+        c.fillStyle = '#2b2f3a'; c.fillRect(x, y + T - 5, T, 5);
+        const gr = c.createLinearGradient(0, y + 11, 0, y + T);
+        gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, '#c3cad8'); gr.addColorStop(1, '#5f687c');
+        const tri = i => { c.beginPath(); c.moveTo(x + i * 8 + 0.5, y + T - 4); c.lineTo(x + i * 8 + 4, y + 11); c.lineTo(x + i * 8 + 7.5, y + T - 4); c.closePath(); };
+        c.shadowColor = 'rgba(255,40,40,.7)'; c.shadowBlur = 8; c.fillStyle = gr;
+        for (let i = 0; i < 4; i++) { tri(i); c.fill(); }
+        c.shadowBlur = 0; c.strokeStyle = '#1b2030'; c.lineWidth = 1.6; c.lineJoin = 'round';
+        for (let i = 0; i < 4; i++) { tri(i); c.stroke(); }
+        c.fillStyle = '#ff4747';
+        for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(x + i * 8 + 4, y + 11); c.lineTo(x + i * 8 + 2.4, y + 16); c.lineTo(x + i * 8 + 5.6, y + 16); c.closePath(); c.fill(); }
+        c.restore();
       } else if (t === 'J') {
         c.fillStyle = '#ff5d73'; c.fillRect(x + 4, y + 14, T - 8, 6); c.fillStyle = '#ccc'; c.fillRect(x + 8, y + 20, T - 16, 12); c.fillStyle = '#ff5d73'; c.fillRect(x + 2, y + 10, T - 4, 6);
       } else if (t === 'C') {

@@ -3,7 +3,7 @@
  * ===================================================================== */
 const ST = { W: 400, H: 640, BH: 26, BASE: 220 };
 makeScreen('stack', {
-  title: '🏗️ 탑 쌓기', status: '화면을 누르거나 스페이스로 블록을 멈춰요. 딱 맞추면 콤보!',
+  title: '🏗️ 탑 쌓기', status: '화면 아무 데나 누르거나 스페이스로 블록을 멈춰요. 딱 맞추면 콤보!',
   stats: [['score', '높이'], ['best', '최고 기록']],
   body: `<div class="center"><canvas id="st-cv" class="game-cv" width="${ST.W}" height="${ST.H}"></canvas></div>`,
 });
@@ -76,5 +76,5 @@ const Stack = {
     if (this.flash > 0 && this.combo) { c.font = 'bold 22px "Noto Sans KR", sans-serif'; c.fillText(`딱 맞음! ×${this.combo}`, ST.W / 2, 130); }
   },
 };
-$('#st-cv').addEventListener('pointerdown', () => Stack.place());
+TouchArea.add('stack', { mouse: true, down: () => Stack.place() });     // 판 밖 빈 곳(양옆 검은 부분)을 눌러도 쌓여요
 register('stack', { solo: () => Stack.start(), stop: () => { Stack.over = true; }, key: e => { if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat) Stack.place(); } });
