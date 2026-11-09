@@ -140,11 +140,11 @@ body.gaming #scr-yut .yt-msg{display:flex;align-items:center}
  * 세로 화면: 주사위판 → 메시지 → 점수표 / 가로 화면: [주사위판 · 메시지 | 점수표] */
 body.gaming #scr-yacht .yc-table tr.yc-head2{display:none}
 body.gaming #scr-yacht .yc-msg{display:flex;align-items:center}
-/* 주사위 5개가 판 폭에 한 줄로 들어가게 (판 폭 기준 크기) */
-body.gaming #scr-yacht .yc-tray{container-type:inline-size}
-body.gaming #scr-yacht .yc-dice{flex-wrap:nowrap}
-body.gaming #scr-yacht .yc-die .die{width:var(--dz,72px);height:var(--dz,72px)}
-body.gaming #scr-yacht .yc-tray{--dz:min(72px,calc((100cqi - 4 * 14px) / 5))}
+/* 주사위 5개가 판 폭에 한 줄로 들어가게: 5칸 격자(칸마다 최대 --dmax) 에 주사위가 칸 폭만큼 정사각형으로.
+ * (예전에는 컨테이너 단위 cqi 로 계산했는데, 아이패드 크롬 · 사파리에서는 화면 폭 기준으로 계산돼 주사위가 판 밖으로 넘쳤어요 → 격자로) */
+body.gaming #scr-yacht .yc-dice{display:grid;grid-template-columns:repeat(5,minmax(0,var(--dmax,72px)));justify-content:center;gap:var(--dgap,14px);width:100%}
+body.gaming #scr-yacht .yc-die{width:100%;min-width:0}
+body.gaming #scr-yacht .yc-die .die{width:100%;height:auto;aspect-ratio:1 / 1}
 
 /* 점수표 두 칸 (한 표가 다 들어가는 큰 화면 말고 전부: 높이 920px 이하 또는 좁은 화면) */
 @media (max-height:920px), (max-width:900px){
@@ -204,8 +204,7 @@ body.gaming #scr-yacht .yc-table tr.sub td:not(:first-child) small{font:inherit;
 @media (max-width:600px){
   body.gaming #scr-yacht .yc-tray{padding:8px 10px;gap:6px 10px;border-radius:20px}
   body.gaming #scr-yacht .yc-who{font-size:13.5px;padding:3px 12px}
-  body.gaming #scr-yacht .yc-dice{gap:7px;padding-bottom:14px}
-  body.gaming #scr-yacht .yc-tray{--dz:min(56px,calc((100cqi - 4 * 7px) / 5))}
+  body.gaming #scr-yacht .yc-dice{--dgap:7px;--dmax:56px;padding-bottom:14px}
   body.gaming #scr-yacht .yc-die .die{padding:8px;border-radius:12px}
   body.gaming #scr-yacht .yc-die em{bottom:-17px;font-size:10px;padding:0 6px}
   body.gaming #scr-yacht .yc-hint{font-size:12px;line-height:1.35}
@@ -232,8 +231,7 @@ body.gaming #scr-yacht .yc-table tr.sub td:not(:first-child) small{font:inherit;
   body.gaming #scr-yacht .yc-left{flex:1 1 300px;min-width:260px;gap:6px}
   body.gaming #scr-yacht .yc-tray{padding:8px 10px;gap:6px;border-radius:20px}
   body.gaming #scr-yacht .yc-who{font-size:13px;padding:3px 12px}
-  body.gaming #scr-yacht .yc-dice{gap:6px;padding-bottom:14px}
-  body.gaming #scr-yacht .yc-tray{--dz:min(48px,calc((100cqi - 4 * 6px) / 5))}
+  body.gaming #scr-yacht .yc-dice{--dgap:6px;--dmax:48px;padding-bottom:14px}
   body.gaming #scr-yacht .yc-die .die{padding:7px;border-radius:11px}
   body.gaming #scr-yacht .yc-die em{bottom:-17px;font-size:10px;padding:0 6px}
   body.gaming #scr-yacht .yc-hint{font-size:12px;line-height:1.3}
