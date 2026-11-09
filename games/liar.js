@@ -1,6 +1,6 @@
 'use strict';
 /* 🤫 라이어 게임 — 한 붓씩 그리고 투표로 라이어 찾기 */
-const { WORDS } = require('../data/words');
+const { nextLiarWord } = require('../data/words');       // 주제 13가지 · 한 번씩 다 나오기 전엔 겹치지 않아요
 
 module.exports = H => {
   const { emit, sys, later, cancel, getPlayer, participants, finishGame } = H;
@@ -57,8 +57,7 @@ module.exports = H => {
     games: { liar: { name: '라이어 게임', min: 3, max: 8 } },
     start(room) {
       const parts = participants(room);
-      const category = H.pick(Object.keys(WORDS));
-      const word = H.pick(WORDS[category]);
+      const [category, word] = nextLiarWord();
       const liar = H.pick(parts);
       room.game = { type: 'liar', order: H.shuffle(parts.map(p => p.id)), turn: -1, total: parts.length * 2, category, word, liarId: liar.id, phase: 'draw', votes: new Map(), drawerId: null, token: 0, timer: null };
       parts.forEach(p => H.toPlayer(p.id, 'liar:start', { isLiar: p.id === liar.id, category, word: p.id === liar.id ? null : word, total: room.game.total }));

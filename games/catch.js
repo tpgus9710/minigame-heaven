@@ -1,6 +1,6 @@
 'use strict';
 /* 🎨 캐치마인드 — 돌아가며 그리고, 채팅으로 정답 맞히기 */
-const { ALL_WORDS } = require('../data/words');
+const { nextCatchWord } = require('../data/words');      // 518개 · 한 번씩 다 나오기 전엔 겹치지 않아요
 
 module.exports = H => {
   const { emit, sys, later, cancel, getPlayer, participants, pushScores, rankScores, finishGame } = H;
@@ -13,7 +13,7 @@ module.exports = H => {
     while (++g.turn < g.total) { drawer = getPlayer(room, g.order[g.turn % g.order.length]); if (drawer) break; }
     if (!drawer) return finishGame(room, { title: '🎨 캐치마인드 종료!', ranking: rankScores(room, '점') });
 
-    g.word = H.pick(ALL_WORDS); g.drawerId = drawer.id; g.solved = false;
+    g.word = nextCatchWord(); g.drawerId = drawer.id; g.solved = false;
     const token = ++g.token;
     emit(room, 'catch:turn', { drawerId: drawer.id, drawerName: drawer.name, length: g.word.length, turn: g.turn + 1, total: g.total, seconds: 80 });
     H.toPlayer(drawer.id, 'catch:word', { word: g.word });

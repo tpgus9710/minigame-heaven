@@ -2,7 +2,7 @@
  *  🎲 차례형 보드·카드 게임 공통 진행기 — 화면(싱글: 봇과 대전)과 서버(멀티)가 같은 코드를 씁니다.
  *
  *  게임 규칙(Core)은 아래 모양을 지켜요 (public/js/shared/*-core.js):
- *    meta      { name, min, max, bots(봇 가능?), turnSec(사람 제한 시간), botDelay:[최소,최대]ms, options:[로비 옵션] }
+ *    meta      { name, min, max, bots(봇 가능?), turnSec(사람 제한 시간), botDelay:[최소,최대]ms 또는 state => [최소,최대], options:[로비 옵션] }
  *    setup(players, rnd, opts) → state        players: [{ id, name, bot }]
  *    view(state, viewerId)     → 그 사람에게 보여줄 정보 (남의 패처럼 숨길 건 숨김)
  *    act(state, id, action)    → 잘못된 행동이면 오류 문자열, 아니면 undefined (state를 바꿈)
@@ -16,6 +16,7 @@
  *    drop(state, id)           → 나간 사람 처리 (없으면 봇이 대신함)
  *    chatRoute(state, id)      → 채팅을 누구에게 보낼지 (마피아 밤 채팅 등)
  *    out(state, id) · endNow(state) → 사람이 모두 탈락(쓰러짐 · 파산 · 탈출)하면 봇끼리 이어 하지 않고 바로 끝내요 (endNow 가 결과를 돌려줘요)
+ *    lag(state)                → 화면이 방금 일을 다 보여 줄 때까지 남은 시간(ms) — 봇 · 사람 제한 시간이 그만큼 늦게 시작해요
  * ===================================================================== */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -53,13 +54,15 @@
       const waiting = Core.pending(state);
       const dl = Core.deadline ? Core.deadline(state) : null;
       if (dl) timers.push(o.setTimer(() => { if (ended) return; Core.timeup(state); schedule(); o.onUpdate(); }, Math.max(0, dl - Date.now())));
-      const [lo, hi] = meta.botDelay || [700, 1400];
-      for (const id of waiting) if (bots.has(id)) timers.push(o.setTimer(() => botMove(id), lo + Math.random() * (hi - lo)));
+      // lag: 화면 연출이 아직 남은 시간(ms) — 봇은 그만큼 더 기다렸다 움직이고, 사람 제한 시간도 그만큼 늦게 시작해요 (세계여행)
+      const lag = Core.lag ? Math.max(0, Math.min(20000, +Core.lag(state) || 0)) : 0;
+      const [lo, hi] = (typeof meta.botDelay === 'function' ? meta.botDelay(state) : meta.botDelay) || [700, 1400];
+      for (const id of waiting) if (bots.has(id)) timers.push(o.setTimer(() => botMove(id), lag + lo + Math.random() * (hi - lo)));
       const humans = waiting.filter(id => !bots.has(id));
       if (!dl && humans.length && meta.turnSec && o.timeouts !== false) {
         const sec = humans.every(id => (afk.get(id) || 0) >= 2) ? Math.min(meta.turnSec, 10) : meta.turnSec;
-        state.turnEnd = Date.now() + sec * 1000;
-        timers.push(o.setTimer(() => humans.forEach(id => { if (!ended && Core.pending(state).includes(id)) force(id); }), sec * 1000));
+        state.turnEnd = Date.now() + lag + sec * 1000;
+        timers.push(o.setTimer(() => humans.forEach(id => { if (!ended && Core.pending(state).includes(id)) force(id); }), lag + sec * 1000));
       } else state.turnEnd = dl || null;
     }
     function tryAct(id, a) { return a == null ? 'no-move' : Core.act(state, id, a); }

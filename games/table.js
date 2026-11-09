@@ -38,7 +38,7 @@ module.exports = H => {
         rnd: Math.random, opts: room.options,
         setTimer: (fn, ms) => H.later(room, ms, fn), clearTimer: t => H.cancel(room, t),
         onUpdate: () => push(room),
-        onEnd: res => { push(room); H.later(room, 1500, () => finish(room, res)); },
+        onEnd: res => { push(room); H.later(room, 1500 + (Core.lag && g.T ? Math.min(15000, Core.lag(g.T.state) || 0) : 0), () => finish(room, res)); },   // 화면 연출(lag)이 끝난 뒤에 결과
         log: m => console.warn('⚠️ ', room.gameType, m),
       });
       H.emit(room, 'tb:start', { game: room.gameType });

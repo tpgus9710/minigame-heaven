@@ -26,67 +26,10 @@
 /* ── 공통 테이블 ── */
 .felt{background:radial-gradient(ellipse at center,#1f6b4a 0%,#134a33 60%,#0c3423 100%);border-radius:28px;box-shadow:inset 0 0 0 10px #4a2f1d,inset 0 0 0 13px #6b4429,0 20px 50px rgba(0,0,0,.45)}
 
-/* ═════════════ 🌍 세계여행 ═════════════ */
-.mb-wrap{display:flex;gap:16px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
-.mb-board{position:relative;display:grid;grid-template-columns:1.25fr repeat(7,1fr) 1.25fr;grid-template-rows:1.25fr repeat(7,1fr) 1.25fr;width:min(780px,96vw,calc(100vh - 200px));min-width:min(560px,96vw);aspect-ratio:1;padding:8px;gap:3px;
-  background:linear-gradient(135deg,#0e2b20,#14402d);border-radius:18px;box-shadow:0 18px 48px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.06)}
-.mb-cell{position:relative;background:linear-gradient(180deg,#fbf7ec,#ece4cf);color:#1d2433;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;padding:2px;text-align:center;transition:transform .12s}
-.mb-cell:hover{transform:scale(1.04);z-index:2}
-.mb-cell .band{position:absolute;top:0;left:0;right:0;height:17%}
-.mb-cell .band.spot{background:repeating-linear-gradient(90deg,#16a085 0 6px,#1abc9c 6px 12px)}
-.mb-cell .flag{font-size:clamp(8px,.9vw,10px);font-weight:900;color:#6b7280;margin-top:12%;letter-spacing:.5px}
-.mb-cell .nm{font-size:clamp(9px,1.15vw,13px);font-weight:900;line-height:1.1;word-break:keep-all}
-.mb-cell .nm.long{font-size:clamp(8px,.85vw,10px);word-break:break-all}
-.mb-cell .pr{font-size:clamp(8px,.95vw,11px);color:#4b5563;font-weight:700}
-.mb-cell .bld{display:flex;gap:2px;min-height:8px}
-.mb-cell .bld i{width:8px;height:8px;border-radius:2px;background:#2ecc71}
-.mb-cell .bld i.lv2{background:#3498db} .mb-cell .bld i.lv3{background:#9b59b6} .mb-cell .bld i.lv4{background:#f1c40f;box-shadow:0 0 6px #f1c40f}
-.mb-cell.owned{box-shadow:inset 0 0 0 3px var(--own);background:linear-gradient(180deg,#fff,color-mix(in srgb,var(--own) 22%,#f3ecd8))}
-.mb-cell.key{background:linear-gradient(160deg,#ffe58a,#e0a92a)} .mb-cell.tax{background:linear-gradient(160deg,#d7dde8,#aab3c5)}
-.mb-cell .key-ic{font-family:'Black Han Sans',sans-serif;font-size:clamp(10px,1.3vw,15px);color:#7a4f00;letter-spacing:1px}
-.mb-cell .key-ic.tax{color:#2c3e50}
-.mb-cell.corner{background:linear-gradient(160deg,#243b55,#141e30);color:#fff}
-.mb-cell.corner.start{background:linear-gradient(160deg,#e74c3c,#8e1e14)} .mb-cell.corner.island{background:linear-gradient(160deg,#16a085,#0b5345)}
-.mb-cell.corner.fund{background:linear-gradient(160deg,#8e44ad,#4a235a)} .mb-cell.corner.travel{background:linear-gradient(160deg,#2980b9,#154360)}
-.mb-cell .corner-t{font-family:'Black Han Sans',sans-serif;font-size:clamp(12px,1.8vw,20px)}
-.mb-cell.corner small{font-size:clamp(8px,.9vw,10px);opacity:.85;line-height:1.3}
-.mb-cell.pick{animation:pickGlow 1s infinite;cursor:crosshair}
-@keyframes pickGlow{50%{box-shadow:inset 0 0 0 3px #5ce1ff,0 0 14px #5ce1ff}}
-.mb-center{grid-row:2/9;grid-column:2/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px;position:relative;
-  background:radial-gradient(ellipse at center,rgba(255,255,255,.06),transparent 70%);border-radius:12px}
-.mb-logo{font-family:'Black Han Sans',sans-serif;font-size:clamp(26px,4.2vw,46px);color:rgba(255,255,255,.12);letter-spacing:6px;line-height:.9;text-align:center}
-.mb-logo span{display:block;font-size:.6em;letter-spacing:12px}
-.mb-dice{display:flex;gap:12px;min-height:50px}
-.mb-msg{color:#f4f6fb;font-weight:700;text-align:center;min-height:24px;font-size:clamp(12px,1.5vw,16px);max-width:90%}
-.mb-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-.mb-acts .btn small{opacity:.8;margin-left:4px;font-size:12px}
-.mb-hint{color:#5ce1ff;font-weight:900;animation:pickGlowT 1s infinite}
-@keyframes pickGlowT{50%{opacity:.5}}
-.mb-info{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);color:#dfe6f3;border-radius:10px;padding:8px 12px;font-size:13px;max-width:92%;text-align:center;line-height:1.5}
-.mb-tolls{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin:4px 0}
-.mb-tolls span{font-size:11px;background:rgba(255,255,255,.08);padding:1px 6px;border-radius:6px} .mb-tolls span.on{background:#f1c40f;color:#222;font-weight:900}
-.mb-card{position:absolute;width:min(300px,70%);padding:22px;border-radius:14px;text-align:center;color:#3d2a00;background:linear-gradient(150deg,#fff3b0,#e6b422 55%,#b8860b);
-  box-shadow:0 20px 40px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.6);z-index:5}
-.mb-card small{letter-spacing:4px;font-weight:900;opacity:.7} .mb-card b{display:block;font-family:'Black Han Sans',sans-serif;font-size:26px;margin:4px 0} .mb-card p{margin:0;font-weight:700;line-height:1.5}
-.mb-card.flip{animation:cardFlip .5s ease-out}
-@keyframes cardFlip{from{transform:rotateY(90deg) scale(.6);opacity:0}to{transform:none;opacity:1}}
-.mb-token{position:absolute;width:22px;height:22px;z-index:6;transition:left .11s linear,top .11s linear;pointer-events:none;
-  border-radius:50% 50% 45% 45%;background:radial-gradient(circle at 35% 30%,#fff 0,var(--pc) 35%,color-mix(in srgb,var(--pc) 60%,#000) 100%);box-shadow:0 4px 6px rgba(0,0,0,.5),0 0 0 2px rgba(255,255,255,.85)}
-.mb-token.out{display:none}
-.mb-side{display:flex;flex-direction:column;gap:10px;width:min(260px,96vw)}
-.mb-p{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--pc);border-radius:12px;padding:10px 12px;transition:transform .2s}
-.mb-p.turn{border-color:var(--pc);box-shadow:0 0 0 2px var(--pc),0 8px 20px rgba(0,0,0,.3);transform:translateX(-4px)}
-.mb-p.out{opacity:.4}
-.mb-p-top{display:flex;align-items:center;gap:8px}
-.mb-p-top .pawn{width:14px;height:14px;border-radius:50%;background:var(--pc)}
-.mb-p-top em{font-style:normal;font-size:11px;background:var(--panel2);border:1px solid var(--line);padding:1px 7px;border-radius:99px;margin-left:auto}
-.mb-money{font-family:'Black Han Sans',sans-serif;font-size:24px;margin-top:2px;transition:color .3s}
-.mb-money small{font-family:'Noto Sans KR';font-size:12px;color:var(--muted);margin-left:3px}
-.mb-money.up{animation:moneyUp 1s} .mb-money.down{animation:moneyDown 1s}
+/* 🌍 세계여행 화면은 css/marble.css */
+/* 돈이 바뀔 때 반짝 (인생 게임이 써요) */
 @keyframes moneyUp{0%{color:#3fcf9b;transform:scale(1.08)}100%{color:inherit}}
 @keyframes moneyDown{0%{color:#ff5d73;transform:scale(1.08)}100%{color:inherit}}
-.mb-p-sub{font-size:12px;color:var(--muted)}
-@media (max-width:900px){.mb-side{flex-direction:row;flex-wrap:wrap;width:96vw}.mb-p{flex:1;min-width:150px}}
 
 /* 🎓 인생 게임 화면은 css/life.css */
 

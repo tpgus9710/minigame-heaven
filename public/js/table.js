@@ -71,7 +71,8 @@ const Table = {
     const top = rk.filter(r => rk.length && r.value === rk[0].value);
     const win = c.players.length > 1 && (Array.isArray(res.winners) ? res.winners.includes('me') : !/무승부/.test(res.title || '') && top.some(r => r.id === 'me'));
     const rec = mine && typeof mine.score === 'number' && !c.tut ? { v: mine.score } : undefined;      // 따라 하기 판(정해 둔 패)은 기록 X
-    after(1500, () => showResult({ title: res.title, subtitle: res.subtitle || '', lines: res.lines || [], ranking: rk.map(r => ({ name: name(r.id), value: r.value })), solo: c.key, win: win && !c.tut, rec, tut: c.tut }));
+    const lag = this.defs[c.key].core.lag ? Math.min(15000, this.defs[c.key].core.lag(c.T.state) || 0) : 0;   // 마지막 장면(파산 등)을 다 보여 준 뒤에 결과
+    after(1500 + lag, () => showResult({ title: res.title, subtitle: res.subtitle || '', lines: res.lines || [], ranking: rk.map(r => ({ name: name(r.id), value: r.value })), solo: c.key, win: win && !c.tut, rec, tut: c.tut }));
   },
   stop(key) { const c = this.cur; if (c && (!key || c.key === key)) { if (c.T) c.T.stop(); this.cur = null; } },
   startMulti(key) {

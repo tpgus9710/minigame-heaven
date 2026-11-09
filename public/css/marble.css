@@ -1,0 +1,316 @@
+/* ═════════════ 🌍 세계여행 보드게임 (#scr-marble) — v12.6 리마스터 ═════════════
+ * 판 크기(--mb-bw)는 marble.js 의 fit() 이 남는 자리에 맞춰 정해요. 칸 · 가운데 글씨는 판 크기(cqi = 판 너비의 1%)에 맞춰요
+ * (cqi 는 판 안쪽 요소에서 바로 써요 — 판 자신에 둔 변수로 넘기면 아이패드(WebKit)에서 화면 너비로 계산돼요).
+ * 말(토큰)은 marble.js 가 칸 위치(px)로 놓아요. 판 밖으로 잠깐 삐져나온 말이 '넘침'으로 잡히지 않게 판은 overflow:clip.
+ * 세로 화면: [판 / 참가자 줄 / 내 황금열쇠 (자리가 남으면 지난 일)] · 가로 화면: [판 | 옵션 · 참가자 · 내 황금열쇠 · 지난 일] */
+#scr-marble{--mb-bw:min(780px,100%,calc(100vh - 270px));--mb-bw:min(780px,100%,calc(100dvh - 270px))}
+#scr-marble .mb-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+
+/* ── 판 ── */
+.mb-board{position:relative;display:grid;grid-template-columns:1.22fr repeat(7,minmax(0,1fr)) 1.22fr;grid-template-rows:1.22fr repeat(7,minmax(0,1fr)) 1.22fr;
+  width:var(--mb-bw);aspect-ratio:1;min-width:0;min-height:0;container-type:inline-size;overflow:hidden;overflow:clip;
+  padding:clamp(4px,calc(var(--mb-bw) * .012),10px);gap:clamp(2px,calc(var(--mb-bw) * .005),4px);border-radius:clamp(12px,calc(var(--mb-bw) * .028),22px);
+  background:radial-gradient(circle at 50% 45%,rgba(125,211,252,.18),transparent 60%),radial-gradient(130% 120% at 50% 30%,#1e5f80 0%,#134563 45%,#0b2539 100%);
+  box-shadow:0 18px 46px rgba(0,0,0,.42),inset 0 0 0 1px rgba(255,255,255,.08),inset 0 0 50px rgba(0,0,0,.32)}
+
+/* 칸 */
+.mb-cell{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0;overflow:hidden;
+  padding:calc(15% + 1px) 1px 2px;border-radius:clamp(4px,1.1cqi,9px);background:linear-gradient(180deg,#fffdf8,#f0e8d6);color:#1c2230;text-align:center;cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 4px rgba(0,0,0,.28);transition:transform .15s,box-shadow .2s,background .3s;-webkit-tap-highlight-color:transparent;line-height:1.05}
+.mb-cell .band{position:absolute;left:0;right:0;top:0;height:15%;background:var(--g)}
+.mb-cell .band.spot{background:repeating-linear-gradient(90deg,#14b8a6 0 5px,#5eead4 5px 10px)}
+.mb-cell .ic{font-size:clamp(9.5px,3cqi,24px);line-height:1.08;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+.mb-cell .nm{font-size:clamp(8px,2.1cqi,15px);font-weight:900;letter-spacing:-.03em;word-break:keep-all;max-width:100%}
+.mb-cell .nm.long{font-size:clamp(7px,1.62cqi,12px);line-height:1.02}
+.mb-cell .pr{margin-top:.18em;padding:.06em .4em;border-radius:99px;font-size:clamp(7px,1.75cqi,12.5px);font-weight:800;color:#5b6474;white-space:nowrap;line-height:1.15}
+.mb-cell .bld{position:absolute;right:3%;top:calc(15% + 1px);font-size:clamp(9px,2.5cqi,20px);line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4));z-index:1;
+  font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+.mb-cell .bld:empty{display:none}
+.mb-cell.owned{background:linear-gradient(180deg,#fff,color-mix(in srgb,var(--own) 22%,#f6efe0));box-shadow:inset 0 0 0 clamp(1.5px,.42cqi,3px) var(--own),0 2px 4px rgba(0,0,0,.28)}
+.mb-cell.owned .pr{background:var(--own);color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.28)}
+/* 모서리 · 황금열쇠 · 국세청 */
+.mb-cell.corner{padding:3px 2px;color:#fff;gap:.12em}
+.mb-cell .ic.big{font-size:clamp(11px,3.5cqi,28px)}
+.mb-cell.corner .ic.big{font-size:clamp(14px,4.6cqi,38px)}
+.mb-cell .corner-t{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:clamp(9px,2.5cqi,20px);line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
+.mb-cell.corner small{font-size:clamp(7px,1.55cqi,11.5px);font-weight:700;opacity:.92;line-height:1.1;white-space:nowrap}
+.mb-cell.start{background:linear-gradient(150deg,#fb7185,#be123c)}
+.mb-cell.island{background:linear-gradient(150deg,#2dd4bf,#0f766e)}
+.mb-cell.fund{background:linear-gradient(150deg,#c084fc,#7e22ce)}
+.mb-cell.travel{background:linear-gradient(150deg,#60a5fa,#1d4ed8)}
+.mb-cell.key{padding-top:2px;background:linear-gradient(150deg,#fef08a,#f59e0b);gap:.1em}
+.mb-cell.key .nm{color:#713f12}
+.mb-cell.tax{padding-top:2px;background:linear-gradient(150deg,#f1f5f9,#94a3b8);gap:.1em}
+/* 효과 */
+@media (hover:hover){ .mb-cell:hover{transform:translateY(-2px);z-index:2;box-shadow:0 7px 14px rgba(0,0,0,.35)} }
+.mb-cell.sel{z-index:3;box-shadow:0 0 0 2px #fff,0 0 0 4px #22d3ee,0 0 18px #22d3ee}
+.mb-cell.pick{animation:mbPick 1.2s ease-in-out infinite}
+@keyframes mbPick{50%{box-shadow:inset 0 0 0 3px #5eead4,0 0 14px #5eead4}}
+.mb-cell.hit{animation:mbHit .9s ease-out;z-index:3}
+@keyframes mbHit{0%{transform:scale(1)}25%{transform:scale(1.14);box-shadow:0 0 0 3px #fff,0 0 22px #fde047}100%{transform:scale(1)}}
+.mb-cell.pop{animation:mbPop .65s cubic-bezier(.3,1.6,.5,1);z-index:3}
+@keyframes mbPop{0%{transform:scale(.8)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.mb-cell.flip{animation:mbFlip .62s ease-in-out;z-index:3}
+@keyframes mbFlip{50%{transform:perspective(300px) rotateY(90deg) scale(1.12)}}
+.mb-cell.guard::after{content:'🛡️';position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(16px,4.6cqi,36px);background:rgba(255,255,255,.6);animation:mbGuard 1.4s ease-out forwards}
+@keyframes mbGuard{0%{opacity:0;transform:scale(.6)}20%{opacity:1;transform:scale(1.1)}80%{opacity:1}100%{opacity:0}}
+
+/* ── 가운데 ── */
+.mb-center{grid-row:2/9;grid-column:2/9;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(4px,1.25cqi,12px);
+  min-width:0;min-height:0;overflow:hidden;padding:clamp(6px,1.7cqi,18px);border-radius:clamp(8px,1.6cqi,16px);color:#eef6ff}
+.mb-center::before{content:'';position:absolute;inset:4%;pointer-events:none;opacity:.12;border-radius:50%;
+  background:radial-gradient(circle,#fff 1px,transparent 1.7px) 0 0/clamp(8px,2.1cqi,16px) clamp(8px,2.1cqi,16px);
+  -webkit-mask:radial-gradient(closest-side,#000 55%,transparent 100%);mask:radial-gradient(closest-side,#000 55%,transparent 100%)}
+.mb-center > *{position:relative}
+.mb-turn{display:inline-flex;align-items:center;gap:.45em;max-width:100%;padding:.32em .9em .32em .55em;border-radius:99px;font-size:clamp(11px,2.5cqi,17px);font-weight:800;white-space:nowrap;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18)}
+.mb-turn i{flex:none;width:.85em;height:.85em;border-radius:50%;background:var(--pc);box-shadow:0 0 0 2px rgba(255,255,255,.75)}
+.mb-turn b{overflow:hidden;text-overflow:ellipsis}
+.mb-turn span{opacity:.75;font-weight:600}
+.mb-turn.me{background:color-mix(in srgb,var(--pc) 38%,transparent);border-color:var(--pc)}
+.mb-turn.new{animation:mbTurn .7s ease-out}
+@keyframes mbTurn{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:none}}
+.mb-dice{display:flex;gap:clamp(8px,2cqi,16px)}
+.mb-dice .die{width:clamp(30px,8cqi,64px);height:clamp(30px,8cqi,64px);padding:clamp(4px,1.15cqi,10px);border-radius:clamp(7px,1.7cqi,14px);gap:clamp(1px,.3cqi,3px)}
+.mb-dice.tumble .die{animation:mbTumble .17s linear infinite}
+.mb-dice.tumble .die:nth-child(2){animation-direction:reverse}
+@keyframes mbTumble{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-16%) rotate(20deg)}}
+.mb-dice.land .die{animation:mbLand .4s cubic-bezier(.3,1.7,.5,1)}
+@keyframes mbLand{0%{transform:scale(1.25)}100%{transform:scale(1)}}
+.mb-msg{max-width:96%;min-height:1.35em;font-size:clamp(11px,2.4cqi,17px);font-weight:700;line-height:1.35;text-align:center;word-break:keep-all;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.mb-msg b{color:#fde047}
+.mb-panel{display:flex;flex-direction:column;align-items:center;gap:clamp(4px,1cqi,8px);width:100%;min-height:0}
+.mb-panel:empty{display:none}
+.mb-panel .btn{font-size:clamp(12px,2.6cqi,17px);padding:.55em 1em;border-radius:clamp(9px,1.8cqi,14px)}
+.mb-panel .btn small{opacity:.85;font-size:.8em;margin-left:.3em}
+.mb-panel .btn.mb-roll{font-size:clamp(15px,3.5cqi,25px);padding:.6em 1.5em;box-shadow:0 8px 22px rgba(63,207,155,.35)}
+.mb-row{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(4px,1cqi,8px)}
+.mb-hint{font-size:clamp(12px,2.6cqi,17px);font-weight:900;color:#5eead4;animation:mbBlink 1.3s ease-in-out infinite}
+@keyframes mbBlink{50%{opacity:.55}}
+.mb-wait{display:flex;align-items:center;gap:.25em;max-width:100%;font-size:clamp(11px,2.3cqi,15.5px);color:#d6eaff;text-align:center;word-break:keep-all;line-height:1.35}
+.mb-wait b{color:#fff}
+.mb-wait.scary{color:#fecaca}
+.mb-wait .dots{display:inline-flex;gap:3px;margin-left:3px}
+.mb-wait .dots i{width:.32em;height:.32em;border-radius:50%;background:currentColor;animation:mbDot 1.2s infinite}
+.mb-wait .dots i:nth-child(2){animation-delay:.2s} .mb-wait .dots i:nth-child(3){animation-delay:.4s}
+@keyframes mbDot{0%,60%,100%{opacity:.25;transform:none}30%{opacity:1;transform:translateY(-3px)}}
+.mb-feed{display:flex;flex-direction:column;align-items:center;gap:2px;max-width:98%;font-size:clamp(9.5px,1.95cqi,13px);opacity:.72}
+.mb-feed div{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mb-feed b{color:#fde68a;font-weight:700}
+.mb-feed:empty{display:none}
+/* 내가 고르는 중엔 주사위 · 지난 일을 접어 자리를 내요 */
+.mb-center:is([data-mode=buy],[data-mode=build],[data-mode=toll],[data-mode=takeover]) :is(.mb-dice,.mb-feed,.mb-msg){display:none}
+.mb-center[data-mode=busy] .mb-feed{display:none}
+
+/* 사고 · 짓고 · 내고 · 인수하는 카드 */
+.mb-deal{width:min(100%,30em);padding:clamp(7px,1.6cqi,14px);border-radius:clamp(10px,2cqi,16px);font-size:clamp(10.5px,2.25cqi,15px);line-height:1.35;
+  background:rgba(7,18,31,.78);border:1px solid rgba(255,255,255,.16);border-top:clamp(3px,.8cqi,6px) solid var(--g,#94a3b8);box-shadow:0 12px 28px rgba(0,0,0,.38)}
+.mb-deal-h{display:flex;align-items:center;gap:.4em;margin-bottom:.3em;font-size:1.16em;font-weight:900;min-width:0}
+.mb-deal-h .ic{font-size:1.3em;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+.mb-deal-h b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mb-deal-h small{margin-left:auto;flex:none;font-size:.76em;font-weight:700;opacity:.85}
+.mb-deal-h small .big{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:1.5em;color:#fca5a5;opacity:1}
+.mb-deal-x{opacity:.92}
+.mb-deal-x + .mb-deal-x{margin-top:.15em}
+.mb-deal-x b{color:#fde047}
+.mb-deal .muted2{opacity:.7;font-size:.9em}
+.mb-ladder{display:flex;flex-wrap:wrap;gap:.25em;margin:.3em 0}
+.mb-ladder span{padding:.08em .42em;border-radius:6px;background:rgba(255,255,255,.09);font-size:.86em;white-space:nowrap}
+.mb-ladder span.on{background:#fde047;color:#1f2937;font-weight:900}
+.mb-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,9.5em),1fr));gap:clamp(4px,1cqi,8px);margin-top:.55em}
+.mb-panel .mb-opts .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.1em;padding:.5em .55em;font-size:1em;line-height:1.15;min-width:0}
+.mb-panel .mb-opts .btn b{font-size:1.02em;white-space:nowrap}
+.mb-panel .mb-opts .btn small{margin:0;font-size:.78em;font-weight:600;opacity:.88}
+.mb-panel .btn.key{background:linear-gradient(150deg,#fef08a,#f59e0b);color:#3b2600;box-shadow:0 3px 0 #b45309}
+.mb-warn{margin-top:.45em;padding:.35em .6em;border-radius:8px;background:rgba(250,204,21,.15);color:#fde68a;font-size:.9em;line-height:1.35}
+
+/* 황금열쇠 카드 · 알림 (가운데를 덮어요 · 누르면 닫혀요) */
+.mb-pop{position:absolute;inset:0;z-index:8;display:grid;place-items:center;background:rgba(4,12,22,.42);cursor:pointer;animation:mbFade .2s ease-out}
+.mb-pop.ban{background:transparent;pointer-events:none}
+.mb-pop.hidden,.mb-info.hidden{display:none}
+@keyframes mbFade{from{opacity:0}}
+.mb-kcard{width:min(76%,19em);max-height:96%;padding:clamp(10px,2.6cqi,22px);border-radius:clamp(12px,2.6cqi,22px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35em;
+  text-align:center;font-size:clamp(11px,2.45cqi,17px);color:#3b2600;background:linear-gradient(155deg,#fff7c2 0%,#facc15 45%,#d4a017 78%,#b7791f 100%);
+  box-shadow:0 22px 44px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.65),inset 0 0 0 clamp(5px,1.1cqi,9px) rgba(255,255,255,.18);animation:mbCard .55s cubic-bezier(.2,1.3,.4,1)}
+@keyframes mbCard{0%{transform:perspective(600px) rotateY(100deg) scale(.6);opacity:0}100%{transform:none;opacity:1}}
+.mb-kcard small{font-size:.7em;font-weight:900;letter-spacing:.35em;opacity:.6}
+.mb-kcard .kic{font-size:2.6em;line-height:1.1;filter:drop-shadow(0 3px 4px rgba(0,0,0,.25));font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+.mb-kcard b{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:1.55em;line-height:1.1}
+.mb-kcard p{margin:0;font-weight:700;line-height:1.45;word-break:keep-all}
+.mb-kcard em{display:inline-flex;align-items:center;gap:.35em;margin-top:.3em;padding:.22em .75em;border-radius:99px;font-style:normal;font-size:.78em;font-weight:800;background:rgba(255,255,255,.5)}
+.mb-kcard em i{width:.8em;height:.8em;border-radius:50%}
+.mb-banner{max-width:92%;padding:.45em 1.1em;border-radius:18px;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:clamp(17px,4.8cqi,40px);color:#fff;text-align:center;
+  background:rgba(8,18,32,.88);border:2px solid var(--pc,#fff);box-shadow:0 0 0 4px color-mix(in srgb,var(--pc,#fff) 30%,transparent),0 16px 34px rgba(0,0,0,.45);animation:mbBan .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes mbBan{0%{transform:scale(.5);opacity:0}100%{transform:none;opacity:1}}
+
+/* 칸 정보 · 황금열쇠 설명 */
+.mb-info{position:absolute;inset:0;z-index:7;display:grid;place-items:center;padding:3%}
+.mb-info-card{position:relative;width:min(100%,25em);max-height:100%;overflow:auto;padding:clamp(8px,2cqi,16px);border-radius:clamp(10px,2cqi,16px);font-size:clamp(10.5px,2.3cqi,15px);line-height:1.4;
+  background:#fffdf8;color:#1c2230;border-top:clamp(4px,1cqi,8px) solid var(--g,#94a3b8);box-shadow:0 18px 40px rgba(0,0,0,.5);animation:mbBan .3s ease-out}
+.mb-info-card.still{animation:none}
+.mb-info-card.key{background:linear-gradient(160deg,#fffbe6,#fde68a);border-top-color:#f59e0b}
+.mb-info-card .x{position:absolute;right:.4em;top:.35em;width:2em;height:2em;border:0;border-radius:50%;background:rgba(0,0,0,.07);color:#334155;font-size:.95em;cursor:pointer}
+.mb-info-card .h{display:flex;align-items:center;gap:.4em;margin:0 2.2em .35em 0;font-size:1.2em;font-weight:900}
+.mb-info-card .h .ic{font-size:1.35em;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+.mb-info-card .h small{font-size:.66em;font-weight:800;color:#64748b;letter-spacing:.05em}
+.mb-info-card .row + .row{margin-top:.25em}
+.mb-info-card .row.small{font-size:.9em;color:#475569}
+.mb-info-card .mb-ladder span{background:#eef2f7;color:#334155}
+.mb-info-card .mb-ladder span.on{background:#facc15;color:#1f2937}
+.mb-info-card .btn{margin-top:.6em;width:100%;font-size:1.05em;padding:.55em}
+
+/* ── 말 ── */
+.mb-token{position:absolute;left:0;top:0;z-index:6;width:var(--tk,20px);height:calc(var(--tk,20px) * 1.33);pointer-events:none;transition:left .2s ease-out,top .2s ease-out}
+.mb-token svg{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.mb-token.cur{z-index:7}
+.mb-token.cur::before{content:'';position:absolute;left:-18%;right:-18%;bottom:-8%;height:36%;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--pc) 70%,#fff),transparent);animation:mbGlow 1.4s ease-in-out infinite}
+@keyframes mbGlow{50%{opacity:.35;transform:scale(1.3)}}
+.mb-token.hop svg{animation:mbHop .24s ease-out}
+@keyframes mbHop{40%{transform:translateY(-36%) scale(1.06)}}
+.mb-token.fly{z-index:9;transition:left 1s cubic-bezier(.45,0,.3,1),top 1s cubic-bezier(.45,0,.3,1)}
+.mb-token.fly svg{animation:mbFly 1s ease-in-out}
+@keyframes mbFly{50%{transform:translateY(-55%) scale(1.75)}}
+.mb-token.warp{transition:none}
+.mb-token.warp svg{animation:mbWarp .9s ease-out}
+@keyframes mbWarp{0%{transform:scale(0) rotate(-200deg);opacity:0}60%{transform:scale(1.3)}100%{transform:none;opacity:1}}
+.mb-token.out{display:none}
+
+/* 떠오르는 숫자 · 날아가는 황금열쇠 (body 에 붙어요) */
+.mb-float{position:fixed;z-index:9999;pointer-events:none;transform:translate(-50%,-50%);padding:.12em .55em;border-radius:99px;white-space:nowrap;
+  font-family:'Black Han Sans',sans-serif;font-size:17px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3);box-shadow:0 6px 14px rgba(0,0,0,.3);animation:mbFloat 1.4s ease-out forwards}
+.mb-float.up{background:#16a34a} .mb-float.down{background:#dc2626} .mb-float.info{background:#334155;font-size:14px}
+@keyframes mbFloat{0%{opacity:0;transform:translate(-50%,-30%) scale(.8)}15%{opacity:1;transform:translate(-50%,-70%) scale(1.06)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-190%)}}
+.mb-fly{position:fixed;z-index:9999;width:40px;height:40px;display:grid;place-items:center;font-size:30px;pointer-events:none;transition:transform .7s cubic-bezier(.4,0,.2,1),opacity .7s;
+  font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;filter:drop-shadow(0 4px 6px rgba(0,0,0,.35))}
+
+/* ── 참가자 · 내 황금열쇠 · 지난 일 ── */
+.mb-side{display:flex;flex-direction:column;gap:8px;width:var(--mb-bw);min-width:0}
+.mb-players{display:grid;grid-template-columns:repeat(var(--np,4),minmax(0,1fr));gap:6px}
+.mb-p{position:relative;min-width:0;padding:7px 9px 7px 12px;border-radius:13px;background:var(--panel);border:1px solid var(--line);transition:box-shadow .25s,border-color .25s,opacity .3s,transform .25s}
+.mb-p::before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:4px;border-radius:0 4px 4px 0;background:var(--pc)}
+.mb-p.turn{border-color:var(--pc);box-shadow:0 0 0 2px var(--pc),0 6px 18px rgba(0,0,0,.22)}
+.mb-p.out{opacity:.42}
+.mb-p-top{display:flex;align-items:center;gap:5px;min-width:0;font-size:13.5px}
+.mb-p-top .pawn{flex:none;width:12px;height:16px;display:block}
+.mb-p-top .pawn svg{width:100%;height:100%;display:block}
+.mb-p-top b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mb-p-top em{flex:none;padding:0 6px;border-radius:99px;font-style:normal;font-size:10.5px;font-weight:800;line-height:1.6;background:var(--panel2);border:1px solid var(--line)}
+.mb-p-top em.me{background:var(--pc);border-color:var(--pc);color:#fff}
+.mb-p-top em.mb-st{margin-left:auto}
+.mb-money{font-family:'Black Han Sans',sans-serif;font-size:21px;line-height:1.22;white-space:nowrap;transition:color .6s}
+.mb-money small{margin-left:2px;font-family:'Noto Sans KR',sans-serif;font-size:11px;color:var(--muted)}
+.mb-money.up{color:#22c55e} .mb-money.down{color:#ef4444}
+.mb-money.up,.mb-money.down{animation:mbMoney 1.1s ease-out forwards}
+@keyframes mbMoney{0%{transform:scale(1.1)}100%{color:inherit;transform:none}}
+.mb-p-sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mb-p-items{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.mb-p-items:empty{display:none}
+.mb-p-items span{display:inline-flex;align-items:center;padding:0 4px;border-radius:7px;font-size:13px;line-height:1.45;background:color-mix(in srgb,#facc15 22%,var(--panel2));border:1px solid color-mix(in srgb,#facc15 45%,var(--line))}
+.mb-p-items sub{margin-left:1px;font-size:10px;font-weight:900;vertical-align:baseline}
+.mb-keys{padding:8px 10px;border-radius:14px;background:linear-gradient(160deg,color-mix(in srgb,#facc15 16%,var(--panel)),var(--panel));border:1px solid color-mix(in srgb,#facc15 42%,var(--line))}
+.mb-keys.hidden{display:none}
+.mb-keys-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;font-size:14px;font-weight:900}
+.mb-keys-h small{font-size:11.5px;font-weight:600;color:var(--muted)}
+.mb-kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.mb-kc{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:10px;align-items:center;padding:8px 12px;border:0;border-radius:12px;
+  text-align:left;font:inherit;color:#3b2600;cursor:pointer;background:linear-gradient(150deg,#fff7c2,#facc15 60%,#e5a800);box-shadow:0 3px 0 #b7791f,0 6px 14px rgba(0,0,0,.22);
+  -webkit-tap-highlight-color:transparent;transition:transform .12s}
+.mb-kc:active{transform:translateY(2px)}
+.mb-kc .ic{grid-row:1 / 3;font-size:30px;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+.mb-kc b{font-size:15px;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mb-kc small{font-size:12px;font-weight:700;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mb-kc em{position:absolute;top:-7px;right:-6px;min-width:24px;height:24px;padding:0 5px;border-radius:99px;display:grid;place-items:center;font-style:normal;font-size:13px;font-weight:900;color:#fff;background:#dc2626;border:2px solid var(--panel)}
+.mb-kc.new{animation:mbPop .7s cubic-bezier(.3,1.6,.5,1)}
+.mb-kempty{font-size:12.5px;color:var(--muted);line-height:1.45;word-break:keep-all}
+.mb-log{display:none;flex-direction:column;min-height:0;padding:8px 10px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+.mb-log.show{display:flex}
+.mb-log h4{margin:0 0 6px;font-size:13.5px}
+.mb-log ol{flex:1;min-height:0;margin:0;padding:0;list-style:none;overflow:auto;display:flex;flex-direction:column;gap:3px;font-size:12.5px;line-height:1.4}
+.mb-log li{display:flex;align-items:baseline;gap:6px}
+.mb-log li i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--pc);transform:translateY(-1px)}
+.mb-log li b{font-weight:800}
+.mb-log li.fresh{animation:mbLi .45s ease-out}
+@keyframes mbLi{from{opacity:0;transform:translateX(-8px)}}
+
+/* ── 세로 화면 (휴대폰 · 폴드 커버 · 세로 태블릿) ── */
+@media (max-aspect-ratio:1/1){
+  #scr-marble .mb-wrap{gap:8px}
+  #scr-marble .mb-p-top em.mb-st{margin-left:0}
+}
+@media (max-aspect-ratio:1/1) and (max-width:560px){
+  #scr-marble .mb-players{gap:5px}
+  #scr-marble .mb-p{padding:5px 7px 5px 10px;border-radius:11px}
+  #scr-marble .mb-p::before{top:7px;bottom:7px;width:3px}
+  #scr-marble .mb-p-top{font-size:12.5px;gap:4px}
+  #scr-marble .mb-p-top .pawn{width:10px;height:13px}
+  #scr-marble .mb-p-top em{font-size:9.5px;padding:0 4px}
+  #scr-marble .mb-money{font-size:17px}
+  #scr-marble .mb-money small{font-size:9.5px}
+  #scr-marble .mb-p-sub{font-size:10px}
+  #scr-marble .mb-p-items span{font-size:11.5px;padding:0 3px}
+  #scr-marble .mb-keys{padding:6px 8px}
+  #scr-marble .mb-keys-h{font-size:13px;margin-bottom:5px}
+  #scr-marble .mb-kgrid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:6px}
+  #scr-marble .mb-kc{padding:6px 9px;column-gap:8px}
+  #scr-marble .mb-kc .ic{font-size:24px}
+  #scr-marble .mb-kc b{font-size:13.5px}
+  #scr-marble .mb-kc small{font-size:11px}
+}
+/* 휴대폰 · 폴드 커버: 설명 줄은 숨겨 판을 크게 (규칙은 설명서에) */
+@media (max-width:620px) and (max-height:940px){ body.gaming #scr-marble .game-head .status{display:none} }
+
+/* ── 가로 화면: [판 | 옵션 · 참가자 · 내 황금열쇠 · 지난 일] ── */
+@media (min-aspect-ratio:1/1){
+  #scr-marble{--mb-bw:min(780px,calc(100vw - 450px - var(--mb-chat,0px)),calc(100vh - 156px));--mb-bw:min(780px,calc(100vw - 450px - var(--mb-chat,0px)),calc(100dvh - 156px))}
+  body.gaming #scr-marble.active{display:grid;grid-template-columns:var(--mb-bw) minmax(300px,420px);grid-template-rows:auto auto minmax(0,1fr);
+    grid-template-areas:"head head" "board mode" "board side";column-gap:14px;justify-content:center;align-items:start}
+  body.gaming #scr-marble > .game-head{grid-area:head}
+  body.gaming #scr-marble > #mb-solo{grid-area:mode;justify-content:flex-start;margin-bottom:10px}
+  #scr-marble .mb-wrap{display:contents}
+  #scr-marble .mb-board{grid-area:board}
+  /* 옆 칸은 판 높이만큼만 (지난 일이 길어져도 화면이 넘치지 않게 안에서 넘겨요) */
+  #scr-marble .mb-side{grid-area:side;width:auto;height:0;min-height:100%;align-self:stretch;overflow:hidden}
+  #scr-marble .mb-players{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #scr-marble .mb-log{flex:1;min-height:56px}
+}
+@media (min-aspect-ratio:1/1) and (min-width:1101px) and (pointer:fine),(min-aspect-ratio:1/1) and (min-width:1401px){ body.gaming.in-room #scr-marble{--mb-chat:312px} }
+/* 낮은 가로 화면 (휴대폰 가로): 촘촘하게 */
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-marble > #mb-solo{margin-bottom:6px}
+  #scr-marble .mb-side{gap:6px}
+  #scr-marble .mb-players{gap:5px}
+  #scr-marble .mb-p{padding:4px 8px 4px 11px}
+  #scr-marble .mb-p-top{font-size:12px}
+  #scr-marble .mb-money{font-size:16px}
+  #scr-marble .mb-p-sub{font-size:10px}
+  #scr-marble .mb-p-items{margin-top:1px}
+  #scr-marble .mb-keys{padding:5px 8px}
+  #scr-marble .mb-keys-h{font-size:12.5px;margin-bottom:4px}
+  #scr-marble .mb-kgrid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:5px}
+  #scr-marble .mb-kc{padding:4px 8px;column-gap:7px;border-radius:10px}
+  #scr-marble .mb-kc .ic{font-size:20px}
+  #scr-marble .mb-kc b{font-size:12.5px}
+  #scr-marble .mb-kc small{display:none}
+  #scr-marble .mb-log{padding:5px 8px}
+  #scr-marble .mb-log h4{display:none}
+  #scr-marble .mb-log ol{font-size:11.5px}
+}
+
+/* 판이 작으면 (휴대폰) 가운데를 촘촘하게 */
+@container (max-width:420px){
+  .mb-center{gap:4px;padding:5px}
+  .mb-cell .ic{font-size:9.5px;line-height:1}
+  .mb-cell{line-height:1}
+  .mb-cell .pr{margin-top:1px;padding:0 .3em}
+  .mb-deal{padding:6px 7px}
+  .mb-opts{margin-top:.4em;gap:4px}
+  .mb-panel .mb-opts .btn{padding:.42em .35em}
+}
+/* 판이 아주 크면 (태블릿 · 큰 화면) 가운데 카드도 넉넉하게 */
+@container (min-width:640px){
+  .mb-deal{width:min(100%,34em)}
+}
+@media (prefers-reduced-motion:reduce){
+  .mb-token,.mb-token.fly{transition-duration:.05s}
+  .mb-token svg,.mb-cell,.mb-kcard,.mb-banner,.mb-dice .die{animation-duration:.01s!important}
+}
