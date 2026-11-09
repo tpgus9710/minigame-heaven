@@ -199,41 +199,7 @@
 .yt-tag rect{fill:#5a3b20;stroke:#fbf3df;stroke-width:1.5} .yt-tag text{font-family:'Black Han Sans',sans-serif;font-size:13px;fill:#fbe9c4;text-anchor:middle;dominant-baseline:middle}
 
 
-/* ═════════════ 🎲 요트 다이스 ═════════════ */
-.yc-wrap{display:flex;gap:18px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
-.yc-left{flex:1 1 440px;max-width:620px;display:flex;flex-direction:column;gap:12px}
-.yc-tray{padding:22px 18px 18px;display:flex;flex-direction:column;align-items:center;gap:14px;min-height:300px}
-.yc-who{color:#fff;font-weight:900;font-size:16px;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.25);padding:6px 14px;border-radius:99px}
-.yc-who i{width:12px;height:12px;border-radius:50%;background:var(--c)}
-.yc-dice{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;min-height:118px;align-items:flex-start}
-.yc-die{position:relative;border:none;background:none;padding:0;cursor:pointer;transition:transform .15s}
-.yc-die .die{width:72px;height:72px;padding:11px;border-radius:15px;gap:3px}
-.yc-die em{position:absolute;left:50%;bottom:-24px;transform:translateX(-50%);white-space:nowrap;font-style:normal;font-size:11px;font-weight:900;color:#3b2a00;background:#ffd54f;padding:1px 8px;border-radius:99px;opacity:0;transition:opacity .15s}
-.yc-die.held{transform:translateY(-10px)} .yc-die.held .die{box-shadow:0 0 0 4px #ffd54f,0 10px 18px rgba(0,0,0,.45)} .yc-die.held em{opacity:1}
-.yc-die:disabled{cursor:default} .yc-die.idle .die{opacity:.55}
-.yc-die:not(:disabled):hover{transform:translateY(-6px)} .yc-die.held:not(:disabled):hover{transform:translateY(-12px)}
-.yc-die.tumble .die{animation:diceShake .14s linear infinite}
-.yc-hint{color:#d7f5e5;font-size:14px;text-align:center;min-height:20px;margin-top:6px}
-.yc-acts .btn small{opacity:.8;font-size:12px;margin-left:6px}
-.yc-msg{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:700;font-size:14px}
-.yc-msg:empty{display:none}
-.yc-card{flex:0 1 460px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px;overflow-x:auto}
-.yc-table{width:100%;border-collapse:collapse;font-size:14px}
-.yc-table th{padding:8px 6px;font-size:13px;color:var(--muted);border-bottom:2px solid var(--line);white-space:nowrap}
-.yc-table th small{display:block;font-size:10px;color:#5ce1ff}
-.yc-table th.turn{color:#fff;background:color-mix(in srgb,var(--accent) 22%,transparent);border-radius:8px 8px 0 0}
-.yc-table td{padding:6px;border-bottom:1px solid var(--line);text-align:center;font-family:'Black Han Sans',sans-serif;font-size:17px;min-width:54px}
-.yc-table td:first-child{text-align:left;font-family:'Noto Sans KR',sans-serif;font-size:13px;min-width:120px}
-.yc-table td:first-child small{display:block;font-size:10.5px;color:var(--muted);font-weight:400}
-.yc-table tr.sep td{border-bottom:2px solid var(--line)}
-.yc-table td.done{color:var(--text)} .yc-table td.zero{color:var(--muted)}
-.yc-table td.pick{cursor:pointer;color:#5ce1ff;background:rgba(92,225,255,.07);transition:background .12s}
-.yc-table td.pick:hover{background:rgba(92,225,255,.25);color:#fff}
-.yc-table td.pick.best{box-shadow:inset 0 0 0 2px rgba(92,225,255,.6)} .yc-table td.pick.zero{color:#6b7a90}
-.yc-table td.peek{color:var(--muted);opacity:.6}
-.yc-table tr.sub td{font-size:14px;color:var(--muted)} .yc-table tr.sub td.ok{color:#3fcf9b}
-.yc-table tr.total td{font-size:22px;border-bottom:none;padding-top:10px} .yc-table tr.total td:first-child{font-size:14px}
-@media (max-width:600px){.yc-die .die{width:56px;height:56px;padding:8px}.yc-dice{gap:8px}}
+/* 🎲 요트 다이스 화면은 css/yacht.css */
 
 
 /* ═════════════ 🂡 블랙잭 ═════════════ */

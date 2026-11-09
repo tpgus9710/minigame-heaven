@@ -272,6 +272,11 @@
   #scr-marble .mb-side{grid-area:side;width:auto;height:0;min-height:100%;align-self:stretch;overflow:hidden}
   #scr-marble .mb-players{grid-template-columns:repeat(2,minmax(0,1fr))}
   #scr-marble .mb-log{flex:1;min-height:56px}
+  /* 옆 칸이 좁으면 (marble.js fit 이 .two 를 붙여요): 「AI 상대」 줄 / 「라운드」 줄 두 줄로 */
+  body.gaming #scr-marble > #mb-solo.two{flex-wrap:wrap;row-gap:3px}
+  body.gaming #scr-marble > #mb-solo.two::after{content:'';flex-basis:100%;order:2}
+  body.gaming #scr-marble > #mb-solo.two > span.muted:not(:first-child),body.gaming #scr-marble > #mb-solo.two > span.muted:not(:first-child) ~ .seg-btn{order:3}
+  body.gaming #scr-marble > #mb-solo.two > span.muted:not(:first-child){margin-left:0!important}
 }
 @media (min-aspect-ratio:1/1) and (min-width:1101px) and (pointer:fine),(min-aspect-ratio:1/1) and (min-width:1401px){ body.gaming.in-room #scr-marble{--mb-chat:312px} }
 /* 낮은 가로 화면 (휴대폰 가로): 촘촘하게 */

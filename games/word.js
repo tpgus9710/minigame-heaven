@@ -1,6 +1,7 @@
 'use strict';
 /* 🔤 끝말잇기 — 끝 글자(두음법칙 허용)로 시작하는 단어 잇기.
- *  판정은 사람이 아니라 국어사전(표준국어대사전 · 우리말샘 49만 낱말, lib/kodict.js)이 해요.
+ *  판정은 사람이 아니라 국어사전(표준국어대사전 · 우리말샘 표제어 전부, lib/kodict.js)이 해요.
+ *  사전 범위(대기실): 모든 낱말(기본 · 부사 · 동사 · 어근까지) · 명사만 · 표준어 명사만
  *  사전에 없는 말은 모두에게 ✗ 로 보이고, 시간 안에 다시 낼 수 있어요. 시간이 다 되면 ❤️ -1 → 새 단어로 다시 시작. */
 const Dict = require('../lib/kodict');
 
@@ -15,7 +16,7 @@ const START_WORDS = ['사과', '기차', '나무', '바다', '하늘', '구름',
   '경찰', '소방관', '의사', '요리사', '화가', '농부', '어부', '마술사', '로켓', '우주', '지구', '태양', '별빛', '바람', '번개',
   '겨울', '여름', '가을', '소풍', '생일', '선물', '풍선', '인형', '장난감', '퍼즐', '보물', '지도', '나침반', '등대', '항구'];
 const OPTIONS = [
-  { key: 'wdDict', label: '📖 사전', def: 'wide', values: [['wide', '전체 (49만 단어)'], ['std', '표준어만 (33만)']] },
+  { key: 'wdDict', label: '📖 사전', def: 'all', values: [['all', '모든 낱말 (95만)'], ['wide', '명사만 (84만)'], ['std', '표준어 명사만 (73만)']] },
   { key: 'wdKill', label: '💥 한방 단어', def: 'on', values: [['on', '허용'], ['off', '금지']] },
   { key: 'bots', label: '🤖 봇', def: 0, values: [[0, '없음'], [1, '1명'], [2, '2명'], [3, '3명']] },
 ];
@@ -42,11 +43,11 @@ module.exports = H => {
   const turnId = g => g.order[g.turn];
   const seconds = g => Math.max(7, 15 - g.round * 0.4);
   const nameOf = (g, id) => g.names[id] || '?';
-  const isDead = (g, w) => !Dict.canStart(startsFor(w), g.used, g.std);       // 이을 말이 없는 한방 단어?
+  const isDead = (g, w) => !Dict.canStart(startsFor(w), g.used, g.mode);      // 이을 말이 없는 한방 단어?
 
   function startWord(g) {
-    const pool = START_WORDS.filter(w => !g.used.has(w) && Dict.allowed(Dict.lookup(w), g.std) && !isDead(g, w));
-    return pool.length ? H.pick(pool) : (Dict.pick(['가', '나', '사', '자'], { used: g.used, stdOnly: true, maxLen: 3, alive: w => !isDead(g, w) }) || '사과');
+    const pool = START_WORDS.filter(w => !g.used.has(w) && Dict.allowed(Dict.lookup(w), g.mode) && !isDead(g, w));
+    return pool.length ? H.pick(pool) : (Dict.pick(['가', '나', '사', '자'], { used: g.used, mode: 'std', maxLen: 3, alive: w => !isDead(g, w) }) || '사과');
   }
   function syncScores(room) {
     const g = room.game;
@@ -91,7 +92,7 @@ module.exports = H => {
     g.phase = 'pause';
     g.hearts[id] = Math.max(0, g.hearts[id] - 1);
     const dead = isDead(g, g.word);
-    const examples = dead ? [] : Dict.examples(startsFor(g.word), { used: g.used, stdOnly: g.std }, 3);
+    const examples = dead ? [] : Dict.examples(startsFor(g.word), { used: g.used, mode: g.mode }, 3);
     H.emit(room, 'word:fail', { id, name: nameOf(g, id), why, hearts: g.hearts, word: g.word, examples });
     if (g.hearts[id] <= 0) { g.outOrder.push(id); H.emit(room, 'game:out', { id }); H.sys(room, `💔 ${nameOf(g, id)} 님 탈락!`); }
     H.later(room, 2600, () => newRound(room, id));
@@ -122,22 +123,26 @@ module.exports = H => {
   }
   /** 낸 말 판정 → 통과면 null, 아니면 { why, show } (show: 모두에게 ✗ 로 보여 줄지) */
   function judge(g, w) {
-    if (!/^[가-힣]{2,15}$/.test(w)) return { why: '한글 2~15글자로 입력해 주세요.' };
+    if (!/^[가-힣]{2,20}$/.test(w)) return { why: '한글 2~20글자로 입력해 주세요 (한 글자 말은 안 돼요).' };
     const starts = startsFor(g.word);
     if (!starts.includes(w[0])) return { why: `'${starts.join("' 또는 '")}'(으)로 시작해야 해요.` };
     if (g.used.has(w)) return { why: '이미 나온 단어', show: true };
     const kind = Dict.lookup(w);
     if (!kind) return { why: '사전에 없는 말', show: true };
-    if (kind === 'ext' && g.std) return { why: '표준어가 아니에요 (방언·옛말 등)', show: true };
-    if (!g.kill && isDead(g, w)) { return { why: '💥 한방 단어는 금지예요', show: true }; }
+    if (!Dict.allowed(kind, g.mode)) {
+      return { why: kind === 'other' ? '사전에는 있지만 명사가 아니에요 (이 방은 「명사만」)' : '사전에는 있지만 표준어 명사가 아니에요 (이 방은 「표준어 명사만」)', show: true };
+    }
+    if (!g.kill && isDead(g, w)) {
+      return { why: `사전에는 있지만 '${startsFor(w).join("' · '")}'(으)로 시작하는 말이 없는 💥 한방 단어예요 (이 방은 한방 금지)`, show: true };
+    }
     return { kind };
   }
   function botMove(room, id, sec) {
     const g = room.game, session = g.turnAt;
     const word = g.word;
     const blank = Math.random() < 0.07;               // 가끔은 봇도 말이 막혀요
-    const w = blank ? null : Dict.pick(startsFor(word), { used: g.used, stdOnly: g.std, maxLen: 6, alive: x => !isDead(g, x) })
-      || Dict.pick(startsFor(word), { used: g.used, stdOnly: g.std, common: false, maxLen: 8, alive: x => g.kill || !isDead(g, x) });
+    const w = blank ? null : Dict.pick(startsFor(word), { used: g.used, mode: g.mode, maxLen: 6, alive: x => !isDead(g, x) })
+      || Dict.pick(startsFor(word), { used: g.used, mode: g.mode, common: false, maxLen: 8, alive: x => g.kill || !isDead(g, x) });
     if (!w) return;                                    // 정말 없으면 시간 초과로
     const wait = Math.min(sec * 1000 - 1200, 1500 + Math.random() * 2200 + w.length * 140);
     g.botTimer = H.later(room, wait, () => {
@@ -160,12 +165,12 @@ module.exports = H => {
         type: 'word', order, turn: 0, names: Object.fromEntries(all.map(p => [p.id, p.name])), bots: new Set(bots.map(b => b.id)),
         hearts: Object.fromEntries(order.map(id => [id, HEARTS])), score: Object.fromEntries(order.map(id => [id, 0])),
         used: new Set(), chain: [], phase: 'wait', round: 0, words: 0, outOrder: [], tries: {},
-        std: opt(room, 'wdDict') === 'std', kill: opt(room, 'wdKill') !== 'off', best: '',
+        mode: opt(room, 'wdDict'), kill: opt(room, 'wdKill') !== 'off', best: '',
       };
       g.word = startWord(g); g.used.add(g.word); g.chain.push({ w: g.word, by: null });
       H.emit(room, 'word:start', {
         order: order.map(id => ({ id, name: g.names[id], bot: g.bots.has(id) })), word: g.word, hearts: g.hearts,
-        std: g.std, kill: g.kill, size: g.std ? Dict.count().std : Dict.count().std + Dict.count().ext,
+        mode: g.mode, std: g.mode === 'std', kill: g.kill, size: Dict.count()[g.mode],
       });
       syncScores(room);
       H.later(room, 2000, () => nextTurn(room, false));
@@ -196,7 +201,7 @@ module.exports = H => {
       const g = room.game;
       if (!g) return;
       socket.emit('word:start', {
-        order: g.order.map(id => ({ id, name: g.names[id], bot: g.bots.has(id) })), word: g.word, hearts: g.hearts, std: g.std, kill: g.kill,
+        order: g.order.map(id => ({ id, name: g.names[id], bot: g.bots.has(id) })), word: g.word, hearts: g.hearts, mode: g.mode, std: g.mode === 'std', kill: g.kill,
         chain: g.chain.filter(x => x.by).map(x => ({ w: x.w, name: nameOf(g, x.by) })), score: g.score, resync: true,
       });
       if (g.phase === 'turn') {                         // 지금 차례도 다시 (남은 시간만큼)

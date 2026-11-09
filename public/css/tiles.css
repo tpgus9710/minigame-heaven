@@ -1,7 +1,7 @@
 /* ═════════════ 🀄 마작 솔리테어 (#scr-mahjong) · 🧩 타일 매치 (#scr-tilematch) ═════════════
  * 패 크기는 화면마다 js 의 fit() 이 정해요: --tw(패 너비) · --th(높이) · --d(층마다 위로 올라가 보이는 두께) · --lz(가장 높은 층) */
 .mj-wrap{position:relative;display:flex;justify-content:center;padding:2px 0 4px}
-.mj-board{position:relative;margin:0 auto;--tw:48px;--th:62px;--d:5px;--lz:3}
+.mj-board{position:relative;margin:0 auto;--tw:48px;--th:62px;--d:5px;--lz:3;isolation:isolate}   /* isolate: 패마다 준 z-index(층 순서)가 결과창 위로 새어 나오지 않게 */
 .mj-tile{position:absolute;padding:0;border:0;cursor:pointer;display:grid;place-items:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
   left:calc(var(--x) * var(--tw) / 2 + (var(--lz) - var(--z)) * var(--d));top:calc(var(--y) * var(--th) / 2 + (var(--lz) - var(--z)) * var(--d));
   width:calc(var(--tw) - 2px);height:calc(var(--th) - 2px);border-radius:calc(var(--tw) * .14);background:linear-gradient(160deg,#fffef8,#efe6cc);
@@ -25,7 +25,7 @@
 
 /* 🧩 타일 매치: 판 · 위 칸(꺼낸 타일) · 아래 7칸 — 크기는 --ts (tilematch.js fit) */
 .tm-wrap{position:relative;display:flex;justify-content:center;padding:2px 0}
-.tm-board{position:relative;--ts:50px}
+.tm-board{position:relative;--ts:50px;isolation:isolate}
 .tm-tile{position:absolute;left:calc(var(--x) * var(--ts) / 2);top:calc(var(--y) * var(--ts) / 2);width:calc(var(--ts) - 3px);height:calc(var(--ts) - 3px);
   border:0;padding:0;border-radius:calc(var(--ts) * .2);background:linear-gradient(170deg,#fffdf5,#f0e5c8);box-shadow:0 3px 0 #c6ad7a,0 5px 9px rgba(0,0,0,.38);
   display:grid;place-items:center;font-size:calc(var(--ts) * .56);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:filter .15s}

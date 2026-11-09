@@ -1,6 +1,6 @@
 /* =====================================================================
  *  🔤 끝말잇기 (멀티 · 봇 가능) — 끝 글자로 시작하는 단어 잇기.
- *  맞는 말인지는 국어사전(표준국어대사전 · 우리말샘)이 판정해요 (서버: games/word.js · lib/kodict.js)
+ *  맞는 말인지는 국어사전(표준국어대사전 · 우리말샘 표제어 약 95만)이 판정해요 (서버: games/word.js · lib/kodict.js)
  * ===================================================================== */
 makeScreen('word', {
   title: '🔤 끝말잇기', status: '끝 글자로 시작하는 단어 잇기 · 국어사전이 판정',
@@ -14,13 +14,13 @@ makeScreen('word', {
     </div>
     <div class="ox-bar wd-bar"><div id="wd-bar"></div></div>
     <div class="wd-feed" id="wd-feed" aria-live="polite"></div>
-    <div class="wd-input"><input id="wd-input" maxlength="15" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="단어 입력 후 Enter"><button class="btn good" data-act="wdSay">보내기</button></div>
+    <div class="wd-input"><input id="wd-input" maxlength="20" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="단어 입력 후 Enter"><button class="btn good" data-act="wdSay">보내기</button></div>
     <div class="wd-chain" id="wd-chain"></div>
     <div class="wd-src" id="wd-src"></div>
   </div>`,
 });
 LOBBY_OPTIONS.word = [
-  { key: 'wdDict', label: '📖 사전', def: 'wide', values: [['wide', '전체 (49만 단어)'], ['std', '표준어만 (33만)']] },
+  { key: 'wdDict', label: '📖 사전', def: 'all', values: [['all', '모든 낱말 (95만)'], ['wide', '명사만 (84만)'], ['std', '표준어 명사만 (73만)']] },
   { key: 'wdKill', label: '💥 한방 단어', def: 'on', values: [['on', '허용'], ['off', '금지']] },
   { key: 'bots', label: '🤖 봇', def: 0, values: [[0, '없음'], [1, '1명'], [2, '2명'], [3, '3명']] },
 ];
@@ -80,7 +80,8 @@ socket.on('word:start', d => {
   $('#wd-chain').innerHTML = '';
   if (d.chain) d.chain.forEach(x => Word.chain(x.w, x.name)); else Word.chain(d.word, '시작 단어', true);
   $('#wd-next').innerHTML = '';
-  $('#wd-src').innerHTML = `📖 판정: 표준국어대사전 · 우리말샘${d.std ? ' (표준어만)' : ''}${d.kill === false ? ' · 한방 금지' : ''} · 단어를 누르면 뜻을 볼 수 있어요`;
+  const range = { all: '모든 낱말', wide: '명사만', std: '표준어 명사만' }[d.mode || (d.std ? 'std' : 'wide')] || '모든 낱말';
+  $('#wd-src').innerHTML = `📖 판정: 표준국어대사전 · 우리말샘 (${range})${d.kill === false ? ' · 한방 금지' : ''} · 단어를 누르면 뜻을 볼 수 있어요`;
   Word.feed(d.resync ? '다시 연결됐어요.' : '곧 시작합니다… 다른 사람 차례에도 미리 입력해 둘 수 있어요.');
   Word.players(); Word.input(false);
   $('#wd-input').value = '';
@@ -113,7 +114,7 @@ socket.on('word:accepted', d => {
   Word.chain(d.word, d.name);
   Word.word(d.word);
   Word.players();
-  Word.feed(`✓ ${d.by === S.myId ? '나' : esc(d.name)}: <b>${esc(d.word)}</b>${d.kind === 'ext' ? ' <small>📜 방언·옛말 등</small>' : ''}`, 'good');
+  Word.feed(`✓ ${d.by === S.myId ? '나' : esc(d.name)}: <b>${esc(d.word)}</b>${d.kind === 'ext' ? ' <small>📜 방언·옛말·북한어</small>' : d.kind === 'other' ? ' <small>📗 부사·동사 등</small>' : ''}`, 'good');
   if (d.by === S.myId) { $('#wd-input').value = ''; Word.mine = false; }
   if (d.dead) { Word.stamp('💥 한방!'); Sound.play('pop'); } else Sound.play('tap');
   Word.clearTimer();

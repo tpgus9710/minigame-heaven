@@ -174,6 +174,60 @@ body.gaming #scr-card .actions.hidden + .waiting{margin-top:8px;min-height:var(-
   body.gaming #scr-card .actions.hidden + .waiting{min-height:150px;font-size:12.5px}
 }
 
+/* ── v12.8 3장 섯다: 보여줄 카드 · 족보 고르기 ──
+ * 내 카드: 지금 고른 카드(.sel)는 위로 · 보여준 카드(.pub)는 아래에 「공개」 · 족보에 안 쓰는 카드(.off)는 흐리게 · 누를 수 있으면 .tap
+ * 뒤집혀 공개되는 카드(.flip)는 한 번 돌아요. transform 대신 translate · scale · rotate 를 써서 나눠 주는 움직임(.deal)과 겹쳐도 괜찮아요
+ * 고르기 칸(#card-actions.choose, .c3 = 족보 3가지): 세로 화면 [보기 | 보기 | (보기) | 결정] 한 줄 — 베팅 버튼 칸과 높이가 비슷해서 화면이 흔들리지 않아요
+ *                                                  가로 화면 [보기들] 아래 [결정] (족보는 한 줄에 하나: 카드 | 이름) */
+body.gaming #scr-card .cards .card{transition:translate .18s,scale .18s,opacity .2s,filter .2s,box-shadow .18s}
+body.gaming #scr-card .cards .card.tap{cursor:pointer;-webkit-tap-highlight-color:transparent}
+body.gaming #scr-card .cards .card.sel{translate:0 -12%;box-shadow:0 0 0 2px #ffc24b,0 6px 14px rgba(0,0,0,.45)}
+body.gaming #scr-card .cards .card.off{opacity:.4;filter:grayscale(.75);translate:0 6%;scale:.9}
+body.gaming #scr-card .cards .card.pub::after{content:'공개';position:absolute;left:50%;bottom:calc(var(--w) * -.16);translate:-50% 0;padding:0 calc(var(--w) * .12);border-radius:99px;
+  font:700 max(9px,calc(var(--w) * .2))/1.4 'Noto Sans KR',sans-serif;color:#fff;background:#2e7dd7;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.35);pointer-events:none}
+body.gaming #scr-card .cards .card.flip{animation:cdFlip .4s cubic-bezier(.3,.7,.4,1) backwards}
+@keyframes cdFlip{from{rotate:y 90deg}to{rotate:y 0deg}}
+body.gaming #scr-card .seat.deciding{border-color:rgba(255,194,75,.6)}
+body.gaming #scr-card .actions.choose .cd-opt{background:var(--panel2);color:var(--text);border:2px solid var(--line);box-shadow:none;gap:1px;justify-content:center;font-size:15px}
+body.gaming #scr-card .actions.choose .cd-opt.on{border-color:#ffc24b;background:rgba(255,194,75,.18);box-shadow:0 0 0 2px rgba(255,194,75,.35)}
+body.gaming #scr-card .cd-opt b{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(11px,3.1vw,15px);line-height:1.25}
+body.gaming #scr-card .actions .cd-opt small{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(9.5px,2.5vw,11.5px);opacity:.75}
+body.gaming #scr-card .actions .cd-ok small{white-space:normal;word-break:keep-all;line-height:1.2;text-align:center}
+body.gaming #scr-card .cd-mini{display:flex;gap:3px;justify-content:center;margin-bottom:3px}
+body.gaming #scr-card .cd-mini .card{--w:24px;width:var(--w);height:calc(var(--w) * 1.6);border-radius:calc(var(--w) * .1);box-shadow:0 0 0 1px rgba(0,0,0,.3),0 1px 3px rgba(0,0,0,.3)}
+body.gaming #scr-card .cd-mini.one .card{--w:30px}
+body.gaming #scr-card .cd-mini .card .ht{top:-4px;right:-4px}
+@media (max-aspect-ratio:1/1){
+  body.gaming #scr-card .actions.choose{grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,.8fr)}
+  body.gaming #scr-card .actions.choose.c3{grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,.72fr)}
+}
+@media (max-aspect-ratio:1/1) and (min-width:601px){
+  body.gaming #scr-card .cd-mini .card{--w:30px}
+  body.gaming #scr-card .cd-mini.one .card{--w:38px}
+}
+@media (max-aspect-ratio:1/1) and (max-width:600px){
+  body.gaming #scr-card .cd-mini .card{--w:21px}
+  body.gaming #scr-card .cd-mini.one .card{--w:28px}
+  body.gaming #scr-card .actions.choose .btn{padding:5px 3px}
+}
+@media (min-aspect-ratio:1/1){
+  body.gaming #scr-card .actions.choose .cd-ok{grid-column:1 / -1}
+  body.gaming #scr-card .actions.choose.c3{grid-template-columns:minmax(0,1fr)}
+  body.gaming #scr-card .actions.choose.c3 .cd-opt{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:8px;align-items:center;justify-items:start;text-align:left;padding:6px 8px}
+  body.gaming #scr-card .actions.choose.c3 .cd-mini{grid-row:1 / 3;margin:0}
+  body.gaming #scr-card .actions.choose.c3 .cd-opt b{align-self:end}
+  body.gaming #scr-card .actions.choose.c3 .cd-opt small{align-self:start}
+  body.gaming #scr-card .cd-opt b{font-size:15px}
+  body.gaming #scr-card .actions .cd-opt small{font-size:11.5px}
+}
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-card .cd-mini .card{--w:17px}
+  body.gaming #scr-card .cd-mini.one .card{--w:24px}
+  body.gaming #scr-card .actions.choose .btn{padding:3px 6px}
+  body.gaming #scr-card .cd-opt b{font-size:13px}
+  body.gaming #scr-card .actions .cd-opt small{font-size:10px}
+}
+
 /* ═════════════ 🖍️ 그림 릴레이 (#scr-relay — relay.js · relay.css) ═════════════
  * 그리기 · 맞히기: 세로 화면은 [제시어] [스케치북] [도구 / 답 칸], 가로 화면은 [스케치북 | 제시어 · 도구 / 답 칸]
  * 스케치북 폭 = 남는 높이(--avail-h - --rly-rsv)에 맞춘 4:3 (relay.css 의 100vh 기준 대신)

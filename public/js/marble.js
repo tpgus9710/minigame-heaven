@@ -572,8 +572,8 @@ const Marble = {
   fit() {
     const sec = $('#scr-marble'), board = $('#mb-board');
     if (!sec || !sec.classList.contains('active') || typeof Fit === 'undefined' || !board) return;
-    const land = matchMedia('(min-aspect-ratio:1/1)').matches, wrap = land ? board : $('#scr-marble .mb-wrap'), log = $('#mb-log'), side = $('#mb-side');
-    log.classList.toggle('show', land); log.style.maxHeight = ''; side.style.height = '';
+    const land = matchMedia('(min-aspect-ratio:1/1)').matches, wrap = land ? board : $('#scr-marble .mb-wrap'), log = $('#mb-log'), side = $('#mb-side'), solo = $('#mb-solo');
+    log.classList.toggle('show', land); log.style.maxHeight = ''; side.style.height = ''; solo.classList.remove('two');
     const z = +(sec.dataset.z || 1) || 1;
     const H = Math.floor(Fit.room(sec) - (wrap.getBoundingClientRect().top - sec.getBoundingClientRect().top) / z - 6);
     const maxW = land ? sec.clientWidth - 300 - 14 : wrap.clientWidth;
@@ -581,7 +581,10 @@ const Marble = {
     let lo = 280, hi = Math.max(lo, Math.min(1150, maxW));
     if (!ok(hi) && ok(lo)) { while (hi - lo > 2) { const m = (lo + hi) >> 1; if (ok(m)) lo = m; else hi = m; } ok(lo); }
     if (!land) { const spare = H - wrap.offsetHeight; if (spare >= 100) { log.classList.add('show'); log.style.maxHeight = (spare - 10) + 'px'; } }
-    else {                                                                // 가로 화면: 옆 칸은 판 아래 끝까지만 (지난 일이 길어져도 넘치지 않게 · CSS 의 height:0 + min-height:100% 를 브라우저마다 똑같이)
+    else {
+      // 가로 화면: 옆 칸이 좁으면(폴드 펼친 화면처럼 거의 정사각형) 옵션 줄을 두 줄로 — 한 줄로 넘치면 화면 맞춤(Fit)이 계속 다시 줄였다 키웠다 해요
+      if (!solo.classList.contains('hidden') && solo.scrollWidth > solo.clientWidth + 1) solo.classList.add('two');
+      // 옆 칸은 판 아래 끝까지만 (지난 일이 길어져도 넘치지 않게 · CSS 의 height:0 + min-height:100% 를 브라우저마다 똑같이)
       const sb = side.getBoundingClientRect(), bb = board.getBoundingClientRect();
       side.style.height = Math.max(100, Math.floor((bb.bottom - sb.top) / z)) + 'px';
     }
@@ -605,8 +608,9 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && is
 // 판 크기가 바뀌면(화면 맞춤 · 제목 줄 크기 변화 등) 말도 다시 놓고, 화면 폭이 바뀌면(채팅 접기 · 펴기 등) 판 크기를 다시 재요
 if (typeof ResizeObserver !== 'undefined') {
   new ResizeObserver(() => { if (isScreen('marble') && Marble.v) Marble.layoutTokens(); }).observe($('#mb-board'));
-  let secW = 0;
-  new ResizeObserver(es => { const w = Math.round(es[0].contentRect.width); if (w && w !== secW) { secW = w; if (isScreen('marble') && Marble.v) Marble.fitSoon(); } }).observe($('#scr-marble'));
+  // 화면(섹션) 자신이 아니라 바깥 틀의 폭을 봐요 — 섹션 폭은 화면 맞춤(Fit)이 줄일 때도 바뀌어서, 그걸 보고 다시 재면 서로 주고받으며 흔들려요
+  let outerW = 0;
+  new ResizeObserver(es => { const w = Math.round(es[0].contentRect.width); if (w && w !== outerW) { const first = !outerW; outerW = w; if (!first && isScreen('marble') && Marble.v) Marble.fitSoon(); } }).observe($('#scr-marble').parentElement);
 }
 Object.assign(ACT, {
   mbDo: el => {

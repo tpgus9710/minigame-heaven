@@ -1,0 +1,201 @@
+/* ═════════════ 🎲 요트 다이스 (#scr-yacht) — v12.7 리마스터 ═════════════
+ * 트레이 = [누구 차례 · ♪] / KEEP 줄(남길 주사위 5칸) / 펠트 테이블. 주사위 · 컵은 트레이 기준 절대 위치로 yacht.js 가 놓아요
+ * (주사위 크기 --ds 도 yacht.js 가 트레이 폭에 맞춰 px 로 넣어요 — 컨테이너 단위를 쓰지 않아 아이패드에서도 같아요).
+ * 점수표(15줄)가 가장 길어요 → 큰 화면이 아니면 [위쪽 6칸+보너스 | 아래쪽 6칸+총점] 두 칸으로 나란히 (tbody 두 개)
+ * 세로 화면: 트레이 → 버튼 → 메시지 → 점수표 / 가로 화면: [트레이 · 버튼 · 메시지 | 점수표] */
+.yc-wrap{display:flex;gap:18px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+.yc-left{flex:1 1 440px;max-width:620px;min-width:0;display:flex;flex-direction:column;gap:10px}
+
+/* ── 트레이 (나무 틀 + 초록 펠트) ── */
+.yc-tray{--ds:56px;position:relative;display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px;border-radius:24px;overflow:hidden;overflow:clip;
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  background:linear-gradient(160deg,#7a4a24 0%,#5b3418 55%,#43240f 100%);box-shadow:inset 0 0 0 2px rgba(255,236,200,.12),inset 0 -6px 14px rgba(0,0,0,.3),0 16px 36px rgba(0,0,0,.42)}
+.yc-tray.bump{animation:ycBump .3s ease-out}
+@keyframes ycBump{25%{transform:translateY(3px)}60%{transform:translateY(-1px)}}
+.yc-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:30px}
+.yc-who{display:flex;align-items:center;gap:7px;min-width:0;max-width:calc(100% - 44px);padding:4px 13px;border-radius:99px;background:rgba(0,0,0,.3);color:#fff3dc;font-size:14.5px;font-weight:800;white-space:nowrap}
+.yc-who b{overflow:hidden;text-overflow:ellipsis}
+.yc-who i{flex:none;width:11px;height:11px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px rgba(255,255,255,.6)}
+.yc-who.me{background:rgba(63,207,155,.32);box-shadow:inset 0 0 0 1.5px #3fcf9b}
+.yc-bgm{flex:none;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.3);color:#ffe7a8;font-size:18px;font-weight:900;cursor:pointer;line-height:1}
+.yc-bgm.off{color:rgba(255,231,168,.45);text-decoration:line-through}
+.yc-keep{position:relative;display:flex;align-items:center;justify-content:center;gap:calc(var(--ds) * .2);height:calc(var(--ds) + 14px);border-radius:14px;
+  background:rgba(0,0,0,.24);box-shadow:inset 0 2px 7px rgba(0,0,0,.4)}
+.yc-keep b{position:absolute;left:5px;top:50%;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;font-size:9px;font-weight:900;letter-spacing:.16em;color:rgba(255,231,168,.5)}
+.yc-keep i{flex:none;width:var(--ds);height:var(--ds);border-radius:calc(var(--ds) * .22);border:2px dashed rgba(255,231,168,.22)}
+.yc-felt{flex:1;min-height:calc(var(--ds) * 2.75);border-radius:16px;
+  background:radial-gradient(120% 90% at 45% 40%,#2e8a5c 0%,#1f6b45 55%,#164d33 100%);
+  box-shadow:inset 0 0 0 3px rgba(0,0,0,.16),inset 0 8px 22px rgba(0,0,0,.4)}
+/* 컵 (위치 · 뒤집기는 바깥 상자 transform, 흔들기 · 손짓은 안쪽) */
+.yc-cup{position:absolute;left:0;top:0;z-index:6;width:90px;height:100px;cursor:pointer;touch-action:none;-webkit-touch-callout:none;filter:drop-shadow(0 9px 10px rgba(0,0,0,.45))}
+.yc-cupi{width:100%;height:100%;transform-origin:50% 85%}
+.yc-cupi svg{display:block;width:100%;height:100%}
+.yc-cup.shake .yc-cupi{animation:ycShake .15s ease-in-out infinite}
+.yc-tray.ready .yc-cup:not(.shake) .yc-cupi{animation:ycBob 1.8s ease-in-out infinite}
+@keyframes ycShake{0%,100%{transform:rotate(-15deg) translate(-4px,2px)}50%{transform:rotate(13deg) translate(4px,-4px)}}
+@keyframes ycBob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-5px) rotate(-4deg)}}
+/* 주사위 */
+.yc-die{position:absolute;left:0;top:0;z-index:4;width:var(--ds);height:var(--ds);padding:0;border:0;background:none;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;opacity:0}
+.yc-die .die{width:100%;height:100%;padding:calc(var(--ds) * .15);border-radius:calc(var(--ds) * .21);gap:calc(var(--ds) * .04)}
+.yc-die.kept{z-index:4}
+.yc-die.kept .die{box-shadow:0 0 0 3px #ffd54f,0 6px 12px rgba(0,0,0,.42)}
+.yc-die.tumble .die{animation:ycTumble .18s linear infinite}
+@keyframes ycTumble{0%{transform:rotate(0) scale(1)}50%{transform:rotate(180deg) scale(.88)}100%{transform:rotate(360deg) scale(1)}}
+@media (hover:hover){ .yc-tray .yc-die:not(.kept):hover .die{box-shadow:0 0 0 3px rgba(255,213,79,.55),0 6px 12px rgba(0,0,0,.4)} }
+/* 족보 축하 · 색종이 */
+.yc-pop{position:absolute;inset:0;z-index:9;display:grid;place-items:center;pointer-events:none;overflow:hidden}
+.yc-pop.hidden{display:none}
+.yc-ban{padding:.25em .85em;border-radius:18px;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:clamp(22px,calc(var(--ds) * .62),44px);color:#fff;
+  background:rgba(8,24,18,.82);border:2px solid #ffd54f;box-shadow:0 12px 28px rgba(0,0,0,.45);animation:ycBan .5s cubic-bezier(.2,1.5,.4,1)}
+.yc-pop.yacht .yc-ban{font-size:clamp(30px,calc(var(--ds) * .95),66px);color:#3b2600;background:linear-gradient(150deg,#fff6bf,#facc15 55%,#d39e00);border-color:#fff}
+.yc-pop.bonus .yc-ban{background:rgba(22,120,80,.9);border-color:#a7f3d0}
+@keyframes ycBan{0%{transform:scale(.4) rotate(-6deg);opacity:0}100%{transform:none;opacity:1}}
+.yc-confetti i{position:absolute;top:-14px;left:var(--x);width:8px;height:13px;border-radius:2px;background:hsl(var(--h) 90% 60%);animation:ycConf 1.7s var(--d) ease-in forwards}
+@keyframes ycConf{to{transform:translateY(420px) rotate(var(--r));opacity:.2}}
+.yc-float{position:fixed;z-index:9999;pointer-events:none;transform:translate(-50%,-50%);padding:.05em .5em;border-radius:99px;font-family:'Black Han Sans',sans-serif;font-size:20px;color:#fff;
+  background:#16a34a;box-shadow:0 6px 14px rgba(0,0,0,.3);animation:ycFloat 1.25s ease-out forwards}
+.yc-float.zero{background:#475569}
+@keyframes ycFloat{0%{opacity:0;transform:translate(-50%,-30%) scale(.8)}18%{opacity:1;transform:translate(-50%,-80%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-180%)}}
+
+/* ── 트레이 아래: 굴리기 · 기록하기 · 다른 사람 차례 ── */
+.yc-bar{display:flex;flex-direction:column;align-items:center;gap:6px;min-height:52px;justify-content:center}
+.yc-roll{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:min(100%,280px);line-height:1.15;touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;transition:transform .12s,filter .12s}
+.yc-roll b{font-weight:900}
+.yc-roll small{font-size:12px;font-weight:600;opacity:.85}
+.yc-roll.on{transform:scale(.96);filter:brightness(1.12);box-shadow:0 0 0 4px rgba(63,207,155,.35)}
+.yc-hint{font-size:13px;color:var(--muted);text-align:center;line-height:1.4;word-break:keep-all}
+.yc-confirm{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;padding:7px 10px;border-radius:14px;background:var(--panel);border:1px solid var(--line);font-size:15px}
+.yc-confirm .btn{padding:8px 16px;font-size:15px;border-radius:11px}
+.yc-confirm .pts{color:#5ce1ff}
+.yc-wait{display:flex;align-items:center;gap:4px;font-size:14px;color:var(--muted)}
+.yc-wait .dots{display:inline-flex;gap:3px;margin-left:2px}
+.yc-wait .dots i{width:5px;height:5px;border-radius:50%;background:currentColor;animation:ycDot 1.2s infinite}
+.yc-wait .dots i:nth-child(2){animation-delay:.2s} .yc-wait .dots i:nth-child(3){animation-delay:.4s}
+@keyframes ycDot{0%,60%,100%{opacity:.25}30%{opacity:1}}
+.yc-msg{display:flex;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 14px;font-weight:700;font-size:14px}
+.yc-msg:empty{display:none}
+
+/* ── 점수표 ── */
+.yc-card{flex:0 1 460px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px;overflow-x:auto}
+.yc-table{width:100%;border-collapse:collapse;font-size:14px}
+.yc-table th{padding:8px 6px;font-size:13px;color:var(--muted);border-bottom:2px solid var(--line);white-space:nowrap}
+.yc-table th small{display:block;font-size:10px;color:#5ce1ff}
+.yc-table th.turn{color:var(--text);background:color-mix(in srgb,var(--accent) 22%,transparent);border-radius:8px 8px 0 0}
+.yc-table td{padding:6px;border-bottom:1px solid var(--line);text-align:center;font-family:'Black Han Sans',sans-serif;font-size:17px;min-width:54px}
+.yc-table td:first-child{text-align:left;font-family:'Noto Sans KR',sans-serif;font-size:13px;min-width:120px}
+.yc-table td:first-child small{display:block;font-size:10.5px;color:var(--muted);font-weight:400}
+.yc-table tr.sep td{border-bottom:2px solid var(--line)}
+.yc-table td.done{color:var(--text)} .yc-table td.zero{color:var(--muted)}
+.yc-table td.pick{cursor:pointer;color:#5ce1ff;background:rgba(92,225,255,.07);transition:background .12s}
+@media (hover:hover){ .yc-table td.pick:hover{background:rgba(92,225,255,.25);color:#fff} }
+.yc-table td.pick.best{box-shadow:inset 0 0 0 2px rgba(92,225,255,.6)} .yc-table td.pick.zero{color:#6b7a90}
+.yc-table td.pick.sel{background:#0ea5c6;color:#fff;box-shadow:inset 0 0 0 2px #fff,0 0 0 2px #5ce1ff}
+.yc-table td.peek{color:var(--muted);opacity:.6}
+.yc-table td.flash{animation:ycFlash 1s ease-out}
+@keyframes ycFlash{0%{background:#facc15;color:#1f2937}100%{background:transparent}}
+.yc-table tr.sub td{font-size:14px;color:var(--muted)} .yc-table tr.sub td.ok{color:#3fcf9b}
+.yc-table tr.total td{font-size:22px;border-bottom:none;padding-top:10px} .yc-table tr.total td:first-child{font-size:14px}
+.yc-table tr.yc-head2{display:none}
+.yc-table tr.sub td:not(:first-child) small{font:inherit;color:inherit}
+
+/* 점수표 두 칸 (한 표가 다 들어가는 큰 가로 화면 말고 전부: 높이 920px 이하 · 좁은 화면 · 세로 화면) */
+@media (max-height:920px), (max-width:900px), (max-aspect-ratio:1/1){
+  body.gaming #scr-yacht .yc-card{padding:6px}
+  body.gaming #scr-yacht .yc-table{display:flex;gap:10px;align-items:flex-start}
+  body.gaming #scr-yacht .yc-table > tbody{display:table;flex:1 1 0;min-width:0;border-collapse:collapse}
+  body.gaming #scr-yacht .yc-table tr.yc-head2{display:table-row}
+  body.gaming #scr-yacht .yc-table th{padding:5px 4px;font-size:12px;max-width:80px;overflow:hidden;text-overflow:ellipsis}
+  body.gaming #scr-yacht .yc-table td{padding:4px 4px;min-width:40px;line-height:1.25}
+  body.gaming #scr-yacht .yc-table td:first-child{min-width:0}
+  body.gaming #scr-yacht .yc-table tr.total td{font-size:19px;padding-top:6px}
+}
+/* 낮거나 좁은 화면: 점수표 설명 글은 숨기고(칸 이름 위에 마우스를 올리면 보여요) 줄을 촘촘하게 */
+@media (max-width:600px), (max-height:520px){
+  body.gaming #scr-yacht .yc-table td:first-child small{display:none}
+  body.gaming #scr-yacht .yc-table td{padding:3px 3px;font-size:15px;min-width:34px;line-height:1.2}
+  body.gaming #scr-yacht .yc-table td:first-child{font-size:12px;white-space:nowrap}
+  body.gaming #scr-yacht .yc-table th{padding:4px 3px;font-size:11px;line-height:1.2}
+  body.gaming #scr-yacht .yc-table th small{font-size:9.5px}
+  body.gaming #scr-yacht .yc-table tr.sub td{font-size:12.5px}
+  body.gaming #scr-yacht .yc-table tr.total td{font-size:17px;padding-top:4px}
+  body.gaming #scr-yacht .yc-table tr.total td:first-child{font-size:12px}
+  body.gaming #scr-yacht .yc-table tr:not(:first-child){height:27px}
+}
+@media (max-width:600px) and (min-height:690px){
+  body.gaming #scr-yacht .yc-table tr:not(:first-child){height:31px}
+}
+/* 휴대폰에서 3~4명: 칸을 더 좁게 (칸 이름은 두 줄까지) */
+@media (max-width:600px){
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) > tbody{table-layout:fixed;width:10px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) th:first-child{width:62px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(5)) th:first-child{width:58px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) td{min-width:0;font-size:14px;padding:2px 1px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) td:first-child{white-space:normal;word-break:keep-all;line-height:1.1;font-size:11px;padding:2px 2px 2px 3px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) th{max-width:46px;font-size:10px;padding:3px 1px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) th:first-child{font-size:0}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) tr.sub td{font-size:11px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) tr.sub td:not(:first-child) small{display:none}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) tr.total td{font-size:15px}
+  body.gaming #scr-yacht .yc-table:has(th:nth-child(4)) tr.total td:first-child{font-size:11px}
+}
+
+/* ── 세로 화면 ── */
+@media (max-aspect-ratio:1/1){
+  body.gaming #scr-yacht .yc-wrap{flex-direction:column;flex-wrap:nowrap;align-items:center;gap:6px}
+  body.gaming #scr-yacht .yc-left{flex:none;width:100%;max-width:640px;gap:6px}
+  body.gaming #scr-yacht .yc-card{flex:none;width:100%;max-width:640px}
+  body.gaming #scr-yacht .yc-msg{height:31px;padding:1px 10px;font-size:12.5px;line-height:1.2;border-radius:10px;overflow:hidden}
+}
+/* 휴대폰 세로 */
+@media (max-width:600px){
+  body.gaming #scr-yacht .yc-tray{padding:7px 8px 8px;gap:6px;border-radius:18px}
+  body.gaming #scr-yacht .yc-top{min-height:26px}
+  body.gaming #scr-yacht .yc-who{font-size:13px;padding:3px 11px}
+  body.gaming #scr-yacht .yc-bgm{width:28px;height:28px;font-size:15px}
+  body.gaming #scr-yacht .yc-keep{height:calc(var(--ds) + 10px);border-radius:12px}
+  body.gaming #scr-yacht .yc-keep b{font-size:8px;left:4px}
+  body.gaming #scr-yacht .yc-felt{min-height:calc(var(--ds) * 2.45);border-radius:13px}
+  body.gaming #scr-yacht .yc-bar{min-height:46px;gap:3px}
+  body.gaming #scr-yacht .yc-roll{padding:7px 14px;font-size:17px;border-radius:13px}
+  body.gaming #scr-yacht .yc-roll small{font-size:11px}
+  body.gaming #scr-yacht .yc-hint{font-size:11.5px;line-height:1.3}
+  body.gaming #scr-yacht .yc-confirm{font-size:13.5px;padding:5px 8px;gap:6px}
+  body.gaming #scr-yacht .yc-confirm .btn{padding:6px 12px;font-size:14px}
+}
+/* 휴대폰 · 낮은 화면: 설명 줄은 숨겨 트레이와 점수표가 줄지 않게 (규칙은 설명서에) */
+@media (max-width:600px) and (max-height:820px), (max-height:700px){
+  body.gaming #scr-yacht .game-head .status{display:none}
+}
+@media (max-width:600px) and (max-height:780px){
+  body.gaming #scr-yacht .yc-msg{display:none}
+}
+@media (max-width:600px) and (max-height:700px){
+  body.gaming #scr-yacht .yc-hint{display:none}
+  body.gaming #scr-yacht .yc-felt{min-height:calc(var(--ds) * 2.2)}
+  body.gaming #scr-yacht .yc-bar{min-height:42px}
+}
+
+/* ── 가로 화면 ── */
+@media (min-aspect-ratio:1/1) and (max-height:920px){
+  body.gaming #scr-yacht .yc-wrap{flex-wrap:nowrap;gap:14px}
+  body.gaming #scr-yacht .yc-left{flex:1 1 420px;min-width:280px;max-width:560px;gap:8px}
+  body.gaming #scr-yacht .yc-card{flex:1 1 500px;max-width:680px;min-width:0}
+}
+/* 휴대폰 가로 */
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  body.gaming #scr-yacht .yc-left{flex:1 1 300px;min-width:250px;gap:5px}
+  body.gaming #scr-yacht .yc-tray{padding:6px 8px 7px;gap:5px;border-radius:16px}
+  body.gaming #scr-yacht .yc-top{min-height:24px}
+  body.gaming #scr-yacht .yc-who{font-size:12.5px;padding:2px 10px}
+  body.gaming #scr-yacht .yc-bgm{width:26px;height:26px;font-size:14px}
+  body.gaming #scr-yacht .yc-keep{height:calc(var(--ds) + 8px)}
+  body.gaming #scr-yacht .yc-keep b{display:none}
+  body.gaming #scr-yacht .yc-felt{min-height:calc(var(--ds) * 2.1)}
+  body.gaming #scr-yacht .yc-bar{min-height:40px}
+  body.gaming #scr-yacht .yc-roll{padding:6px 14px;font-size:16px;border-radius:12px}
+  body.gaming #scr-yacht .yc-hint{display:none}
+  body.gaming #scr-yacht .yc-msg{height:28px;padding:1px 10px;font-size:12px;line-height:1.2;border-radius:10px;overflow:hidden}
+}
+@media (prefers-reduced-motion:reduce){
+  .yc-cup.shake .yc-cupi,.yc-tray.ready .yc-cup:not(.shake) .yc-cupi,.yc-die.tumble .die{animation-duration:.5s}
+}

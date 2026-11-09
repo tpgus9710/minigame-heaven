@@ -1,6 +1,7 @@
 /* =====================================================================
  *  🎲 요트 다이스 규칙 — 주사위 5개를 한 턴에 최대 3번 굴려 12가지 족보 중 하나를 채워요.
  *  위쪽(1~6) 합이 63점 이상이면 보너스 +35. 12라운드 뒤 총점이 가장 높은 사람이 승리!
+ *  v12.7: 화면이 컵 흔들기 → 탁! → 주사위 공개를 보여 주는 동안(PACE) 봇 · 제한 시간이 기다려요 (TableKit: Core.lag)
  * ===================================================================== */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./table'));
@@ -28,6 +29,19 @@
       case 'yacht': return c.includes(5) ? 50 : 0;
       default: return 0;
     }
+  }
+  /** 화면 연출 시간(ms): 굴림 = 남길 주사위 정리 + 컵에 담기 · 흔들기 · 탁! · 공개 / 기록 = 점수 칸 반짝 (+보너스 · 요트 축하) */
+  const PACE = { collect: 450, shake: 850, slam: 380, reveal: 700, settle: 250, score: 1000, bonus: 800, yacht: 1400 };
+  const ROLL_MS = PACE.collect + PACE.shake + PACE.slam + PACE.reveal + PACE.settle;
+  /** 굴린 주사위에서 눈에 띄는 족보 (화면 축하용): yacht · ls · ss · full · four */
+  function combo(d) {
+    const c = [0, 0, 0, 0, 0, 0, 0]; d.forEach(x => c[x]++);
+    if (c.includes(5)) return 'yacht';
+    if (calc('ls', d)) return 'ls';
+    if (c.some(x => x >= 4)) return 'four';
+    if (c.includes(3) && c.includes(2)) return 'full';
+    if (calc('ss', d)) return 'ss';
+    return null;
   }
   const upperSum = sc => UPPER.reduce((a, k) => a + (sc[k] || 0), 0);
   const total = sc => CATS.reduce((a, [k]) => a + (sc[k] || 0), 0) + (upperSum(sc) >= 63 ? 35 : 0);
@@ -60,7 +74,8 @@
       s.held = held;
       s.dice = s.dice.map((d, i) => (s.held[i] ? d : 1 + Math.floor(s.rnd() * 6)));
       s.rolls++; s.rollN++;
-      log(s, { t: 'roll', id, dice: s.dice.slice(), held: s.held.slice() });
+      log(s, { t: 'roll', id, dice: s.dice.slice(), held: s.held.slice(), r: s.rolls });
+      s.lag = ROLL_MS; s.lagAt = Date.now();
       s.msg = s.rolls < 3 ? `${p.name} 님 ${s.rolls}번째 굴림 — 남길 주사위를 누르고 다시 굴리거나 점수를 고르세요.` : `${p.name} 님 마지막 굴림! 점수 칸을 고르세요.`;
       return;
     }
@@ -71,7 +86,9 @@
       const pts = calc(a.cat, s.dice), name = CATS.find(([k]) => k === a.cat)[1];
       const before = upperSum(p.score);
       p.score[a.cat] = pts;
-      log(s, { t: 'score', id, cat: a.cat, pts });
+      const bonusNow = before < 63 && upperSum(p.score) >= 63;
+      log(s, { t: 'score', id, cat: a.cat, pts, bonus: bonusNow });
+      s.lag = PACE.score + (bonusNow ? PACE.bonus : 0) + (a.cat === 'yacht' && pts ? PACE.yacht : 0); s.lagAt = Date.now();
       s.msg = `${p.name} 님 ${name}에 ${pts}점!` + (before < 63 && upperSum(p.score) >= 63 ? ' 보너스 +35 달성!' : '');
       s.rolls = 0; s.held = [false, false, false, false, false];
       s.turn = (s.turn + 1) % s.players.length;
@@ -156,11 +173,15 @@
   }
   return {
     meta: {
-      name: '요트 다이스', min: 1, max: 4, bots: true, turnSec: 45, botDelay: [900, 1500],
+      name: '요트 다이스', min: 1, max: 4, bots: true, turnSec: 50,
+      /** 봇이 '생각하는' 시간 (연출 시간은 TableKit 이 lag 로 따로 더해요) */
+      botDelay: s => (s.rolls ? [900, 1600] : [600, 1100]),
       options: [{ key: 'bots', label: '🤖 봇 추가', def: 0, values: [[0, '없음'], [1, '1명'], [2, '2명'], [3, '3명']] }],
     },
-    CATS, UPPER, calc, total,
+    CATS, UPPER, PACE, ROLL_MS, calc, total, combo,
     setup, act, ai, view, result,
+    /** 화면 연출이 아직 남은 시간(ms) */
+    lag: s => Math.max(0, (s.lag || 0) - (Date.now() - (s.lagAt || 0))),
     free: (s, id, a) => a.t === 'hold',
     pending: s => (s.over ? [] : [cur(s).id]),
   };
