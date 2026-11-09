@@ -1,0 +1,44 @@
+/* ═════════════ 🔺 세트 찾기 (#scr-setgame) ═════════════
+ * 카드 크기 · 열 수는 setgame.js 의 fit() 이 남는 자리에 맞춰 정해요 (--cols · --cw · --gap). 세로 화면은 세로 카드, 넓은 화면은 가로 카드. */
+#scr-setgame .sg-modes{align-items:center;margin-bottom:10px}
+#scr-setgame .sg-modes .seg-btn{padding:7px 13px}
+.sg-lv{display:inline-flex;align-items:center;gap:6px;margin-left:8px}
+.sg-lv .muted{margin-right:2px}
+.sg-players{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:0 0 10px}
+.sg-p{display:flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:13.5px}
+.sg-p b{font-weight:800;white-space:nowrap} .sg-p.bot b{color:var(--muted)}
+.sg-p span{min-width:26px;text-align:center;padding:2px 8px;border-radius:999px;background:var(--panel2);font-family:'Black Han Sans',sans-serif;font-size:15px}
+.sg-p.me{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--panel))} .sg-p.me span{background:var(--accent);color:#fff}
+.sg-p.pulse{animation:sgPulse .6s}
+@keyframes sgPulse{0%{transform:scale(1)}35%{transform:scale(1.12)}100%{transform:scale(1)}}
+.sg-wrap{position:relative;display:flex;justify-content:center}
+.sg-board{display:grid;grid-template-columns:repeat(var(--cols,3),var(--cw,110px));gap:var(--gap,10px);justify-content:center;padding:4px;user-select:none;-webkit-user-select:none}
+.sg-card{width:var(--cw,110px);aspect-ratio:100/135;padding:5%;border:0;border-radius:13px;background:#fff;cursor:pointer;display:grid;place-items:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  box-shadow:0 1px 0 rgba(0,0,0,.08),0 6px 16px rgba(0,0,0,.28);transition:transform .12s,box-shadow .12s,background .12s}
+.sg-board.land .sg-card{aspect-ratio:135/100}
+.sg-card svg{width:100%;height:100%;display:block;overflow:visible}
+@media (hover:hover){ .sg-card:hover{transform:translateY(-2px)} }
+.sg-card.sel{transform:translateY(-5px);background:#f3f0ff;box-shadow:0 0 0 3px var(--accent),0 10px 22px rgba(0,0,0,.35)}
+.sg-card.new{animation:sgNew .38s ease-out}
+.sg-card.got{animation:sgGot .52s ease-in forwards}
+.sg-card.took{animation:sgTook .52s ease-in forwards}
+.sg-card.bad{animation:sgBad .45s}
+.sg-card.hint{animation:sgHint 1.3s 2}
+.sg-board.locked .sg-card{filter:saturate(.35) brightness(.82);cursor:not-allowed}
+@keyframes sgNew{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:none}}
+@keyframes sgGot{0%{box-shadow:0 0 0 3px #22c55e,0 0 26px #22c55e}60%{transform:scale(1.08);opacity:1;box-shadow:0 0 0 4px #22c55e,0 0 34px #22c55e}100%{transform:scale(.6);opacity:0}}
+@keyframes sgTook{0%{box-shadow:0 0 0 3px #f59e0b,0 0 22px #f59e0b}60%{transform:scale(1.04);opacity:1}100%{transform:scale(.6);opacity:0}}
+@keyframes sgBad{0%,100%{transform:none}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}
+  0%,80%{box-shadow:0 0 0 3px #ef4444,0 8px 18px rgba(0,0,0,.3)}}
+@keyframes sgHint{0%,100%{box-shadow:0 1px 0 rgba(0,0,0,.08),0 6px 16px rgba(0,0,0,.28)}50%{box-shadow:0 0 0 4px #ffd54f,0 0 26px #ffd54f}}
+.sg-msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);max-width:min(92%,460px);padding:10px 18px;border-radius:16px;background:rgba(17,20,38,.9);color:#fff;
+  font-weight:700;font-size:15px;line-height:1.4;text-align:center;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:3;word-break:keep-all}
+.sg-msg.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.sg-msg.good{background:rgba(22,140,72,.94)} .sg-msg.bad{background:rgba(214,48,52,.94)}
+.sg-msg b{font-family:'Black Han Sans',sans-serif;font-weight:400;margin-left:4px}
+.sg-tools{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap}
+.sg-tools .btn small{opacity:.75;font-size:11px;margin-left:4px}
+.sg-defs{position:absolute;width:0;height:0;overflow:hidden}
+/* 휴대폰 · 폴드 커버: 설명 줄은 숨겨 카드를 크게 (규칙은 설명서에) */
+@media (max-width:620px) and (max-height:940px){ body.gaming #scr-setgame .game-head .status{display:none} }
+@media (max-width:520px){ #scr-setgame .sg-modes{gap:6px} #scr-setgame .sg-modes .seg-btn{padding:6px 10px;font-size:13.5px} .sg-lv{margin-left:0} .sg-p{font-size:12.5px} }

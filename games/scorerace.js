@@ -1,11 +1,13 @@
 'use strict';
 /* 💎🍉 점수 대결 — 모두 같은 시드(같은 판·같은 순서)로 각자 플레이하고 점수로 겨룹니다.
- *  보석 맞추기 · 과일 합치기 · 사천성 · 핀볼이 이 모듈을 함께 씁니다. 화면 쪽은 register(키, { multi }) 로 시작됩니다. */
+ *  보석 맞추기 · 과일 합치기 · 사천성 · 핀볼 · 마작 솔리테어 · 타일 매치가 이 모듈을 함께 씁니다. 화면 쪽은 register(키, { multi }) 로 시작됩니다. */
 const CONFIG = {
   gem: { name: '보석 맞추기 대결', seconds: 60 },
   fruit: { name: '과일 합치기 대결', seconds: 120 },
   shisen: { name: '사천성 대결', seconds: 180 },
   pinball: { name: '핀볼 점수 대결', seconds: 240 },
+  mahjong: { name: '마작 솔리테어 대결', seconds: 240 },
+  tilematch: { name: '타일 매치 대결', seconds: 240 },
 };
 
 module.exports = H => {

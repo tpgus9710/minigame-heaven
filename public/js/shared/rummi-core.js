@@ -258,13 +258,192 @@
     }
     return table;
   }
+  /* ─────────── 봇: 한 차례에 낼 수 있는 가장 좋은 배치 (정확한 계산) ───────────
+   *  봇은 사람과 똑같이 '내 패'와 '모두에게 보이는 바닥'만 봐요 — 다른 사람 패 · 더미 순서는 몰라요.
+   *  바닥 타일은 모두 바닥에 남기되(떼고 붙여 다시 짜도 OK) 내 패를 가장 많이 내려놓는 배치를 찾아요.
+   *  숫자 1 → 13 순서로 훑으며, 색마다 이어 가는 런 2줄의 길이(0 · 1 · 2 · 3 이상) + 쓴 조커 수를 상태로 삼고
+   *  런에 쓰고 남은 같은 숫자 타일은 그룹(1~2개)으로 묶어요. 모든 경우를 따지므로 사람이 찾을 수 있는 배치는 봇도 찾아요.
+   *  조커는 아껴 두다가(내 타일 2장 이상을 더 낼 수 있을 때만) 쓰고, 패를 다 털 수 있으면 조커도 내요. */
+  const PAIRS = [], PIDX = [];
+  for (let h = 0; h <= 3; h++) { PIDX[h] = []; for (let l = 0; l <= h; l++) { PIDX[h][l] = PAIRS.length; PAIRS.push([h, l]); } }
+  const pidx = (a, b) => (a >= b ? PIDX[a][b] : PIDX[b][a]);
+  const ENDOK = [PIDX[0][0], PIDX[3][0], PIDX[3][3]];
+  const SOLVE_LIMIT = 2e6;                               // 계산이 너무 길어지면(드물게 0.3초 넘게) 간단한 방법(aiPlay)으로
+  const AI_CFG = { keep: -1500 };                        // 내 패의 조커를 낼 때 점수: 진짜 타일 1장 = 1000+숫자 → 2장 이상 더 낼 수 있을 때만 조커를 써요
+
+  /** 같은 숫자 그룹 나누기: 그룹에 2장 넣는 색 수 c2 · 1장 넣는 색 수 c1 · 조커 jg → 그룹 0~2개 { k, b1(1번 그룹에 넣을 한 장짜리 색 수), j1 } */
+  function groupSplit(c2, c1, jg) {
+    if (!c2 && !c1) return jg ? null : { k: 0, b1: 0, j1: 0 };
+    if (!c2 && c1 + jg >= 3 && c1 + jg <= 4) return { k: 1, b1: c1, j1: jg };
+    for (let b1 = 0; b1 <= c1; b1++) for (let j1 = 0; j1 <= jg; j1++) {
+      const s1 = c2 + b1 + j1, s2 = c2 + c1 - b1 + jg - j1;
+      if (s1 >= 3 && s1 <= 4 && s2 >= 3 && s2 <= 4 && c2 + b1 >= 1 && c2 + c1 - b1 >= 1) return { k: 2, b1, j1 };
+    }
+    return null;
+  }
+
+  /**
+   * 바닥 타일(모두 써야 함) + 내 패(골라 씀)로 만들 수 있는 가장 좋은 배치.
+   * mode.first: 첫 등록 — 내 패로만 · 합 30 이상 / mode.jw: 내 패의 조커 한 장을 낼 때 점수(음수면 아끼기)
+   * → { sets, placed(내려놓은 내 패), value } · 못 만들면 null
+   * 상태 키 = 색마다 런 2줄 길이(10가지) 4자리 + 1만 × (쓴 조커 + 3 × (이 숫자에서 그룹에 넣은 색 요약 + 25 × 첫 등록 점수))
+   * 숫자 하나를 색 4개로 나눠 한 색씩 넘겨요(경우의 수가 곱이 아니라 합으로 늘어서 빨라요).
+   */
+  function solve(tableIds, rackIds, mode) {
+    const first = !!mode.first, jw = mode.jw || 0;
+    const TA = [0, 1, 2, 3].map(() => Array.from({ length: 16 }, () => [])), RA = [0, 1, 2, 3].map(() => Array.from({ length: 16 }, () => []));
+    const JT = [], JR = [];
+    for (const id of tableIds) { if (isJ(id)) JT.push(id); else { const t = tile(id); TA[COLORS.indexOf(t.c)][t.n].push(id); } }
+    for (const id of rackIds) { if (isJ(id)) JR.push(id); else { const t = tile(id); RA[COLORS.indexOf(t.c)][t.n].push(id); } }
+    const JB = JT.length + JR.length;
+    const has = (c, n) => n <= 13 && TA[c][n].length + RA[c][n].length > 0;
+    const POW = [1, 10, 100, 1000];
+    let work = 0;
+    let cur = new Map([[0, { sc: 0, prev: null, ch: null }]]);
+    const put = (map, k, sc, prev, ch) => { const old = map.get(k); if (!old || old.sc < sc) map.set(k, { sc, prev, ch }); };
+    for (let n = 1; n <= 13; n++) {
+      for (let c = 0; c < 4; c++) {
+        const next = new Map(), memo = new Map();
+        const T = TA[c][n].length, R = RA[c][n].length, look1 = has(c, n + 1), look = look1 || has(c, n + 2);
+        const acts = L => {                                // [새 길이, 0 안 씀 · 1 진짜 타일 · 2 조커]
+          if (L === 1 && n === 13) return [];
+          if (L === 1 || L === 2) return [[L + 1, 1], [L + 1, 2]];
+          if (L === 3) return JT.length || look1 ? [[3, 1], [3, 2], [0, 0]] : [[3, 1], [0, 0]];
+          return n <= 11 ? (look ? [[1, 1], [1, 2], [0, 0]] : [[1, 1], [0, 0]]) : [[0, 0]];
+        };
+        /** 이 색 · 이 숫자에서 할 수 있는 일들 (런 2줄을 잇기 · 끝내기 · 새로 시작 + 남는 타일은 그룹으로) */
+        const optsFor = (pi, jl) => {
+          const mk = pi * 3 + jl;
+          let list = memo.get(mk);
+          if (list) return list;
+          list = [];
+          const [hi, lo] = PAIRS[pi], A = acts(hi), B = acts(lo);
+          for (let i = 0; i < A.length; i++) for (let k = hi === lo ? i : 0; k < B.length; k++) {   // 길이가 같은 두 줄은 순서만 다른 경우를 빼요
+            const [h2, x1] = A[i], [l2, x2] = B[k];
+            const rr = (x1 === 1) + (x2 === 1), jr = (x1 === 2) + (x2 === 2);
+            if (jr > jl) continue;
+            for (let u = T; u <= T + R; u++) {
+              const gg = u - rr;
+              if (gg < 0 || gg > 2) continue;
+              list.push({ ns: pidx(h2, l2), a: [x1, x2], u, rk: u - T, jr, g: gg, c, n });
+            }
+          }
+          memo.set(mk, list);
+          return list;
+        };
+        for (const [key, node] of cur) {
+          const runs = key % 10000, rest = (key - runs) / 10000;
+          const j = rest % 3, gs = Math.floor(rest / 3) % 25, v = Math.floor(rest / 75);
+          const pi = Math.floor(runs / POW[c]) % 10, base = runs - pi * POW[c];
+          for (const o of optsFor(pi, JB - j)) {
+            if (++work > SOLVE_LIMIT) throw new Error('solve-limit');
+            const gs2 = gs + (o.g === 2 ? 5 : o.g === 1 ? 1 : 0);
+            const v2 = first ? Math.min(30, v + (o.u + o.jr) * n) : 0;
+            put(next, base + o.ns * POW[c] + 10000 * (j + o.jr + 3 * (gs2 + 25 * v2)), node.sc + o.rk * (1000 + n), node, o);
+          }
+        }
+        cur = next;
+        if (!cur.size) return null;
+      }
+      // 이 숫자의 그룹: 그룹에 넣기로 한 타일 + 조커로 그룹 1~2개를 만들 수 있나
+      const next = new Map();
+      for (const [key, node] of cur) {
+        const runs = key % 10000, rest = (key - runs) / 10000;
+        const j = rest % 3, gs = Math.floor(rest / 3) % 25, v = Math.floor(rest / 75);
+        const c2 = Math.floor(gs / 5), c1 = gs % 5;
+        for (let jg = 0; jg <= JB - j; jg++) {
+          if (++work > SOLVE_LIMIT) throw new Error('solve-limit');
+          const sp = groupSplit(c2, c1, jg);
+          if (!sp) continue;
+          const v2 = first ? Math.min(30, v + jg * n) : 0;
+          put(next, runs + 10000 * (j + jg + 75 * v2), node.sc, node, { jg, sp, n });
+        }
+      }
+      cur = next;
+      if (!cur.size) return null;
+    }
+    let best = null, bestSc = -Infinity, bestJ = 0;
+    for (const [key, node] of cur) {
+      const runs = key % 10000, rest = (key - runs) / 10000;
+      if (!ENDOK.includes(runs % 10) || !ENDOK.includes(Math.floor(runs / 10) % 10) || !ENDOK.includes(Math.floor(runs / 100) % 10) || !ENDOK.includes(Math.floor(runs / 1000))) continue;
+      const j = rest % 3, v = Math.floor(rest / 75);
+      if (j < JT.length || (first && v < 30)) continue;
+      const sc = node.sc + (j - JT.length) * jw;
+      if (sc > bestSc) { bestSc = sc; best = node; bestJ = j; }
+    }
+    if (!best) return null;
+    // 되짚어 가며 실제 세트로
+    const chain = [];
+    for (let x = best; x && x.ch; x = x.prev) chain.push(x.ch);
+    chain.reverse();
+    const jok = JT.concat(JR);
+    let ji = 0, value = 0;
+    const runs = [0, 1, 2, 3].map(() => [[], []]), sets = [], placed = [];
+    let gr = [];
+    for (const ch of chain) {
+      const n = ch.n;
+      if (ch.sp) {                                       // 이 숫자의 그룹
+        value += ch.jg * n;
+        if (ch.sp.k) {
+          const two = gr.filter(x => x.length === 2), one = gr.filter(x => x.length === 1).map(x => x[0]);
+          const g1 = two.map(x => x[0]).concat(one.slice(0, ch.sp.b1)), g2 = two.map(x => x[1]).concat(one.slice(ch.sp.b1));
+          for (let k = 0; k < ch.sp.j1; k++) g1.push(jok[ji++]);
+          if (ch.sp.k === 2) { for (let k = ch.sp.j1; k < ch.jg; k++) g2.push(jok[ji++]); sets.push(g1, g2); }
+          else sets.push(g1);
+        }
+        gr = [];
+        continue;
+      }
+      const o = ch, c = o.c, slots = runs[c], reals = TA[c][n].slice();
+      for (let k = 0; k < o.rk; k++) { reals.push(RA[c][n][k]); placed.push(RA[c][n][k]); }
+      value += (o.u + o.jr) * n;
+      for (let si = 0; si < 2; si++) {
+        const x = o.a[si];
+        if (x === 1) slots[si].push(reals.pop());
+        else if (x === 2) slots[si].push(jok[ji++]);
+        else { if (slots[si].length >= 3) sets.push(slots[si]); slots[si] = []; }
+      }
+      slots.sort((p, q) => Math.min(3, q.length) - Math.min(3, p.length));
+      if (reals.length) gr.push(reals);
+    }
+    for (const slots of runs) for (const r of slots) if (r.length) sets.push(r);
+    for (let k = JT.length; k < bestJ; k++) placed.push(jok[k]);
+    return { sets, placed, value };
+  }
+  /** 바닥 순서를 되도록 그대로: 안 바뀐 세트는 제자리 · 바뀐 세트는 가장 많이 겹치는 원래 세트 바로 뒤 · 새 세트는 맨 뒤 */
+  function stableOrder(oldTable, sets) {
+    const key = x => x.slice().sort((a, b) => a - b).join(','), oldKeys = oldTable.map(key), taken = new Set();
+    const where = new Map();
+    oldTable.forEach((set, i) => set.forEach(id => where.set(id, i)));
+    const pos = sets.map((set, k) => {
+      const i = oldKeys.findIndex((x, ii) => !taken.has(ii) && x === key(set));
+      if (i >= 0) { taken.add(i); return i; }
+      const cnt = new Map();
+      for (const id of set) if (where.has(id)) cnt.set(where.get(id), (cnt.get(where.get(id)) || 0) + 1);
+      let bi = -1, bc = 0;
+      for (const [ii, n] of cnt) if (n > bc || (n === bc && ii < bi)) { bi = ii; bc = n; }
+      return bi >= 0 ? bi + 0.5 + k / 1e4 : 1e6 + k;
+    });
+    return sets.map((set, k) => [pos[k], arrange(set)]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+  }
+  /** 봇의 배치: 첫 등록이면 내 패로만 30점 이상 · 등록 뒤에는 바닥까지 다시 짜서 가장 많이 (다 털 수 있으면 털기) */
+  function aiSolve(s, p) {
+    if (!p.melded) {
+      const r = solve([], p.rack, { first: true, jw: AI_CFG.keep });
+      return r && r.placed.length ? s.table.map(x => x.slice()).concat(r.sets.map(arrange)) : null;
+    }
+    const tableIds = [].concat(...s.table);
+    let r = solve(tableIds, p.rack, { jw: 1000 });
+    if (r && r.placed.length < p.rack.length && r.placed.some(isJ)) r = solve(tableIds, p.rack, { jw: AI_CFG.keep });   // 다 못 털면 조커는 아껴요
+    return r && r.placed.length ? stableOrder(s.table, r.sets) : null;
+  }
   function ai(s, id) {
     const p = P(s, id);
-    const sets = aiPlay(s, p);
-    if (sets) {
-      const r = validatePlay(s.table, sets, p.rack, p.melded);
-      if (r.ok) return { t: 'play', sets };
-    }
+    let sets = null;
+    try { sets = aiSolve(s, p); } catch (e) { sets = null; }                       // 계산이 너무 길면 간단한 방법으로
+    if (sets && validatePlay(s.table, sets, p.rack, p.melded).ok) return { t: 'play', sets };
+    sets = aiPlay(s, p);
+    if (sets && validatePlay(s.table, sets, p.rack, p.melded).ok) return { t: 'play', sets };
     return { t: 'draw' };
   }
 
@@ -297,7 +476,7 @@
       ],
     },
     COLORS, CNAME, JV, isJ, tile, pen, rackValue, check, arrange, validatePlay,
-    setup, act, ai, view, result,
+    setup, act, ai, view, result, _solve: solve, _aiPlay: aiPlay, _cfg: AI_CFG,
     auto: () => ({ t: 'draw' }),
     pending: s => (s.over ? [] : [cur(s).id]),
     deadline: s => (s.over || !s.timeSec ? null : s.turnStart + (s.afk && s.afk[cur(s).id] >= 2 ? Math.min(10, s.timeSec) : s.timeSec) * 1000),

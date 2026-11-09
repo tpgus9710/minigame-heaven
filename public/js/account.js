@@ -26,9 +26,10 @@ const SOLO_SUB = { 'dodge:bullet': '총알 모드', 'dodge:bamboo': '대나무 �
 const REC_FMT = {
   race: v => v.toFixed(2) + '초', dodge: v => v.toFixed(2) + '초', mine: v => v + '초', apple: v => v + '개', snake: v => '길이 ' + v,
   stack: v => v + '층', breakout: v => v + '단계', zombie: v => '스테이지 ' + v, plat: v => '스테이지 ' + v,
+  setgame: v => v + '세트', mahjong: v => (v >= 60 ? `${Math.floor(v / 60)}분 ` : '') + `${Math.round(v % 60)}초`, tilematch: v => '레벨 ' + v,
 };
 /** 랭킹에서 고를 수 있는 싱글 기록 */
-const REC_GAMES = [['pinball', ''], ['g2048', ''], ['fruit', ''], ['gem', ''], ['apple', ''], ['race', ''], ['mine:easy', ''], ['mine:normal', ''], ['mine:hard', ''],
+const REC_GAMES = [['setgame', ''], ['mahjong', ''], ['tilematch', ''], ['pinball', ''], ['g2048', ''], ['fruit', ''], ['gem', ''], ['apple', ''], ['race', ''], ['mine:easy', ''], ['mine:normal', ''], ['mine:hard', ''],
   ['dodge:bullet', ''], ['dodge:bamboo', ''], ['snake', ''], ['stack', ''], ['breakout', ''], ['shisen', ''], ['rain', ''], ['mole', ''],
   ['shooter', ''], ['tetris', ''], ['zombie', ''], ['plat', ''], ['yacht', '']];
 
@@ -115,6 +116,7 @@ const Acct = {
     if (!me) this.fr = null;
     else if (fresh || was !== me.id) this.loadFriends();
     this.renderAll();
+    if (typeof Home !== 'undefined') Home.render();               // 홈 추천 게임: 내 계정 기록으로 (core.js)
     if (me) Flair.check(me);                                     // 새 테두리 · 새 칭호 축하 (js/flair.js)
   },
   onLogin(r) {

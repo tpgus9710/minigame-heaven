@@ -1,9 +1,10 @@
 /* =====================================================================
- *  🕹️ 터치 조이스틱 패드 — 휴대폰 · 태블릿에서 작은 버튼 대신 엄지로 미는 조이스틱 (점프 어드벤처 · 총알피하기 · 점프 배구)
+ *  🕹️ 터치 조이스틱 패드 — 휴대폰 · 태블릿에서 작은 버튼 대신 엄지로 미는 조이스틱 (점프 어드벤처 · 총알피하기 · 점프 배구 · 폭탄 배틀)
  *   register('게임', { stick: { x, y, run, analog, full, hint, act: { code, label, icon, hint } } })
  *     x / y   좌우 · 위아래로 밀면 방향키(ArrowLeft·Right / ArrowUp·Down)를 누른 것과 같아요 → 게임은 그대로 held() 로 읽어요
  *             (값 대신 함수를 넣으면 그때그때 물어봐요: 총알피하기 대나무 모드는 좌우만)
  *     run     끝까지 밀면 이 키도 같이 (점프 어드벤처: 달리기)
+ *     four    4방향만: 더 크게 민 쪽 하나만 눌러요 (폭탄 배틀처럼 칸을 따라 걷는 게임 · 대각선으로 밀어도 흔들리지 않게)
  *     analog  방향키 대신 Stick.vec() 로 방향 · 세기를 읽어요 (총알피하기: 살짝 밀면 천천히)
  *     full    오른쪽 버튼 없이 조이스틱만 (세로 화면: 아래 전체가 조이스틱 자리 · 가로 화면: 양옆 어느 쪽이든)
  *     act     오른쪽 버튼 — 오른쪽 자리 어디를 눌러도 그 버튼이에요 (점프 · 스파이크). 길게 누르면 계속 누른 것
@@ -149,11 +150,16 @@ const Stick = {
     const want = new Set(), v = this.vec();
     if (v && !this.opt('analog')) {
       const on = code => this.added.has(code);
-      if (this.opt('x') !== false) {
+      if (this.opt('four')) {                                                  // 4방향: 더 크게 민 쪽 하나 (지금 가는 쪽은 1.3배 더 밀어야 바뀌어요)
+        const ax = Math.abs(v.x), ay = Math.abs(v.y);
+        const curH = on('ArrowLeft') || on('ArrowRight'), curV = on('ArrowUp') || on('ArrowDown');
+        const horiz = curH ? ay <= ax * 1.3 : curV ? ax > ay * 1.3 : ax >= ay;
+        if (Math.max(ax, ay) > (curH || curV ? this.TH_OFF : this.TH)) want.add(horiz ? (v.x < 0 ? 'ArrowLeft' : 'ArrowRight') : (v.y < 0 ? 'ArrowUp' : 'ArrowDown'));
+      } else if (this.opt('x') !== false) {
         if (v.x < -(on('ArrowLeft') ? this.TH_OFF : this.TH)) want.add('ArrowLeft');
         else if (v.x > (on('ArrowRight') ? this.TH_OFF : this.TH)) want.add('ArrowRight');
       }
-      if (this.opt('y')) {
+      if (this.opt('y') && !this.opt('four')) {
         if (v.y < -(on('ArrowUp') ? this.THY_OFF : this.THY)) want.add('ArrowUp');
         else if (v.y > (on('ArrowDown') ? this.THY_OFF : this.THY)) want.add('ArrowDown');
       }

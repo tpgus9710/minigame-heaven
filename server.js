@@ -13,7 +13,7 @@
  *    server.js        방 만들기·입장·채팅 같은 공통 기능
  *    lib/             공통 도구 (accounts.js = 얼굴 로그인 · 기록 · 친구, store.js = 계정 저장소)
  *    data/            단어 목록
- *    games/*.js       게임 하나당 파일 하나 (멀티 43종, 보드·카드 게임은 games/table.js 하나로)
+ *    games/*.js       게임 하나당 파일 하나 (멀티 51종, 보드·카드 게임은 games/table.js 하나로)
  *    public/          화면 (index.html, style.css, js/*.js)
  * ========================================================================= */
 const express = require('express');
@@ -111,7 +111,7 @@ const BUILD = (() => {
 const MODULES = [
   'cards', 'apple', 'race', 'catch', 'liar', 'tetris', 'omok', 'pong',
   'mine', 'g2048', 'snake', 'rain', 'bingo',
-  'dodge', 'plat', 'volley', 'bomb', 'tank', 'onecard', 'halli', 'ox', 'word', 'mole', 'scorerace', 'kart', 'puzzle',
+  'dodge', 'plat', 'volley', 'bomb', 'tank', 'onecard', 'halli', 'ox', 'word', 'setgame', 'mole', 'scorerace', 'kart', 'puzzle',
   'table',   // 차례형 보드·카드 게임들 (public/js/shared/*-core.js)
 ].map(name => require(`./games/${name}`)(H));
 for (const mod of MODULES) for (const [key, info] of Object.entries(mod.games)) REGISTRY[key] = { ...info, mod };

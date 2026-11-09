@@ -68,6 +68,7 @@ function show(id) {
   window.scrollTo({ top: 0 });
   if (typeof RoomList !== 'undefined') { if (id === 'multi') RoomList.start(); else RoomList.stop(); }
   if (typeof Manual !== 'undefined') Manual.seen(id);                 // 처음 하는 게임이면 설명서 안내
+  if (id === 'home' && typeof Home !== 'undefined') Home.render();     // 추천 게임: 방금 한 게임까지
   if (typeof Fit !== 'undefined') {
     const gaming = !MENU_IDS.has(id);                // 게임 화면 스타일은 바로 걸어요 (게임이 처음 그릴 때부터 맞는 크기로)
     document.body.classList.toggle('gaming', gaming);
@@ -378,40 +379,49 @@ const GAME_INFO = {
     rules: '흑과 백이 번갈아 돌을 놓아요. 놓을 때 <b>상대 돌을 내 돌 사이에 끼우면</b>(가로 · 세로 · 대각선) 그 돌들이 모두 내 색으로 뒤집혀요. 하나라도 뒤집을 수 있는 칸에만 둘 수 있고, 둘 곳이 없으면 자동으로 넘어가요. 둘 다 더 이상 둘 곳이 없으면 돌이 많은 쪽이 승리! 모서리는 절대 뒤집히지 않아요.' },
   shisen: { icon: '🀄', name: '사천성 대결', desc: '같은 판으로 3분 점수 대결', cat: '퍼즐', players: '1~8명',
     rules: '모두 똑같은 판으로 시작해요. 같은 그림 두 장을 <b>두 번 이하로 꺾인 선</b>으로 이을 수 있으면 사라져요. 선은 빈칸이나 판 바깥으로만 지나갈 수 있어요. 3초 안에 계속 맞히면 콤보 점수! 힌트(-30점)와 섞기도 있어요. 3분 뒤 점수가 가장 높은 사람이 우승!' },
+  mahjong: { icon: '🀄', name: '마작 솔리테어 대결', desc: '같은 판으로 4분 짝 맞추기 점수 대결 (상하이)', cat: '퍼즐', players: '1~8명', isNew: true,
+    rules: '모두 똑같이 쌓인 패를 받아요. <b>풀린 패</b>(위에 아무것도 없고, 왼쪽이나 오른쪽 한쪽이 비어 있는 패) 중 같은 그림 두 장을 누르면 사라져요. 한 쌍에 10점, 3초 안에 계속 맞히면 콤보! 판을 다 비우면 보너스. 힌트(-30점) · 섞기도 있어요. 4분 뒤 점수가 가장 높은 사람이 우승!' },
+  tilematch: { icon: '🧩', name: '타일 매치 대결', desc: '같은 그림 3개 모으기 · 4분 레벨 점수 대결', cat: '퍼즐', players: '1~8명', isNew: true,
+    rules: '모두 같은 판으로 시작해요. 위가 트인 타일을 누르면 아래 7칸으로 내려가고, <b>같은 그림 3개</b>가 모이면 사라져요(레벨 × 30점). 7칸이 꽉 차면 그 레벨을 새 판으로 다시! 판을 다 비우면 레벨 보너스(레벨 × 100점)와 함께 다음 레벨로. 4분 뒤 점수가 가장 높은 사람이 우승!' },
+  setgame: { icon: '🔺', name: '세트 찾기', desc: '세트 3장을 먼저 찾는 순발력 카드 게임 (SET 방식)', cat: '퍼즐', players: '1~8명 · 봇 가능', isNew: true,
+    rules: '바닥에 카드 12장이 펼쳐져요. 카드마다 <b>개수 · 모양 · 색 · 채우기</b> 네 가지가 있어요. 네 가지가 각각 <b>모두 같거나 모두 다른</b> 카드 3장이 세트! 먼저 찾아 3장을 누르면 내 점수(+1)예요. 틀리면 -1점에 2초 동안 못 눌러요. 바닥에 세트가 없으면 카드가 3장 더 나와요. 더미가 다 떨어지고 세트가 없으면 끝 — 세트를 가장 많이 찾은 사람이 우승! 봇(쉬움 · 보통 · 고수)도 넣을 수 있고, 혼자면 봇 1명과 해요.' },
   pinball: { icon: '🎯', name: '핀볼 점수 대결', desc: '같은 핀볼 판으로 4분 점수 대결', cat: '액션', players: '1~8명', isNew: true,
     rules: '모두 같은 핀볼 판에서 공 3개로 점수를 겨뤄요. 화면 <b>왼쪽 · 오른쪽</b>을 누르면 플리퍼(키보드 ← →), 공이 발사대에 있으면 <b>길게 눌렀다 떼서 발사</b>! 범퍼 · 드롭 타깃 · 궤도 · 스피너로 점수를 쌓고, 드롭 타깃을 다 쓰러뜨려 구멍에 2번 넣으면 <b>멀티볼</b> — 궤도 · 스피너로 <b>잭팟</b>! 4분이 지나거나 모두 공을 다 쓰면 점수가 가장 높은 사람이 우승.' },
-  sudoku: { icon: '🔢', name: '스도쿠 대결', desc: '같은 퍼즐을 누가 먼저 푸나', cat: '퍼즐', players: '1~8명', isNew: true,
+  sudoku: { icon: '🔢', name: '스도쿠 대결', desc: '같은 퍼즐을 누가 먼저 푸나', cat: '퍼즐', players: '1~8명',
     rules: '모두 같은 스도쿠를 받아요. 가로줄 · 세로줄 · 3×3 칸마다 1~9가 한 번씩 들어가게 채워서 <b>가장 먼저 다 맞게 채운 사람이 우승</b>! 위쪽 점수는 채운 칸 %예요(맞았는지는 끝날 때까지 비밀). 시간이 다 되면 맞은 칸이 많은 순서로 순위가 정해져요. 메모 · 되돌리기 가능, 힌트는 없어요.' },
-  nonogram: { icon: '🖼️', name: '노노그램 대결', desc: '같은 그림 퍼즐 먼저 칠하기', cat: '퍼즐', players: '1~8명', isNew: true,
+  nonogram: { icon: '🖼️', name: '노노그램 대결', desc: '같은 그림 퍼즐 먼저 칠하기', cat: '퍼즐', players: '1~8명',
     rules: '모두 같은 노노그램을 받아요. 줄 옆 숫자만큼 이어서 칸을 칠해서(숫자가 여러 개면 덩어리 사이에 빈칸) <b>가장 먼저 모든 줄을 맞힌 사람이 우승</b>! 위쪽 점수는 칠한 칸 %예요. 시간이 다 되면 맞은 칸이 많은 순서. X 표시 · 끌어서 칠하기 · 되돌리기 가능, 힌트는 없어요.' },
-  chess: { icon: '♞', name: '체스', desc: '세계 공통 규칙 체스 · 체스 시계', cat: '보드·카드', players: '2명 · 봇 가능', isNew: true,
+  chess: { icon: '♞', name: '체스', desc: '세계 공통 규칙 체스 · 체스 시계', cat: '보드·카드', players: '2명 · 봇 가능',
     rules: '백이 먼저 두고 번갈아 말을 한 번씩 움직여요. 상대 <b>킹을 잡을 수밖에 없게(체크메이트)</b> 만들면 승리! 말을 누르면 갈 수 있는 칸이 점으로 보여요(끌어서 옮겨도 돼요). <b>캐슬링</b>(킹 · 룩이 안 움직였고 사이가 비었을 때) · <b>앙파상</b>(바로 전에 두 칸 온 폰을 옆에서 잡기) · <b>프로모션</b>(끝줄에 간 폰은 퀸 · 룩 · 비숍 · 나이트로)도 다 돼요. 스테일메이트 · 같은 국면 3번 · 50수 동안 폰 이동과 잡기 없음 · 서로 체크메이트할 말이 없으면 무승부. 멀티는 <b>체스 시계</b>(정한 시간 + 한 수마다 추가 시간)가 있어서 시간이 다 되면 져요. 무승부 제안 · 기권도 할 수 있어요.' },
-  gostop: { icon: '🎴', name: '고스톱', desc: '2명은 맞고 · 3명은 고스톱 (피망 규칙)', cat: '보드·카드', players: '2~3명 · 봇 가능', isNew: true,
+  gostop: { icon: '🎴', name: '고스톱', desc: '2명은 맞고 · 3명은 고스톱 (피망 규칙)', cat: '보드·카드', players: '2~3명 · 봇 가능',
     rules: '화투 48장 + 보너스피 2장. <b>2명은 맞고</b>(손패 10장 · 7점 나기), <b>3명은 고스톱</b>(손패 7장 · 3점 나기). 내 차례엔 손패 한 장을 내서 바닥의 같은 달 패를 먹고, 더미에서 한 장 뒤집어 또 맞춰요. 점수: <b>광</b> 3장 3점(비광 끼면 2점) · 4장 4점 · 5장 15점 / <b>열끗</b> 5장 1점 · 고도리 5점 / <b>띠</b> 5장 1점 · 홍단 · 청단 · 초단 3점 / <b>피</b> 10장 1점(쌍피 2장). 점수가 나면 <b>고</b>(계속, 1고 +1 · 2고 +2 · 3고부터 두 배씩) 또는 <b>스톱</b>! 흔들기 · 폭탄 · 멍따(열끗 7장)는 두 배, 진 사람은 피박 · 광박 · 고박이면 두 배. 쪽 · 따닥 · 뻑 먹기 · 판쓸 · 폭탄이면 상대 피를 한 장씩 뺏어요. 뻑 3번 · 총통은 바로 승리, 아무도 못 나면 나가리(다음 판 두 배).' },
-  rummi: { icon: '🀫', name: '러미 타일', desc: '숫자 타일로 런 · 그룹 만들기 (루미큐브 방식)', cat: '보드·카드', players: '2~4명 · 봇 가능', isNew: true,
+  rummi: { icon: '🀫', name: '러미 타일', desc: '숫자 타일로 런 · 그룹 만들기 (루미큐브 방식)', cat: '보드·카드', players: '2~4명 · 봇 가능',
     rules: '1~13 숫자 타일 4색 × 2벌과 조커 2개(106개) 중 14개씩 받아요. 같은 색 연속 숫자 3개 이상(<b>런</b>)이나 같은 숫자 다른 색 3~4개(<b>그룹</b>)를 내려놓아요. 첫 등록은 <b>내 타일만으로 합 30 이상</b>! 등록한 뒤에는 바닥의 세트를 떼고 붙여 마음대로 다시 짤 수 있어요(차례가 끝날 때 모든 세트가 맞아야 해요). 낼 게 없으면 타일을 한 장 가져와요. 가장 먼저 타일을 다 내면 승리! 남은 타일 합(조커 30점)이 벌점이에요.' },
-  bang: { icon: '⭐', name: '황야의 총잡이', desc: '정체를 숨긴 서부 총격전 (뱅! 방식)', cat: '보드·카드', players: '4~7명 · 봇 가능', isNew: true,
+  bang: { icon: '⭐', name: '황야의 총잡이', desc: '정체를 숨긴 서부 총격전 (뱅! 방식)', cat: '보드·카드', players: '4~7명 · 봇 가능',
     rules: '몰래 받은 역할로 싸워요. <b>보안관</b>(공개)과 부관은 무법자와 배신자를 모두 쓰러뜨리면, <b>무법자</b>는 보안관을 쓰러뜨리면, <b>배신자</b>는 혼자 끝까지 살아남으면 승리! 내 차례엔 카드 2장을 가져오고 사정거리 안의 상대에게 <b>뱅!</b>(차례에 한 번), 맞으면 <b>빗나감!</b>으로 피해요. 맥주 · 술통 · 감옥 · 다이너마이트 · 기관총 · 결투 · 강탈 · 무기(사정거리)와 인물 16명의 능력까지! 생명력보다 많은 카드는 차례 끝에 버려요.' },
-  coup: { icon: '👑', name: '궁정 음모', desc: '거짓말과 도전! 블러핑 카드 게임 (쿠 방식)', cat: '보드·카드', players: '2~6명 · 봇 가능', isNew: true,
+  coup: { icon: '👑', name: '궁정 음모', desc: '거짓말과 도전! 블러핑 카드 게임 (쿠 방식)', cat: '보드·카드', players: '2~6명 · 봇 가능',
     rules: '인물 카드 2장(공작 · 암살자 · 사령관 · 대사 · 백작부인)과 코인 2개로 시작해요. 차례엔 소득(+1) · 해외 원조(+2) · 쿠데타(7코인) 또는 <b>인물 능력</b>을 써요: 공작 세금 +3 · 암살자 3코인으로 암살 · 사령관 2코인 갈취 · 대사 카드 교환. 그 인물이 없어도 <b>있는 척</b>할 수 있어요! 의심되면 <b>도전!</b> 거짓말이면 거짓말한 쪽이, 진짜면 도전한 쪽이 카드를 잃어요. 해외 원조는 공작이, 암살은 백작부인이, 갈취는 사령관 · 대사가 막아요. 코인 10개 이상이면 반드시 쿠데타! 카드 2장을 모두 잃으면 탈락, 마지막 생존자가 승리.' },
-  dalmuti: { icon: '🤴', name: '계급 전쟁', desc: '인생은 불공평해! 신분 카드 게임 (달무티 방식)', cat: '보드·카드', players: '4~8명 · 봇 가능', isNew: true,
+  dalmuti: { icon: '🤴', name: '계급 전쟁', desc: '인생은 불공평해! 신분 카드 게임 (달무티 방식)', cat: '보드·카드', players: '4~8명 · 봇 가능',
     rules: '1(달무티)부터 12(농노)까지 숫자만큼 카드가 있고 어릿광대 2장까지 80장, <b>숫자가 낮을수록 강해요</b>. 선은 같은 숫자 카드를 원하는 만큼 내고, 다음 사람은 <b>같은 장수로 더 낮은 숫자</b>를 내거나 패스해요. 모두 패스하면 마지막에 낸 사람이 새로 시작! 어릿광대는 다른 카드와 함께 내면 그 숫자, 혼자면 13. 먼저 다 낸 순서로 다음 판 계급이 정해지고, <b>농노는 가장 좋은 카드 2장을 달무티에게, 소작농은 1장을 총리대신에게</b> 바쳐요(받은 쪽은 아무 카드나 돌려줘요). 어릿광대 2장을 받으면 혁명! 정한 판 수 동안 점수를 겨뤄요.' },
-  relay: { icon: '🖍️', name: '그림 릴레이', desc: '그리고 맞히고 또 그리고! (텔레스트레이션 방식)', cat: '파티', players: '3~10명', isNew: true,
+  relay: { icon: '🖍️', name: '그림 릴레이', desc: '그리고 맞히고 또 그리고! (텔레스트레이션 방식)', cat: '파티', players: '3~10명',
     rules: '모두 단어 카드(6개)와 주사위로 비밀 단어를 정해요. 스케치북을 옆 사람에게 넘기며 <b>단어를 그림으로 그리기 → 그림을 보고 단어 맞히기</b>를 번갈아 해요(한 장에 60초, 대기실에서 바꿀 수 있어요). 스케치북이 주인에게 돌아오면 한 권씩 펼쳐 보며 단어가 어떻게 바뀌었는지 함께 구경해요! 원래 단어를 그대로 맞히면 맞힌 사람과 그린 사람 모두 +1점, 마음에 드는 장에 하트를 받으면 +1점.' },
-  kart: { icon: '🏎️', name: '드리프트 카트', desc: '드리프트로 부스터 모아 1등! 카트 레이싱', cat: '액션', players: '1~8명', isNew: true,
+  kart: { icon: '🏎️', name: '드리프트 카트', desc: '드리프트로 부스터 모아 1등! 카트 레이싱', cat: '액션', players: '1~8명',
     rules: '방향키(또는 WASD)로 달리고 <b>Shift를 누른 채 꺾으면 드리프트</b>! 드리프트를 길게 하고 놓으면 순간 대시, 스피드전에서는 드리프트로 <b>부스터 게이지</b>가 차서 부스터를 얻어요(Ctrl 또는 E로 사용). 아이템전에서는 아이템 상자를 지나 바나나 · 물풍선 · 미사일 · 실드 · 부스터를 얻어요. 출발 신호 직전에 가속하면 출발 부스터! 벽에 끼면 R 키로 트랙 복귀. 정한 바퀴 수를 가장 먼저 도는 사람이 우승!' },
 };
 const SOLO_GAMES = [   // [키, 아이콘, 이름, 설명, NEW 표시, 분류]
+  ['setgame', '🔺', '세트 찾기', '3분 기록 도전 · AI 1~3명 대결 (SET 방식)', true, '퍼즐'],
+  ['mahjong', '🀄', '마작 솔리테어', '쌓인 패를 짝 맞춰 비우기 (상하이) · 시간 기록', true, '퍼즐'],
+  ['tilematch', '🧩', '타일 매치', '같은 그림 3개 모으기 · 레벨 깨기', true, '퍼즐'],
   ['pinball', '🎯', '핀볼', '플리퍼로 튕겨 미션 · 멀티볼 · 잭팟!', true, '액션'],
-  ['sudoku', '🔢', '스도쿠', '쉬움 · 보통 · 어려움 · 이유를 알려 주는 힌트', true, '퍼즐'],
-  ['nonogram', '🖼️', '노노그램', '숫자만큼 칠해서 그림 완성 · 5×5~15×15', true, '퍼즐'],
-  ['gostop', '🎴', '고스톱 vs AI', '맞고(AI 1명) · 3인 고스톱(AI 2명)', true, '보드·카드'],
-  ['chess', '♞', '체스 vs AI', '쉬움/보통/어려움 · 무르기 가능', true, '보드·카드'],
-  ['kart', '🏎️', '드리프트 카트', '카트 레이싱 · AI와 3바퀴', true, '액션'],
-  ['dalmuti', '🤴', '계급 전쟁 vs AI', '달무티 방식 · AI 3~7명', true, '보드·카드'],
-  ['coup', '👑', '궁정 음모 vs AI', '쿠 방식 블러핑 · AI 1~5명', true, '보드·카드'],
-  ['bang', '⭐', '황야의 총잡이 vs AI', '뱅! 방식 · 봇 3~6명', true, '보드·카드'],
-  ['rummi', '🀫', '러미 타일 vs AI', '루미큐브 방식 · AI 1~3명', true, '보드·카드'],
+  ['sudoku', '🔢', '스도쿠', '쉬움 · 보통 · 어려움 · 이유를 알려 주는 힌트', false, '퍼즐'],
+  ['nonogram', '🖼️', '노노그램', '숫자만큼 칠해서 그림 완성 · 5×5~15×15', false, '퍼즐'],
+  ['gostop', '🎴', '고스톱 vs AI', '맞고(AI 1명) · 3인 고스톱(AI 2명)', false, '보드·카드'],
+  ['chess', '♞', '체스 vs AI', '쉬움/보통/어려움 · 무르기 가능', false, '보드·카드'],
+  ['kart', '🏎️', '드리프트 카트', '카트 레이싱 · AI와 3바퀴', false, '액션'],
+  ['dalmuti', '🤴', '계급 전쟁 vs AI', '달무티 방식 · AI 3~7명', false, '보드·카드'],
+  ['coup', '👑', '궁정 음모 vs AI', '쿠 방식 블러핑 · AI 1~5명', false, '보드·카드'],
+  ['bang', '⭐', '황야의 총잡이 vs AI', '뱅! 방식 · 봇 3~6명', false, '보드·카드'],
+  ['rummi', '🀫', '러미 타일 vs AI', '루미큐브 방식 · AI 1~3명', false, '보드·카드'],
   ['shisen', '🀄', '사천성', '3분 안에 패를 모두 없애라', false, '퍼즐'],
   ['reversi', '⚫', '리버시 vs AI', '오델로 방식 · 쉬움/보통/어려움', false, '보드·카드'],
   ['davinci', '🔐', '암호 해독 vs AI', '다빈치 코드 방식 추리 게임', false, '보드·카드'],
@@ -454,7 +464,7 @@ const avColor = id => AV_COLORS[[...String(id)].reduce((a, c) => a + c.charCodeA
 const EMOJIS = ['👍', '😂', '😱', '🔥', '👏', '💰', '😭', '🤔', '😎', '🙏'];
 
 /* 메뉴 카드 + 분류 칩 */
-const UPDATED = new Set(['life', 'word']);   // 이번에 크게 바뀐 게임
+const UPDATED = new Set(['rummi', 'bomb']);   // 이번에 크게 바뀐 게임
 function fillGrid(sel, list) {
   const grid = $(sel);
   list = list.slice().sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));   // 새 게임을 앞쪽에
@@ -608,7 +618,10 @@ socket.on('joined', d => {
   outSet.clear(); S.scores = []; renderScores();   // 전에 있던 방의 점수가 남지 않게
   stopLocal(); hideOverlay(); show('lobby');
 });
-socket.on('room', r => { S.room = r; renderLobby(); });
+socket.on('room', r => {
+  if (r && r.isStarted && !(S.room && S.room.isStarted && S.room.code === r.code) && typeof Home !== 'undefined') Home.count(r.gameType, 'm');   // 멀티 한 판 시작 (홈 추천)
+  S.room = r; renderLobby();
+});
 socket.on('toLobby', d => {
   stopLocal(); outSet.clear(); S.scores = []; hideOverlay(); show('lobby'); renderLobby();
   if (d && d.msg) toast(d.msg);
@@ -941,7 +954,7 @@ function showResult(d) {
   $('#ov-rank').innerHTML = (d.ranking || []).map((r, i) => `<li><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(r.name)}</span><b>${esc(r.value)}</b></li>`).join('');
   $('#ov-rank').style.display = d.ranking && d.ranking.length ? '' : 'none';
   if (d.solo) {
-    $('#ov-actions').innerHTML = `<button class="btn good" data-act="retrySolo" data-game="${d.solo}">다시 하기</button><button class="btn ghost" data-act="soloMenu">메뉴로</button>`;
+    $('#ov-actions').innerHTML = `<button class="btn good" data-act="retrySolo" data-game="${d.solo}">${esc(d.again || '다시 하기')}</button><button class="btn ghost" data-act="soloMenu">메뉴로</button>`;   // again: 버튼 글 (타일 매치: 다음 레벨)
   } else {
     let n = d.returnIn || 10;
     const isHost = me() && me().isHost, watch = me() && me().role === 'spectator';
@@ -963,6 +976,7 @@ function hideOverlay() { clearInterval(ovTimer); ovDraw = null; $('#overlay').cl
 
 function startSolo(game) {
   stopLocal(); hideOverlay();
+  if (typeof Home !== 'undefined') Home.count(game, 's');                        // 홈 추천 게임용 (이 기기 기록)
   Games[game].solo();
 }
 
@@ -1047,10 +1061,59 @@ padEl.addEventListener('pointerdown', e => {
   const g = Games[S.screen]; if (g && g.keyup) g.keyup(fakeKey(b.dataset.code));
 }));
 
-/* 홈: 새로 나온 게임 진열대 (누르면 바로 싱글, 멀티 전용이면 멀티 메뉴로) */
-$('#home-new').innerHTML = Object.entries(GAME_INFO).filter(([, g]) => g.isNew).map(([k, g]) =>
-  `<button class="home-chip" data-act="homeNew" data-game="${k}">${gameIcon(k, g.cat, 'sm')}<span><b>${esc(stripEmoji(g.name))}</b><small>${esc(g.desc)}</small></span></button>`).join('');
+/* ─── 홈: 추천 게임(자주 하는 게임) 위 · 새로 나온 게임(최신 몇 개, 한 줄) 아래 ───
+ *  자주 하는 게임 = 계정 기록(멀티 + 싱글 판수 · 최근 판, lib/accounts.js favOf) 과 이 기기 기록(mgPlays) 중 큰 쪽.
+ *  누르면 많이 한 쪽으로 바로: 싱글이면 바로 시작 · 멀티면 그 게임 방을 바로 만들어요. 기록이 모자라면 같은 분류 → 기본 추천으로 채워요. */
+const NEW_GAMES = ['setgame', 'mahjong', 'tilematch', 'pinball'];                 // 새로 나온 게임 (최신이 앞)
+const HOME_DEFAULT = ['tetris', 'shisen', 'rummi', 'catch', 'g2048', 'omok', 'gostop', 'yut'];
+const Home = {
+  plays() { try { return JSON.parse(localStorage.getItem('mgPlays') || '{}') || {}; } catch { return {}; } },
+  /** 이 기기에서 한 판 시작 (싱글 s · 멀티 m) */
+  count(k, mode) {
+    if (!k) return;
+    const d = this.plays(), x = Array.isArray(d[k]) ? d[k] : [0, 0, 0];
+    x[mode === 'm' ? 1 : 0]++; x[2] = Date.now(); d[k] = x;
+    try { localStorage.setItem('mgPlays', JSON.stringify(d)); } catch { /* 저장 못 해도 괜찮아요 */ }
+  },
+  solo: k => SOLO_GAMES.find(g => g[0] === k),
+  has(k) { return !!(GAME_INFO[k] || this.solo(k)); },
+  name(k, mode) { const s = this.solo(k), g = GAME_INFO[k]; return stripEmoji((mode === 'm' && g) || !s ? g.name : s[2]).replace(/\s+vs\s+(AI|봇)$/, '').replace(/\s+기록 도전$/, ''); },
+  picks() {
+    const m = new Map(), now = Date.now();
+    const fav = (typeof Acct !== 'undefined' && Acct.me && Acct.me.fav) || [];
+    fav.forEach(([k, p, mode], i) => m.set(k, { k, p: +p || 0, mode, w: (+p || 0) + (8 - i) * 0.5 }));
+    for (const [k, x] of Object.entries(this.plays())) {
+      if (!Array.isArray(x)) continue;
+      const p = (x[0] || 0) + (x[1] || 0), fresh = x[2] ? Math.max(0, 5 - (now - x[2]) / 864e5) : 0;   // 요 며칠 한 게임은 조금 더 위로
+      const y = m.get(k);
+      if (y) { y.p = Math.max(y.p, p); y.w = Math.max(y.w, p) + fresh; }
+      else m.set(k, { k, p, mode: (x[1] || 0) > (x[0] || 0) ? 'm' : 's', w: p + fresh });
+    }
+    const list = [...m.values()].filter(x => x.p > 0 && this.has(x.k)).sort((a, b) => b.w - a.w).slice(0, 4);
+    const played = list.length, top = list[0] && catOf(list[0].k);
+    const pool = (top ? [...SOLO_GAMES.map(g => g[0]), ...Object.keys(GAME_INFO)].filter(k => catOf(k) === top) : []).concat(HOME_DEFAULT);
+    for (const k of pool) {
+      if (list.length >= 4) break;
+      if (this.has(k) && !NEW_GAMES.includes(k) && !list.some(x => x.k === k)) list.push({ k, p: 0, mode: this.solo(k) ? 's' : 'm' });
+    }
+    return { list, played };
+  },
+  render() {
+    const el = $('#home-rec'); if (!el) return;
+    const { list, played } = this.picks();
+    $('#home-rec-sub').textContent = played ? '자주 하는 게임' : '처음이라면 이런 게임부터';
+    el.innerHTML = list.map(x => {
+      const mode = x.mode === 'm' && GAME_INFO[x.k] ? 'm' : this.solo(x.k) ? 's' : 'm';
+      const sub = x.p ? `${x.p.toLocaleString()}판 · ${mode === 'm' ? '친구와' : '싱글'}` : esc(mode === 'm' ? GAME_INFO[x.k].desc : this.solo(x.k)[3]);
+      return `<button class="home-chip rec" data-act="homeGo" data-game="${x.k}" data-mode="${mode}">${gameIcon(x.k, catOf(x.k), 'sm')}<span><b>${esc(this.name(x.k, mode))}</b><small>${sub}</small></span>${icon('chevron-right', 'go')}</button>`;
+    }).join('');
+  },
+};
+$('#home-new').innerHTML = NEW_GAMES.filter(k => Home.has(k)).map(k =>
+  `<button class="home-pill" data-act="homeNew" data-game="${k}">${gameIcon(k, catOf(k), 'sm')}<b>${esc(Home.name(k, 's'))}</b><span class="new-badge">NEW</span></button>`).join('');
+Home.render();
 ACT.homeNew = el => { const k = el.dataset.game; if (SOLO_GAMES.some(g => g[0] === k)) { nick(); startSolo(k); } else { ACT.goMulti(); toast(`${GAME_INFO[k].name}은(는) 친구들과 하는 게임이에요. 방을 만들어 보세요!`); } };
+ACT.homeGo = el => { const k = el.dataset.game; if (el.dataset.mode === 'm' && GAME_INFO[k]) ACT.create(el); else if (Home.solo(k)) { nick(); startSolo(k); } else ACT.homeNew(el); };
 /* 정적 HTML의 아이콘 자리 채우기 + 예전 화면 제목의 이모지도 아이콘 타일로 */
 $$('.gh-title h2').forEach(h => { if (h.querySelector('.gi')) return; const sec = h.closest('section'), id = sec ? sec.id.replace(/^scr-/, '') : ''; h.innerHTML = `${gameIcon(id, catOf(id), 'sm')}<span class="tt">${esc(stripEmoji(h.textContent))}</span>`; });
 $$('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); });

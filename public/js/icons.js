@@ -154,6 +154,9 @@ const ICONS = {
   'pencil': '<path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/> <path d="M13.5 6.5l4 4"/>',
   'pick': '<path d="M13 8l-9.383 9.418a2.091 2.091 0 0 0 0 2.967a2.11 2.11 0 0 0 2.976 0l9.407 -9.385"/> <path d="M9 3h4.586a1 1 0 0 1 .707 .293l6.414 6.414a1 1 0 0 1 .293 .707v4.586a2 2 0 1 1 -4 0v-3l-5 -5h-3a2 2 0 1 1 0 -4z"/>',
   'pinball': '<circle cx="12" cy="6.5" r="2.5" /><path d="M3.5 15.5l6 3.5" /><path d="M20.5 15.5l-6 3.5" /><path d="M5 11.5v-3" /><path d="M19 11.5v-3" />',
+  'shapes': '<path d="M12 3l-4 7h8z" /><path d="M17 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M4 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" />',
+  'mahjong': '<rect x="8.5" y="3" width="11" height="14" rx="2" /><path d="M5 7.5v10.5a2 2 0 0 0 2 2h9" /><path d="M12 7.5l2 -1.5l2 1.5" /><path d="M12 11h4" /><path d="M14 11v3" />',
+  'tiles-3': '<rect x="3" y="8" width="5" height="7" rx="1.2" /><rect x="9.5" y="8" width="5" height="7" rx="1.2" /><rect x="16" y="8" width="5" height="7" rx="1.2" /><path d="M3 19h18" /><path d="M5.5 4.5v1.5M12 4.5v1.5M18.5 4.5v1.5" />',
   'ping-pong': '<path d="M12.718 20.713a7.64 7.64 0 0 1 -7.48 -12.755l.72 -.72a7.643 7.643 0 0 1 9.105 -1.283l2.387 -2.345a2.08 2.08 0 0 1 3.057 2.815l-.116 .126l-2.346 2.387a7.644 7.644 0 0 1 -1.052 8.864"/> <path d="M14 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/> <path d="M9.3 5.3l9.4 9.4"/>',
   'player-pause': '<path d="M6 5m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" /> <path d="M14 5m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" />',
   'player-play': '<path d="M7 4v16l13 -8z"/>',
@@ -277,6 +280,9 @@ const GAME_ICONS = {
   relay: 'scribble',
   kart: 'steering-wheel',
   pinball: 'pinball',
+  setgame: 'shapes',
+  mahjong: 'mahjong',
+  tilematch: 'tiles-3',
 };
 /** 분류별 색 (아이콘 타일 그라데이션) */
 const CAT_COLORS = { '액션': ['#ff6b4a', '#c2185b'], '퍼즐': ['#3aa0ff', '#4f46e5'], '보드·카드': ['#22c38e', '#0f766e'], '파티': ['#b06cff', '#7c3aed'] };

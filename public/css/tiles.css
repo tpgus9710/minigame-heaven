@@ -1,0 +1,58 @@
+/* ═════════════ 🀄 마작 솔리테어 (#scr-mahjong) · 🧩 타일 매치 (#scr-tilematch) ═════════════
+ * 패 크기는 화면마다 js 의 fit() 이 정해요: --tw(패 너비) · --th(높이) · --d(층마다 위로 올라가 보이는 두께) · --lz(가장 높은 층) */
+.mj-wrap{position:relative;display:flex;justify-content:center;padding:2px 0 4px}
+.mj-board{position:relative;margin:0 auto;--tw:48px;--th:62px;--d:5px;--lz:3}
+.mj-tile{position:absolute;padding:0;border:0;cursor:pointer;display:grid;place-items:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  left:calc(var(--x) * var(--tw) / 2 + (var(--lz) - var(--z)) * var(--d));top:calc(var(--y) * var(--th) / 2 + (var(--lz) - var(--z)) * var(--d));
+  width:calc(var(--tw) - 2px);height:calc(var(--th) - 2px);border-radius:calc(var(--tw) * .14);background:linear-gradient(160deg,#fffef8,#efe6cc);
+  box-shadow:1px 1px 0 #e3d6b2,2px 2px 0 #d2bf8f,var(--d) var(--d) 0 #a8834a,calc(var(--d) + 1px) calc(var(--d) + 3px) 7px rgba(0,0,0,.4);
+  transition:transform .12s,filter .15s,opacity .2s}
+.mj-tile b{font-family:'Noto Serif KR','Noto Sans KR',serif;font-weight:900;font-size:calc(var(--tw) * .56);line-height:1;pointer-events:none}
+.mj-tile.r b{color:#b3261e} .mj-tile.g b{color:#1e7a46} .mj-tile.b b{color:#1d3f8a}
+.mj-tile.lock{filter:brightness(.74) saturate(.7);cursor:default}
+.mj-tile.sel{transform:translate(-2px,-4px);background:linear-gradient(160deg,#fff8d6,#ffe69a);box-shadow:0 0 0 3px #ffd54f,var(--d) var(--d) 0 #a8834a,0 10px 18px rgba(0,0,0,.45)}
+.mj-tile.gone{visibility:hidden;pointer-events:none}
+.mj-tile.out{animation:mjOut .3s ease-in forwards}
+.mj-tile.hint{animation:mjHint 1.2s 2}
+.mj-tile.nope{animation:mjNope .32s}
+@keyframes mjOut{to{transform:scale(.7) translateY(-10px);opacity:0}}
+@keyframes mjHint{50%{box-shadow:0 0 0 4px #4ade80,0 0 20px #4ade80,var(--d) var(--d) 0 #a8834a}}
+@keyframes mjNope{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.mj-tools,.tm-tools{display:flex;gap:8px;justify-content:center;align-items:center;margin-top:12px;flex-wrap:wrap}
+.mj-tools .btn small,.tm-tools .btn small{opacity:.75;font-size:11px;margin-left:4px}
+#scr-mahjong .ss-pop,#scr-tilematch .ss-pop{top:0;z-index:5000}
+@media (max-width:620px) and (max-height:940px){ body.gaming #scr-mahjong .game-head .status,body.gaming #scr-tilematch .game-head .status{display:none} }
+
+/* 🧩 타일 매치: 판 · 위 칸(꺼낸 타일) · 아래 7칸 — 크기는 --ts (tilematch.js fit) */
+.tm-wrap{position:relative;display:flex;justify-content:center;padding:2px 0}
+.tm-board{position:relative;--ts:50px}
+.tm-tile{position:absolute;left:calc(var(--x) * var(--ts) / 2);top:calc(var(--y) * var(--ts) / 2);width:calc(var(--ts) - 3px);height:calc(var(--ts) - 3px);
+  border:0;padding:0;border-radius:calc(var(--ts) * .2);background:linear-gradient(170deg,#fffdf5,#f0e5c8);box-shadow:0 3px 0 #c6ad7a,0 5px 9px rgba(0,0,0,.38);
+  display:grid;place-items:center;font-size:calc(var(--ts) * .56);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:filter .15s}
+.tm-tile span{line-height:1;pointer-events:none;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+.tm-tile.lock{filter:brightness(.48) saturate(.55);cursor:default}
+.tm-tile.gone{visibility:hidden;pointer-events:none}
+.tm-tile.nope{animation:mjNope .3s}
+.tm-tray,.tm-hold{display:flex;gap:4px;justify-content:center;width:fit-content;margin:0 auto}
+.tm-tray{margin-top:10px;padding:6px;border-radius:calc(var(--ts) * .28);background:var(--panel);border:1px solid var(--line);transition:border-color .2s,box-shadow .2s}
+.tm-tray.warn{border-color:#ff6b6b;box-shadow:0 0 0 3px rgba(255,107,107,.22)}
+.tm-slot{width:var(--ts);height:var(--ts);border-radius:calc(var(--ts) * .2);background:var(--panel2);position:relative;flex:none}
+.tm-tile.in{position:relative;left:auto;top:auto;width:100%;height:100%;box-shadow:0 2px 0 #c6ad7a,0 3px 6px rgba(0,0,0,.3)}
+.tm-tile.fresh{animation:tmIn .2s ease-out}
+.tm-slot.match .tm-tile{animation:tmMatch .21s ease-in forwards}
+.tm-hold{display:none;margin-top:8px}
+.tm-hold.on{display:flex}
+.tm-hold .tm-slot{background:transparent;outline:2px dashed var(--line);outline-offset:-2px}
+.tm-fly{position:fixed;z-index:9999;border-radius:12px;background:linear-gradient(170deg,#fffdf5,#f0e5c8);display:grid;place-items:center;pointer-events:none;
+  transition:transform .2s cubic-bezier(.3,.7,.4,1),opacity .2s;box-shadow:0 8px 16px rgba(0,0,0,.4)}
+.tm-fly span{line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+@keyframes tmIn{from{transform:scale(.6);opacity:.4}to{transform:none;opacity:1}}
+@keyframes tmMatch{40%{transform:scale(1.15)}100%{transform:scale(.3);opacity:0}}
+/* 넓고 낮은 화면: 도구(마작) · 칸과 도구(타일 매치)를 판 오른쪽에 세워요 */
+.mj-area.side{display:flex;align-items:center;justify-content:center;gap:14px}
+.mj-area.side .mj-tools{flex-direction:column;align-items:stretch;margin:0;flex:none;max-width:130px}
+.mj-area.side .mj-tools .muted{text-align:center;word-break:keep-all}
+.tm-area.side{display:flex;align-items:center;justify-content:center;gap:14px}
+.tm-area.side .tm-side{display:flex;align-items:center;gap:10px;flex:none}
+.tm-area.side .tm-tray,.tm-area.side .tm-hold{flex-direction:column;margin:0}
+.tm-area.side .tm-tools{flex-direction:column;align-items:stretch;margin:0}

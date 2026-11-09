@@ -4,7 +4,7 @@
 const BB = { CELL: 40 };
 const BB_DIR = { ArrowUp: 1, KeyW: 1, ArrowRight: 2, KeyD: 2, ArrowDown: 3, KeyS: 3, ArrowLeft: 4, KeyA: 4 };
 makeScreen('bomb', {
-  title: '💥 폭탄 배틀', status: '방향키로 이동 · 스페이스로 폭탄! 상자를 부수면 아이템이 나와요.',
+  title: '💥 폭탄 배틀', status: TOUCH ? '왼쪽 엄지로 밀어서 이동 · 오른쪽을 누르면 폭탄! 상자를 부수면 아이템이 나와요.' : '방향키로 이동 · 스페이스로 폭탄! 상자를 부수면 아이템이 나와요.',
   stats: [['me', '내 능력'], ['time', '남은 시간']],
   body: `<div class="center"><canvas id="bomb-cv" class="game-cv" width="${15 * 40}" height="${13 * 40}"></canvas></div>`,
 });
@@ -143,6 +143,8 @@ register('bomb', {
     if (['Space', 'Enter', 'KeyX'].includes(e.code) && !e.repeat) { Bomb.press = true; Bomb.sendInput(true); }
   },
   keyup: e => { if (BB_DIR[e.code]) { Bomb.dirs = Bomb.dirs.filter(k => k !== e.code); Bomb.sendInput(false); } },
+  // 휴대폰 · 태블릿: 왼쪽 떠 있는 조이스틱(4방향) + 오른쪽 어디든 폭탄 (stick.js) — 키보드는 그대로
+  stick: { y: true, four: true, hint: '엄지로 밀어서 이동 · 대각선은 더 민 쪽으로', act: { code: 'Space', label: '폭탄', icon: 'bomb', hint: '오른쪽 어디든 누르면 폭탄' } },
   pad: ['ArrowLeft', 'ArrowUp', 'ArrowDown', 'ArrowRight', '|', 'Space'], padLabel: { Space: '💣' },
 });
 socket.on('bomb:start', d => Bomb.startMulti(d));
