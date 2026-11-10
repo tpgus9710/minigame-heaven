@@ -113,6 +113,13 @@ const CatchFeed = {
   clear() { const box = $('#catch-feed'); if (box) box.innerHTML = ''; },
 };
 socket.on('chat', d => { if (isScreen('catch') && !d.emoji && d.msg) CatchFeed.push(d); });
+// 대기실 옵션 (서버 games/catch.js 의 OPTIONS 와 같아요) — LOBBY_OPTIONS 는 뒤에 읽는 table.js 에 있어서 다 읽은 뒤에 넣어요
+document.addEventListener('DOMContentLoaded', () => {
+  LOBBY_OPTIONS.catch = [
+    { key: 'rounds', label: '🔁 라운드 (한 사람이 그리는 횟수)', def: 3, values: [[1, '1번'], [2, '2번'], [3, '3번'], [4, '4번'], [5, '5번'], [6, '6번']] },
+    { key: 'sec', label: '⏱ 그리는 시간', def: 80, values: [[60, '60초'], [80, '80초'], [100, '100초'], [120, '120초'], [150, '150초']] },
+  ];
+});
 socket.on('catch:start', () => {
   stopLocal(); Sketches.catch.clear(); Sketches.catch.enable(false);
   $('#catch-guess').classList.add('hidden'); CatchFeed.clear();
@@ -125,7 +132,7 @@ socket.on('catch:turn', d => {
   const mine = d.drawerId === S.myId;
   Sketches.catch.clear(); Sketches.catch.enable(mine);
   $('#catch-guess').classList.toggle('hidden', mine);
-  $('#catch-turn').textContent = `${d.turn}/${d.total}`;
+  $('#catch-turn').textContent = d.rounds > 1 ? `${d.turn}/${d.total} · ${d.round}라운드` : `${d.turn}/${d.total}`;
   $('#catch-status').textContent = mine ? '✏️ 내가 그릴 차례! 글자나 숫자는 쓰면 안 돼요.' : `✏️ ${d.drawerName} 님이 그리는 중 — ${CHAT_FLOAT.matches ? '정답 칸' : '채팅창'}에 정답을 입력하세요!`;
   $('#catch-word').innerHTML = mine ? '제시어를 받는 중…' : `${'○'.repeat(d.length)} <span class="muted small">(${d.length}글자)</span>`;
   $('#chat-input').placeholder = mine ? '메시지 입력…' : '정답을 입력하세요!';

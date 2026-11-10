@@ -8,7 +8,8 @@
  *     - 다시 시작: 「계속하기」(액션 게임은 3 · 2 · 1 뒤에)
  *  🙈 위장 화면: ` 키(숫자 1 왼쪽) · 🙈 버튼 · 일시정지 창 → 강의 노트(또는 코드 편집기)처럼 보이는 화면
  *     - 탭 제목 · 아이콘도 바뀌고 소리는 꺼져요. 싱글 게임이면 일시정지도 같이.
- *     - 돌아오기: ` 또는 Esc · 화면을 1초 꾹 누르기 (그냥 누르기는 아무 일도 없어요)
+ *     - 돌아오기: 왼쪽 위 ← (진짜 문서 앱의 '뒤로'처럼 보여요) · 화면을 0.8초 꾹 · ` 또는 Esc (다른 곳을 그냥 눌러도 아무 일도 없어요)
+ *       (v13.3: 아이폰은 꾹 누를 때 pointer 이벤트를 끊기도 해서 touch 이벤트로 따로 재요)
  *     - 🙈 버튼을 꾹 누르면(또는 Shift + `) 🚨 방 친구 모두 숨기기
  *  📚 수업 모드 (☰ 메뉴): 소리 · 진동 끄기 + 🙈 버튼 · 평일 9~18시 자동으로 켜기 · 위장 화면 고르기
  * ===================================================================== */
@@ -142,7 +143,7 @@ const Disguise = {
   CODE_ICON: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 8l-4 4l4 4M17 8l4 4l-4 4M14 4l-4 16'/%3E%3C/svg%3E",
   noteHTML() {
     return `<div class="dg-doc">
-      <div class="dg-bar"><span class="dg-file">${icon('file-text')}5주차_로봇기구학_정리</span><span class="dg-tools"><b>B</b><i>I</i><u>U</u><span>≡</span><span>⋮</span></span><span class="dg-saved">모든 변경사항 저장됨</span></div>
+      <div class="dg-bar"><button class="dg-back" data-act="dgHide" aria-label="뒤로">${icon('arrow-left')}</button><span class="dg-file">${icon('file-text')}5주차_로봇기구학_정리</span><span class="dg-tools"><b>B</b><i>I</i><u>U</u><span>≡</span><span>⋮</span></span><span class="dg-saved">모든 변경사항 저장됨</span></div>
       <div class="dg-page">
         <h1>5주차. 로봇 기구학 (Kinematics)</h1>
         <p class="dg-meta">로봇공학개론 · 수업 정리 노트</p>
@@ -178,7 +179,7 @@ const Disguise = {
     ];
     const line = ([k, h], i) => `<div class="dg-ln"><i>${i + 1}</i><span>${k === 'c' ? `<span class="c">${h}</span>` : k === 'k' ? `<span class="k">${h}` : h}</span></div>`;
     return `<div class="dg-code">
-      <div class="dg-tabs"><span class="on">${icon('code')}pid_controller.py</span><span>motor_test.py</span><span>README.md</span></div>
+      <div class="dg-tabs"><button class="dg-back" data-act="dgHide" aria-label="뒤로">${icon('arrow-left')}</button><span class="on">${icon('code')}pid_controller.py</span><span>motor_test.py</span><span>README.md</span></div>
       <div class="dg-src">${L.map(line).join('')}</div>
       <div class="dg-term"><b>터미널</b><pre>$ python pid_controller.py
   0  pos=  2.16  u= 216.00
@@ -216,12 +217,26 @@ const Disguise = {
     Hush.set('hide', false);
     if (this.room) { toast(`🚨 ${this.room} 님이 「모두 숨기기」를 눌렀어요.`); this.room = ''; }
   },
-  /** 돌아오기: 화면을 1초 꾹 (그냥 누르기 · 스크롤은 아무 일도 없어요) */
+  /** 돌아오기: 왼쪽 위 ← · 화면을 0.8초 꾹 (그냥 누르기 · 스크롤은 아무 일도 없어요) */
   bind(el) {
     const cancel = () => { clearTimeout(this.pressT); this.pressT = 0; };
-    el.addEventListener('pointerdown', e => { cancel(); const x = e.clientX, y = e.clientY; this.px = [x, y]; this.pressT = setTimeout(() => { this.pressT = 0; this.hide(); }, 1000); });
-    el.addEventListener('pointermove', e => { if (this.pressT && this.px && Math.hypot(e.clientX - this.px[0], e.clientY - this.px[1]) > 12) cancel(); });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => el.addEventListener(ev, cancel));
+    const start = (x, y) => { cancel(); this.px = [x, y]; this.pressT = setTimeout(() => { this.pressT = 0; this.hide(); }, 800); };
+    const move = (x, y) => { if (this.pressT && this.px && Math.hypot(x - this.px[0], y - this.px[1]) > 14) cancel(); };
+    // 손가락: touch 이벤트로 (아이폰 사파리는 꾹 누르는 동안 pointer 이벤트를 끊기도 해요)
+    el.addEventListener('touchstart', e => {
+      this.touchAt = Date.now();
+      if (e.touches.length !== 1 || (e.target.closest && e.target.closest('.dg-back'))) return cancel();
+      start(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    el.addEventListener('touchmove', e => { const t = e.touches[0]; if (t) move(t.clientX, t.clientY); }, { passive: true });
+    ['touchend', 'touchcancel'].forEach(ev => el.addEventListener(ev, cancel, { passive: true }));
+    // 마우스 · 펜 (손가락으로 만든 pointer 이벤트는 위에서 이미 셌어요)
+    el.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'touch' || Date.now() - (this.touchAt || 0) < 1000 || (e.target.closest && e.target.closest('.dg-back'))) return;
+      start(e.clientX, e.clientY);
+    });
+    el.addEventListener('pointermove', e => { if (e.pointerType !== 'touch') move(e.clientX, e.clientY); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => el.addEventListener(ev, e => { if (e.pointerType !== 'touch') cancel(); }));
     el.addEventListener('contextmenu', e => e.preventDefault());
   },
   /** 🚨 방 친구 모두 숨기기 (방 안에서만) */
@@ -265,12 +280,12 @@ const Class = {
         <button class="cm-opt ${k === 'note' ? 'on' : ''}" data-act="clsKind" data-k="note"><span class="cm-prev note"><i></i><i></i><i></i><i></i></span><b>강의 노트</b><small>로봇 기구학 정리</small></button>
         <button class="cm-opt ${k === 'code' ? 'on' : ''}" data-act="clsKind" data-k="code"><span class="cm-prev code"><i></i><i></i><i></i><i></i></span><b>코드 편집기</b><small>PID 제어 실습</small></button>
       </div>
-      <div class="ms-group"><button class="ms-row" data-act="dgShow"><i class="ms-ic" style="--c:#8e8e93">${icon('eye-off')}</i><span class="ms-t">지금 위장 화면 보기<small>돌아오기: 화면 1초 꾹 · <kbd>\`</kbd> · <kbd>Esc</kbd></small></span><i class="ms-chev">${icon('chevron-right')}</i></button></div>
+      <div class="ms-group"><button class="ms-row" data-act="dgShow"><i class="ms-ic" style="--c:#8e8e93">${icon('eye-off')}</i><span class="ms-t">지금 위장 화면 보기<small>돌아오기: 왼쪽 위 ← · 화면 꾹 · <kbd>\`</kbd> · <kbd>Esc</kbd></small></span><i class="ms-chev">${icon('chevron-right')}</i></button></div>
       <div class="ms-group">
         ${sw('clsAutoPause', this.autoPause, 'player-pause', '#ff9f0a', '다른 앱 · 탭으로 가면 자동 일시정지', '싱글 게임 · 화면을 가리고 시간도 멈춰요')}
         ${sw('clsFollow', this.follow, 'users', '#ff453a', '친구가 🚨 모두 숨기기를 누르면 나도', '같은 방에서 🙈 버튼을 꾹 누르면 모두 숨겨요')}
       </div>
-      <p class="ms-foot cm-help"><kbd>Esc</kbd> 일시정지 · <kbd>\`</kbd> 위장 화면 · <kbd>Shift</kbd>+<kbd>\`</kbd> 방 친구 모두 숨기기<br>휴대폰 · 태블릿: 제목 줄 ⏸ · 🙈 버튼 (🙈 꾹 = 모두 숨기기)</p>`;
+      <p class="ms-foot cm-help"><kbd>Esc</kbd> 일시정지 · <kbd>\`</kbd> 위장 화면 · <kbd>Shift</kbd>+<kbd>\`</kbd> 방 친구 모두 숨기기<br>휴대폰 · 태블릿: 제목 줄 ⏸ · 🙈 버튼 (🙈 꾹 = 모두 숨기기) · 위장 화면에서 돌아오기: <b>왼쪽 위 ←</b> 또는 화면 꾹</p>`;
   },
 };
 
@@ -289,16 +304,23 @@ const Class = {
   })).observe(document.getElementById('main') || document.body, { childList: true, subtree: true });
   const mb = $('#menu-btn');
   if (mb) mb.insertAdjacentHTML('beforebegin', `<button class="btn ghost sm icon-only dg-top" data-act="dgShow" aria-label="위장 화면" title="위장 화면 (\` 키)">${icon('eye-off')}</button>`);
-  // 🙈 꾹 누르기 = 방 친구 모두 숨기기
-  let lp = 0, lpEl = null;
-  document.addEventListener('pointerdown', e => {
+  // 🙈 꾹 누르기 = 방 친구 모두 숨기기 (손가락은 touch 이벤트로 — 아이폰)
+  let lp = 0, touchAt = 0;
+  const lpStart = b => { delete b.dataset.lp; clearTimeout(lp); lp = setTimeout(() => { lp = 0; b.dataset.lp = '1'; Disguise.all(); }, 550); };
+  const lpStop = () => { clearTimeout(lp); lp = 0; };
+  document.addEventListener('touchstart', e => {
+    touchAt = Date.now();
     const b = e.target.closest && e.target.closest('.dg-btn, .dg-top');
-    if (!b) return;
-    delete b.dataset.lp;
-    lpEl = b; clearTimeout(lp);
-    lp = setTimeout(() => { lp = 0; lpEl = null; b.dataset.lp = '1'; Disguise.all(); }, 550);
+    if (b && e.touches.length === 1) lpStart(b);
+  }, { capture: true, passive: true });
+  ['touchend', 'touchcancel'].forEach(ev => document.addEventListener(ev, lpStop, { capture: true, passive: true }));
+  document.addEventListener('touchmove', lpStop, { capture: true, passive: true });
+  document.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'touch' || Date.now() - touchAt < 1000) return;
+    const b = e.target.closest && e.target.closest('.dg-btn, .dg-top');
+    if (b) lpStart(b);
   }, true);
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => document.addEventListener(ev, () => { clearTimeout(lp); lp = 0; }, true));
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => document.addEventListener(ev, e => { if (e.pointerType !== 'touch') lpStop(); }, true));
 })();
 
 /* ── 키보드: Esc 일시정지 · ` 위장 화면 · Shift+` 모두 숨기기 (먼저 받아서 게임으로 안 가게) ── */
@@ -319,16 +341,16 @@ document.addEventListener('keydown', e => {
       || (typeof Yacht !== 'undefined' && Yacht.sel && isScreen('yacht')) || (typeof Marble !== 'undefined' && Marble.infoAt && isScreen('marble'));
     if (busy) return;
     if (Pause.on) { e.preventDefault(); e.stopImmediatePropagation(); Pause.resume(); return; }
-    const a = document.activeElement, chat = a && a.closest && a.closest('.chat, #chat-input');      // 채팅 칸에서는 그대로 (게임 입력칸 · 산성비는 멈춰요)
+    const a = document.activeElement, chat = a && a.closest && a.closest('.chat, #chat-input, #wh-mini');      // 채팅 칸에서는 그대로 (게임 입력칸 · 산성비는 멈춰요)
     if (Pause.can() && !chat) { e.preventDefault(); e.stopImmediatePropagation(); if (a && a.blur && typing()) a.blur(); Pause.start('key'); return; }
   }
   if (Pause.on) {                                                   // 멈춘 동안 게임 조작 막기 (메뉴 · 창 · 채팅의 입력은 그대로)
     const t = e.target;
-    if (t && t.closest && t.closest('.overlay, .ms-ov, .modal, .chat')) return;
+    if (t && t.closest && t.closest('.overlay, .ms-ov, .modal, .chat, #wh-mini')) return;
     e.stopImmediatePropagation(); if (e.key !== 'Tab') e.preventDefault();
   }
 }, true);
-document.addEventListener('keyup', e => { if (Disguise.on || (Pause.on && !(e.target && e.target.closest && e.target.closest('.overlay, .ms-ov, .modal, .chat')))) e.stopImmediatePropagation(); }, true);
+document.addEventListener('keyup', e => { if (Disguise.on || (Pause.on && !(e.target && e.target.closest && e.target.closest('.overlay, .ms-ov, .modal, .chat, #wh-mini')))) e.stopImmediatePropagation(); }, true);
 
 /* ── 자동 일시정지: 다른 앱 · 탭 · 창으로 가면 ── */
 document.addEventListener('visibilitychange', () => { if (document.hidden && Class.autoPause) Pause.start('auto'); });
@@ -357,6 +379,7 @@ Object.assign(ACT, {
   pzToggle: () => Pause.toggle(),
   pzResume: () => Pause.resume(),
   pzQuit: () => { Pause.reset(); ACT.leaveGame(); },
+  dgHide: () => Disguise.hide(),
   dgShow: el => { if (el && el.dataset.lp) { delete el.dataset.lp; return; } Disguise.show('btn'); },
   msClass: () => { Menu.page = 'class'; Menu.render(); },
   clsOn: el => { store.set('mgClass', el.checked ? '1' : ''); Class.apply(); toast(el.checked ? '📚 수업 모드: 소리 · 진동을 껐어요. 🙈 버튼으로 숨길 수 있어요.' : '수업 모드를 껐어요.'); },

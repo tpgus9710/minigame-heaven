@@ -579,13 +579,16 @@ const Acct = {
     if (b === this.wasBusy) return;
     this.wasBusy = b;
     if (b) { this.stashCards(); if (Flair.cur) Flair.close(); }           // 게임이 시작되면 축하 화면도 닫아요
-    else this.flushMissed();
+    else { if (typeof WhBar !== 'undefined') WhBar.clear(); this.flushMissed(); }
   },
   /** 게임을 시작하면 떠 있던 알림 카드는 접어 둬요 (안 읽은 귓속말은 게임이 끝나면 다시 알려 줘요) */
   stashCards() {
     const box = $('#ac-invites'); if (!box) return;
     for (const el of [...box.children]) {
-      if (el._dm) { const x = this.missed.get(el._dm.from.id); this.missed.set(el._dm.from.id, { ...el._dm, n: Math.max(el._dm.n, x ? x.n : 0), during: !!(x && x.during) }); }
+      if (el._dm) {
+        const x = this.missed.get(el._dm.from.id); this.missed.set(el._dm.from.id, { ...el._dm, n: Math.max(el._dm.n, x ? x.n : 0), during: !!(x && x.during) });
+        if (typeof WhBar !== 'undefined') WhBar.push(el._dm.from, el._dm.x, el._dm.n, true);   // 안 읽은 귓속말은 게임 중에도 위에 보여요
+      }
       clearTimeout(el._t); el.remove();
     }
   },
@@ -615,10 +618,11 @@ const Acct = {
     const f = this.fr && this.fr.friends.find(x => x.id === peer);
     if (f) f.unread = (f.unread || 0) + 1;
     this.renderBadges();
-    if (this.busy()) {                                                     // 게임 중: 알림 없이 배지만 · 게임이 끝나면 알려 줘요
+    if (this.busy()) {                                                     // 게임 중: 위쪽 막대에 한 줄로(js/whisper.js) · 안 읽고 닫으면 게임이 끝난 뒤 카드로
       const x = this.missed.get(peer);
       this.missed.delete(peer);
       this.missed.set(peer, { from: m.from, n: (x ? x.n : 0) + 1, x: m.x, during: true });
+      if (typeof WhBar !== 'undefined') WhBar.push(m.from, m.x, f ? f.unread : (x ? x.n : 0) + 1);
       return;
     }
     this.dmPopup(m.from, m.x, f ? f.unread : 1, false);
@@ -630,6 +634,7 @@ const Acct = {
     const f = this.fr && this.fr.friends.find(x => x.id === d.from);
     if (f) f.unread = 0;
     this.missed.delete(d.from);
+    if (typeof WhBar !== 'undefined') WhBar.read(d.from);
     for (const el of [...($('#ac-invites') || { children: [] }).children]) if (el.dataset.dm === d.from) el.remove();
     this.renderBadges();
   },

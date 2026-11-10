@@ -1,10 +1,11 @@
 /* =====================================================================
  *  🛡️ 탱크 대포 (싱글: AI 2대 / 멀티: 2~6명) — 계산은 shared/tank-core.js
+ *  v13.3: 무기 칸을 바뀔 때만 다시 그려요(내 차례에도 눌려요) · 🚁 보급 헬기 · ❤️ 회복 키트 · 🔆 광역 레이저 · ☄️ 유성우
  * ===================================================================== */
 makeScreen('tank', {
-  title: '🛡️ 탱크 대포', status: '←→ 이동 · ↑↓ 각도 · 스페이스를 꾹 눌렀다 떼면 발사 · 1/2/3 무기',
+  title: '🛡️ 탱크 대포', status: '←→ 이동 · ↑↓ 각도 · 스페이스를 꾹 눌렀다 떼면 발사 · 1~5 무기 · 🚁 보급 상자는 닿거나 쏴서 가져가요',
   stats: [['turn', '차례'], ['wind', '바람'], ['time', '남은 시간']],
-  body: `<div class="center"><canvas id="tank-cv" class="game-cv" width="960" height="540"></canvas></div>
+  body: `<div class="center"><canvas id="tank-cv" class="game-cv" width="960" height="540"></canvas><div class="tank-note" id="tank-note" aria-live="polite"></div></div>
   <div class="tank-bar">
     <div class="tank-weapons" id="tank-weapons"></div>
     <div class="tank-read"><span>각도 <b id="tank-angle">-</b>°</span><span>힘 <b id="tank-power">-</b></span><span>연료 <b id="tank-fuel">-</b></span></div>
@@ -18,7 +19,7 @@ const Tank = {
     S.solo = 'tank';
     const s = TankCore.newGame([{ id: 'me', name: nick() }, { id: 'ai1', name: 'AI 하나', bot: true }, { id: 'ai2', name: 'AI 둘', bot: true }], Math.random);
     Object.assign(this, { mode: 'solo', myId: 'me', s, over: false });
-    this.mirror(s.h, s.tanks, TankCore.view(s));
+    this.mirror(s.h, s.tanks, TankCore.view(s), TankCore.items(s));
     show('tank');
     after(800, () => this.turnStart());
     this.loop();
@@ -26,16 +27,26 @@ const Tank = {
   startMulti(d) {
     stopLocal();
     Object.assign(this, { mode: 'multi', myId: S.myId, s: null, over: false });
-    this.mirror(d.h, d.tanks, d.view);
+    this.mirror(d.h, d.tanks, d.view, d.items);
     show('tank'); renderScores();
     this.loop();
   },
   /** 화면에 그릴 상태 (싱글은 엔진 상태를 복사, 멀티는 서버가 보낸 값) */
-  mirror(h, info, view) {
-    this.v = { h: h.slice(), wind: 0, activeId: null, tanks: info.map(t => ({ id: t.id, name: t.name, color: t.color, ...view.find(x => x.id === t.id) })) };
-    Object.assign(this, { anim: null, charging: false, power: 50, lastPower: null, weapon: 'normal', moveDir: 0, deadline: 0, aimSent: 0, fx: [] });
+  mirror(h, info, view, items) {
+    this.v = { h: h.slice(), wind: 0, activeId: null, items: (items || []).slice(), tanks: info.map(t => ({ id: t.id, name: t.name, color: t.color, ...view.find(x => x.id === t.id) })) };
+    Object.assign(this, { anim: null, charging: false, power: 50, lastPower: null, weapon: 'normal', moveDir: 0, deadline: 0, aimSent: 0, fx: [],
+      heli: null, pending: new Set(), falling: new Map(), barSig: '' });
     this.h0 = h.slice(); this.carved = [];
+    $('#tank-note').innerHTML = '';
     this.paintTerrain();
+  },
+  /** 판 위쪽에 잠깐 뜨는 알림 (아래쪽 알림은 무기 칸 · 발사 버튼을 가려서 판 안에 띄워요) */
+  note(txt, cls = '') {
+    const box = $('#tank-note'); if (!box) return;
+    const el = document.createElement('div');
+    el.className = cls; el.textContent = txt; box.append(el);
+    while (box.children.length > 2) box.firstChild.remove();
+    setTimeout(() => el.remove(), 2600);
   },
   /** 땅 그림 (따로 그려 두고 포탄이 터지면 그 자리만 둥글게 지워요) */
   paintTerrain() {
@@ -67,6 +78,8 @@ const Tank = {
     const s = this.s, t = TankCore.active(s);
     this.v.activeId = t.id; this.v.wind = s.wind; this.deadline = performance.now() + 30000;
     this.sync(TankCore.view(s));
+    this.v.items = TankCore.items(s);
+    if (s.drop) { this.startHeli(s.drop); s.drop = null; }
     if (t.bot) {
       after(900, () => {
         const plan = TankCore.aiPlan(s, t.id, 0.55);
@@ -110,6 +123,8 @@ const Tank = {
     const A = this.anim; if (!A) return;
     A.booms.forEach(b => { if (!b.shown) { b.shown = true; this.carve(b.k); } });
     this.v.h = A.r.h.slice(); this.sync(A.r.tanks);
+    if (A.r.items) this.v.items = A.r.items;
+    this.handleGot(A.r.got);
     (A.r.falls || []).forEach(f => { const vt = this.v.tanks.find(x => x.id === f.id); if (vt) this.fx.push({ x: vt.x, y: vt.y - 40, txt: '-' + f.dmg, t: 1.2 }); });
     const done = A.done; this.anim = null;
     if (done) done();
@@ -129,7 +144,11 @@ const Tank = {
         if (idx < p.length - 1) continue;
         const end = p[p.length - 1];
         const b = A.booms.find(b => !b.shown && Math.hypot(b.x - end[0], b.y - end[1]) < 6);
-        if (b) { b.shown = true; this.carve(b.k); this.fx.push({ x: b.x, y: b.y, r: b.r, t: 0.5 }); b.hits.forEach(h => { const vt = this.v.tanks.find(x => x.id === h.id); if (vt) this.fx.push({ x: vt.x, y: vt.y - 40, txt: '-' + h.dmg, t: 1.2 }); }); }
+        if (b) {
+          b.shown = true; this.carve(b.k); this.fx.push({ x: b.x, y: b.y, r: b.r, t: 0.5 });
+          if (b.beam) this.fx.push({ beam: true, x: b.x, y: b.y, r: b.r, t: 0.9 });           // 🔆 하늘에서 빛기둥
+          b.hits.forEach(h => { const vt = this.v.tanks.find(x => x.id === h.id); if (vt) this.fx.push({ x: vt.x, y: vt.y - 40, txt: '-' + h.dmg, t: 1.2 }); });
+        }
       }
       if (idx >= maxLen + 25) this.endAnim();                     // 다 날아가면 결과 반영
     }
@@ -137,7 +156,10 @@ const Tank = {
       const da = (held('ArrowUp', 'KeyW') ? 1 : 0) - (held('ArrowDown', 'KeyS') ? 1 : 0);
       if (da) { t.angle = clamp(t.angle + da * 45 * dt, 0, 180); this.sendAim(now); }
       const mv = (held('ArrowRight', 'KeyD') ? 1 : 0) - (held('ArrowLeft', 'KeyA') ? 1 : 0);
-      if (this.mode === 'solo') { if (mv && TankCore.move(this.s, 'me', mv, dt)) this.sync(TankCore.view(this.s)); }
+      if (this.mode === 'solo') {
+        if (mv && TankCore.move(this.s, 'me', mv, dt)) this.sync(TankCore.view(this.s));
+        if (this.s.got.length) { this.handleGot(this.s.got.splice(0)); this.v.items = TankCore.items(this.s); this.sync(TankCore.view(this.s)); }   // 상자에 닿았어요
+      }
       else if (mv !== this.moveDir) { this.moveDir = mv; socket.emit('tank:move', mv); }
       if (this.charging) { this.power = Math.min(100, this.power + 62 * dt); }
       if (now > this.deadline && this.mode === 'solo') { this.charging = false; this.fire(); }
@@ -154,16 +176,85 @@ const Tank = {
     this.aimSent = now; const t = this.me();
     socket.emit('tank:aim', { angle: Math.round(t.angle), power: Math.round(this.power) });
   },
+  /** 무기 칸 · 숫자: 무기 칸은 바뀔 때만 다시 그려요 (매 프레임 다시 그리면 내 차례에 버튼을 누르는 사이 버튼이 바뀌어 안 눌렸어요) */
   updateBar() {
     const t = this.me();
     if (!t) return;
     $('#tank-angle').textContent = Math.round(t.angle); $('#tank-power').textContent = Math.round(this.power); $('#tank-fuel').textContent = Math.round(t.fuel || 0);
-    const ammo = t.ammo || {};
-    $('#tank-weapons').innerHTML = Object.entries(TankCore.WEAPONS).map(([k, w]) => {
-      const n = k === 'normal' ? '∞' : ammo[k] || 0;
-      return `<button class="btn sm ${this.weapon === k ? 'good' : 'ghost'}" data-act="tankWeapon" data-w="${k}" ${n === 0 ? 'disabled' : ''}>${w.icon} ${w.name} <small>${n}</small></button>`;
-    }).join('');
+    const ammo = t.ammo || {}, keys = Object.keys(TankCore.WEAPONS);
+    const sig = `${this.weapon}|${keys.map(k => ammo[k] || 0).join(',')}`;
+    if (sig !== this.barSig) {
+      this.barSig = sig;
+      $('#tank-weapons').innerHTML = Object.entries(TankCore.WEAPONS).map(([k, w], i) => {
+        const n = k === 'normal' ? '∞' : ammo[k] || 0;
+        if (w.drop && !n) return '';                                         // 보급 특별탄은 얻었을 때만
+        return `<button class="btn sm ${this.weapon === k ? 'good' : 'ghost'}${w.drop ? ' sp' : ''}" data-act="tankWeapon" data-w="${k}" ${n === 0 ? 'disabled' : ''} title="${w.name} (숫자 ${i + 1})">${w.icon} ${w.name} <small>${n}</small></button>`;
+      }).join('');
+    }
     $('#tank-fire').disabled = !this.myTurn();
+  },
+  /* ── 🚁 보급 ── */
+  startHeli(drop) {
+    if (!drop) return;
+    this.pending.add(drop.id);
+    this.heli = { drop, dir: drop.dir || 1, t0: performance.now(), dur: 3400, dropped: false };
+    const it = TankCore.ITEMS[drop.kind];
+    this.note(`🚁 보급 헬기! ${it.icon} ${it.name} 상자 — 닿거나 쏴서 가져가요`);
+  },
+  /** 상자를 누가 가져갔어요 (이동 · 포탄) */
+  handleGot(list) {
+    for (const g of list || []) {
+      this.pending.delete(g.item); this.falling.delete(g.item);
+      if (g.lost) { this.fx.push({ x: g.x, y: g.y - 24, txt: '💨', t: 1, col: '#ddd' }); continue; }
+      const it = TankCore.ITEMS[g.kind], vt = this.v.tanks.find(x => x.id === g.id);
+      this.fx.push({ x: vt ? vt.x : g.x, y: (vt ? vt.y : g.y) - 58, txt: g.kind === 'heal' ? (g.hp ? `+${g.hp} HP` : 'HP 가득') : `${it.icon} ${it.name}!`, t: 1.8, col: g.kind === 'heal' ? '#3fcf9b' : '#ffd23f' });
+      if (g.id === this.myId) this.note(g.kind === 'heal' ? (g.hp ? `❤️ 회복 키트! HP +${g.hp}` : '❤️ 회복 키트 — HP가 이미 가득해요') : `${it.icon} ${it.name}를 얻었어요! 무기 칸에서 골라 쏘세요 (숫자 ${g.kind === 'laser' ? 4 : 5})`, g.kind === 'heal' ? 'good' : 'gold');
+      else this.note(`${g.name} 님이 ${it.icon} ${it.name}를 가져갔어요`);
+      Sound.play('pop');
+    }
+    if (list && list.length) { this.barSig = ''; this.updateBar(); }
+  },
+  /** 상자 (내려오는 중이면 낙하산) */
+  drawItems(c, now) {
+    for (const it of this.v.items || []) {
+      if (this.pending.has(it.id)) continue;
+      let y = it.y;
+      const f = this.falling.get(it.id);
+      if (f) {
+        const k = Math.min(1, (now - f.t0) / f.dur);
+        y = f.y0 + (it.y - f.y0) * k;
+        if (k >= 1) this.falling.delete(it.id);
+        else {                                                               // 낙하산
+          c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(it.x - 9, y - 16); c.lineTo(it.x - 16, y - 40); c.moveTo(it.x + 9, y - 16); c.lineTo(it.x + 16, y - 40); c.stroke();
+          c.fillStyle = it.kind === 'heal' ? '#ff5d73' : it.kind === 'laser' ? '#ffd23f' : '#a77cff'; c.beginPath(); c.arc(it.x, y - 40, 18, Math.PI, 0); c.fill();
+        }
+      }
+      const glow = 0.5 + Math.sin(now / 260 + it.id) * 0.25;
+      c.fillStyle = `rgba(255,255,200,${glow * 0.35})`; c.beginPath(); c.arc(it.x, y - 8, 17, 0, 7); c.fill();
+      c.fillStyle = it.kind === 'heal' ? '#f4f4f4' : it.kind === 'laser' ? '#3b3f8f' : '#3a2b55';
+      c.strokeStyle = '#2b2b2b'; c.lineWidth = 2; c.beginPath(); c.roundRect(it.x - 11, y - 17, 22, 17, 3); c.fill(); c.stroke();
+      if (it.kind === 'heal') { c.fillStyle = '#e2453c'; c.fillRect(it.x - 2.5, y - 14, 5, 11); c.fillRect(it.x - 6.5, y - 11, 13, 5); }
+      else { c.font = '13px sans-serif'; c.textAlign = 'center'; c.fillText(TankCore.ITEMS[it.kind].icon, it.x, y - 4); }
+    }
+  },
+  drawHeli(c, now) {
+    const h = this.heli; if (!h) return;
+    const k = (now - h.t0) / h.dur, W = 960;
+    if (k >= 1) { if (!h.dropped) { this.pending.delete(h.drop.id); } this.heli = null; return; }
+    const x = h.dir > 0 ? -90 + (W + 180) * k : W + 90 - (W + 180) * k, y = 66 + Math.sin(now / 300) * 4;
+    if (!h.dropped && (h.dir > 0 ? x >= h.drop.x : x <= h.drop.x)) { h.dropped = true; this.pending.delete(h.drop.id); this.falling.set(h.drop.id, { y0: y + 30, t0: now, dur: 1400 }); }
+    c.save(); c.translate(x, y); c.scale(h.dir > 0 ? 1 : -1, 1);
+    c.strokeStyle = '#26323a'; c.lineWidth = 4; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(-14, 0); c.lineTo(-46, -4); c.stroke();                          // 꼬리
+    c.lineWidth = 3; c.beginPath(); c.moveTo(-46, -12); c.lineTo(-46, 4); c.stroke();          // 꼬리 날개
+    c.fillStyle = '#3f6b3f'; c.beginPath(); c.ellipse(0, 0, 24, 13, 0, 0, 7); c.fill();       // 몸통
+    c.fillStyle = '#a8e0ff'; c.beginPath(); c.ellipse(11, -3, 9, 7, 0, 0, 7); c.fill();       // 창
+    c.strokeStyle = '#26323a'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(-14, 16); c.lineTo(16, 16); c.moveTo(-8, 12); c.lineTo(-8, 16); c.moveTo(10, 12); c.lineTo(10, 16); c.stroke();
+    c.beginPath(); c.moveTo(0, -13); c.lineTo(0, -18); c.stroke();
+    const sp = Math.abs(Math.sin(now / 35)) * 34 + 6;                                           // 프로펠러
+    c.strokeStyle = 'rgba(30,30,30,.85)'; c.lineWidth = 3; c.beginPath(); c.moveTo(-sp, -19); c.lineTo(sp, -19); c.stroke();
+    if (!h.dropped) { c.fillStyle = '#e8d6a8'; c.strokeStyle = '#2b2b2b'; c.lineWidth = 1.5; c.beginPath(); c.roundRect(-8, 20, 16, 12, 2); c.fill(); c.stroke(); }
+    c.restore();
   },
 
   draw(dt, now) {
@@ -174,6 +265,7 @@ const Tank = {
     for (let x = 0; x <= W; x += 20) c.lineTo(x, 260 + Math.sin(x * 0.01) * 40 + Math.sin(x * 0.023) * 25);
     c.lineTo(W, H); c.fill();
     if (this.terr) c.drawImage(this.terr, 0, 0);
+    this.drawItems(c, now);
     c.textAlign = 'center';
     for (const t of v.tanks) {
       if (!t.alive) { c.fillStyle = '#333'; c.beginPath(); c.roundRect(t.x - 15, t.y - 8, 30, 8, 3); c.fill(); continue; }
@@ -200,9 +292,18 @@ const Tank = {
         if (idx < p.length - 1) { c.fillStyle = '#111'; c.beginPath(); c.arc(p[i][0], p[i][1], 5, 0, 7); c.fill(); }
       }
     }
+    this.drawHeli(c, now);
     this.fx = this.fx.filter(f => (f.t -= dt) > 0);
     for (const f of this.fx) {
-      if (f.txt) { c.globalAlpha = Math.min(1, f.t); c.fillStyle = '#ff5d73'; c.font = 'bold 20px \"Black Han Sans\", sans-serif'; c.fillText(f.txt, f.x, f.y - (1.2 - f.t) * 25); c.globalAlpha = 1; }
+      if (f.beam) {                                                                             // 🔆 광역 레이저 빛기둥
+        const k = f.t / 0.9, w = f.r * 2 * (0.55 + 0.45 * k);
+        const gr = c.createLinearGradient(f.x - w / 2, 0, f.x + w / 2, 0);
+        gr.addColorStop(0, 'rgba(255,240,120,0)'); gr.addColorStop(0.5, `rgba(255,255,230,${0.85 * k})`); gr.addColorStop(1, 'rgba(255,240,120,0)');
+        c.fillStyle = gr; c.fillRect(f.x - w / 2, 0, w, f.y + 12);
+        c.fillStyle = `rgba(255,255,255,${0.9 * k})`; c.fillRect(f.x - 4, 0, 8, f.y + 8);
+        continue;
+      }
+      if (f.txt) { c.globalAlpha = Math.min(1, f.t); c.fillStyle = f.col || '#ff5d73'; c.font = 'bold 20px \"Black Han Sans\", sans-serif'; c.fillText(f.txt, f.x, f.y - (1.2 - f.t) * 25); c.globalAlpha = 1; }
       else { const k = 1 - f.t / 0.5; c.fillStyle = `rgba(255,${160 - k * 100},40,${1 - k})`; c.beginPath(); c.arc(f.x, f.y, f.r * (0.4 + k * 0.8), 0, 7); c.fill(); }
     }
     // 바람
@@ -229,7 +330,7 @@ register('tank', {
   stop: () => { Tank.over = true; Tank.aiAim = null; },
   key: e => {
     if (e.code === 'Space' && !e.repeat && Tank.myTurn()) { Tank.charging = true; Tank.power = 0; }
-    const w = { Digit1: 'normal', Digit2: 'big', Digit3: 'triple' }[e.code];
+    const w = { Digit1: 'normal', Digit2: 'big', Digit3: 'triple', Digit4: 'laser', Digit5: 'meteor' }[e.code];
     if (w) { const t = Tank.me(); if (w === 'normal' || (t && t.ammo && t.ammo[w] > 0)) { Tank.weapon = w; Tank.updateBar(); } }
   },
   keyup: e => { if (e.code === 'Space' && Tank.charging) { Tank.charging = false; Tank.fire(); } },
@@ -240,10 +341,16 @@ socket.on('tank:turn', d => {
   if (!isScreen('tank') || Tank.mode !== 'multi') return;
   Tank.v.activeId = d.id; Tank.v.wind = d.wind; Tank.deadline = performance.now() + d.seconds * 1000; Tank.moveDir = 0;
   Tank.sync(d.tanks);
-  if (d.id === S.myId) { Tank.power = Tank.me().power; toast('🎯 내 차례예요!', 'info'); }
+  if (d.items) Tank.v.items = d.items;
+  if (d.drop) Tank.startHeli(d.drop);
+  if (d.id === S.myId) { Tank.power = Tank.me().power; Tank.note('🎯 내 차례예요!', 'good'); }
   Sound.turn('tank', d.id === S.myId);
 });
 socket.on('tank:aim', d => { const t = Tank.v && Tank.v.tanks.find(x => x.id === d.id); if (t) { t.angle = d.angle; } });
 socket.on('tank:pos', d => { const t = Tank.v && Tank.v.tanks.find(x => x.id === d.id); if (t) Object.assign(t, { x: d.x, y: d.y, fuel: d.fuel }); if (d.id === Tank.myId) Tank.updateBar(); });
 socket.on('tank:shot', r => { if (isScreen('tank') && Tank.mode === 'multi') { Tank.v.activeId = null; Tank.playShot(r, null); } });
-socket.on('tank:log', d => toast(d.msg, 'info'));
+socket.on('tank:log', d => { if (isScreen('tank')) Tank.note(d.msg); else toast(d.msg, 'info'); });
+socket.on('tank:item', d => {                                              // 이동하다 상자에 닿았어요
+  if (!isScreen('tank') || Tank.mode !== 'multi' || !d) return;
+  Tank.sync(d.tanks); Tank.v.items = d.items || []; Tank.handleGot(d.got);
+});

@@ -2,7 +2,7 @@
  *  🔍 게임 검색 (js/search.js) · 처음 화면 추천 게임 12개 (v13.2)
  * ===================================================================== */
 /* ── 처음 화면 검색 칸 ── */
-.hfind{margin:18px 0 0;text-align:left}
+.hfind{max-width:760px;margin:22px auto 18px;text-align:left}        /* 싱글 · 멀티 카드(.hero .mode-grid)와 같은 너비 · 양끝 · 카드 사이 간격(18px)만큼 띄우기 */
 .hf-box{position:relative;display:flex;align-items:center;gap:9px;height:48px;padding:0 10px 0 14px;border-radius:15px;background:var(--panel);
   border:1px solid var(--line);color:var(--muted);cursor:text;transition:border-color .15s,box-shadow .15s}
 .hf-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 24%,transparent)}

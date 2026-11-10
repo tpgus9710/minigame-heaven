@@ -33,6 +33,7 @@ const ICONS = {
   'arrow-right': '<path d="M5 12l14 0" /> <path d="M13 18l6 -6" /> <path d="M13 6l6 6" />',
   'arrow-up': '<path d="M12 5l0 14" /> <path d="M18 11l-6 -6" /> <path d="M6 11l6 -6" />',
   'arrows-exchange': '<path d="M7 10h14l-4 -4"/> <path d="M17 14h-14l4 4"/>',
+  'arrows-maximize': '<path d="M16 4l4 0l0 4" /> <path d="M14 10l6 -6" /> <path d="M8 20l-4 0l0 -4" /> <path d="M4 20l6 -6" /> <path d="M16 20l4 0l0 -4" /> <path d="M14 14l6 6" /> <path d="M8 4l-4 0l0 4" /> <path d="M4 4l6 6" />',
   'arrows-shuffle': '<path d="M18 4l3 3l-3 3"/> <path d="M18 20l3 -3l-3 -3"/> <path d="M3 7h3a5 5 0 0 1 5 5a5 5 0 0 0 5 5h5"/> <path d="M21 7h-5a4.978 4.978 0 0 0 -3 1m-4 8a4.984 4.984 0 0 1 -3 1h-3"/>',
   'arrows-up-down': '<path d="M7 3l0 18" /> <path d="M10 6l-3 -3l-3 3" /> <path d="M20 18l-3 3l-3 -3" /> <path d="M17 21l0 -18" />',
   'badge': '<path d="M17 17v-13l-5 3l-5 -3v13l5 3z"/>',

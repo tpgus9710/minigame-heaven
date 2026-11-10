@@ -1,5 +1,7 @@
 'use strict';
-/* 🛡️ 탱크 대포 — 차례대로 이동·조준·발사. 궤적과 결과는 서버가 계산해서 모두에게 보냅니다. */
+/* 🛡️ 탱크 대포 — 차례대로 이동·조준·발사. 궤적과 결과는 서버가 계산해서 모두에게 보냅니다.
+ *   🚁 헬기 보급 (v13.3): 차례가 바뀔 때 tank-core 가 정한 보급(drop)을 tank:turn 에 실어 보내요.
+ *      이동하다 상자에 닿으면 tank:item, 포탄으로 가져가면 tank:shot 의 got 으로 알려요. */
 const TC = require('../public/js/shared/tank-core');
 const TURN_SEC = 30;
 
@@ -18,7 +20,8 @@ module.exports = H => {
   function startTurn(room) {
     const g = room.game, t = active(g);
     g.phase = 'aim'; g.moveDir = 0;
-    H.emit(room, 'tank:turn', { id: t.id, name: t.name, wind: g.s.wind, seconds: TURN_SEC, tanks: TC.view(g.s) });
+    const drop = g.s.drop; g.s.drop = null;
+    H.emit(room, 'tank:turn', { id: t.id, name: t.name, wind: g.s.wind, seconds: TURN_SEC, tanks: TC.view(g.s), items: TC.items(g.s), drop });
     H.cancel(room, g.timer);
     g.timer = H.later(room, TURN_SEC * 1000, () => {
       if (g.phase !== 'aim') return;
@@ -33,13 +36,14 @@ module.exports = H => {
       const parts = H.shuffle(H.participants(room));
       const s = TC.newGame(parts.map(p => ({ id: p.id, name: p.name })), Math.random);
       const g = room.game = { type: 'tank', s, phase: 'wait', moveDir: 0, deaths: [] };
-      H.emit(room, 'tank:start', { h: s.h, tanks: s.tanks.map(t => ({ id: t.id, name: t.name, color: t.color })), view: TC.view(s) });
+      H.emit(room, 'tank:start', { h: s.h, tanks: s.tanks.map(t => ({ id: t.id, name: t.name, color: t.color })), view: TC.view(s), items: TC.items(s) });
       H.later(room, 1500, () => startTurn(room));
       let n = 0;
       H.loop(room, 1000 / 30, () => {                   // 이동 중인 탱크 움직이기
         if (g.phase !== 'aim' || !g.moveDir) return;
         const t = active(g);
         if (TC.move(s, t.id, g.moveDir, 1 / 30) && ++n % 2 === 0) H.emit(room, 'tank:pos', { id: t.id, x: Math.round(t.x), y: Math.round(t.y), fuel: Math.round(t.fuel) });
+        if (s.got.length) H.emit(room, 'tank:item', { got: s.got.splice(0), tanks: TC.view(s), items: TC.items(s) });   // 이동하다 상자에 닿았어요
       });
     },
     events: {

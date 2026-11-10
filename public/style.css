@@ -288,7 +288,7 @@ body.in-room .chat{display:flex}
 .rank li{display:flex;justify-content:space-between;background:var(--panel2);border-radius:12px;padding:9px 14px}
 .rank li:first-child{background:color-mix(in srgb,var(--warn) 22%,var(--panel2));font-weight:700}
 .ov-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}
-#toasts{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:8px;align-items:center}
+#toasts{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
 .toast{background:#22263f;color:#fff;padding:10px 18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:pop .25s;font-size:15px}
 .toast.error{background:#c93349} .toast.good{background:#1f9a6e}
 
@@ -403,9 +403,16 @@ body.tarea.gaming,body.tarea.gaming :is(.shell,#main,.screen.active){touch-actio
 
 /* 🛡️ 탱크 */
 .tank-bar{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:10px}
-.tank-weapons{display:flex;gap:6px;flex-wrap:wrap}
+.tank-weapons{display:flex;gap:6px;flex-wrap:wrap} .tank-weapons .btn.sp{border-color:#ffd23f;box-shadow:0 0 0 1px rgba(255,210,63,.35),0 0 12px rgba(255,210,63,.25)} .tank-weapons .btn.sp.good{box-shadow:0 0 14px rgba(255,210,63,.55)}
 .tank-read{display:flex;gap:14px;font-size:14px;color:var(--muted)} .tank-read b{color:var(--text);font-family:'Black Han Sans';font-size:18px}
 #tank-fire{user-select:none;touch-action:none}
+/* v13.3: 탱크 알림은 판 위쪽 (헬기 줄 아래)에 — 아래쪽 알림이 무기 칸 · 발사 버튼을 가리지 않게 */
+#scr-tank .center{position:relative}
+.tank-note{position:absolute;left:50%;top:19%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;width:max-content;max-width:min(92%,560px);pointer-events:none;z-index:3}
+.tank-note>div{padding:5px 13px;border-radius:99px;background:rgba(12,16,34,.76);color:#fff;font:700 13.5px/1.35 'Noto Sans KR',sans-serif;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.28);animation:tnIn .18s ease-out,tnOut .45s ease-in 2.15s forwards}
+.tank-note>.good{background:rgba(24,128,92,.9)} .tank-note>.gold{background:rgba(132,98,10,.92)}
+@keyframes tnIn{from{opacity:0;transform:translateY(-6px)}}
+@keyframes tnOut{to{opacity:0}}
 
 /* 💎 보석 */
 .gem-board{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;touch-action:none;user-select:none;max-width:94vw}
