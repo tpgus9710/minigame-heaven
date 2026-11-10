@@ -6,6 +6,9 @@
  *                     → 1장 더 받기 → 모두 동시에 족보로 쓸 2장 고르기(pick) → 마지막 베팅 → 공개
  *    고른 건 모두 고를 때까지(또는 시간이 끝날 때까지) 남에게 안 보여요. 시간 초과면 첫 카드 공개 · 가장 높은 조합.
  *  - 이긴 사람이 다음 판 선, 누군가 0원이 되면 결과 → 대기실
+ *  - 섯다 AI (v13.2): 대기실 「🤖 AI 상대」 수만큼 봇이 앉아요 (혼자면 1명은 꼭). 봇은 자기 패 · 남이 보여준 카드만 보고
+ *    남은 화투로 수백 번 뽑아 보는 계산(몬테카를로)으로 이길 확률을 어림해 다이 · 콜 · 삥 · 쿼터 · 하프 · 올인을 정해요.
+ *    3장 섯다에선 보여줄 카드 · 족보 2장도 스스로 골라요. 사람이 혼자면(나머지는 AI) 시간 제한이 없어요 → 자리를 비워도 기다려요.
  */
 const START_CHIPS = 1000000;
 const ANTE = 5000;
@@ -13,6 +16,9 @@ const TURN_SECONDS = 25;
 const OPEN_SECONDS = 15;   // 3장 섯다: 보여줄 카드 고르기
 const PICK_SECONDS = 20;   // 3장 섯다: 3장 중 족보로 쓸 2장 고르기
 const PAIRS = [[0, 1], [0, 2], [1, 2]];
+const BOT_NAMES = ['봇 알파', '봇 브라보', '봇 찰리', '봇 델타', '봇 에코'];
+const BOT_STYLES = [{ tight: 1, bluff: 0.08 }, { tight: 0.85, bluff: 0.14 }, { tight: 1.15, bluff: 0.05 }, { tight: 0.95, bluff: 0.11 }, { tight: 1.05, bluff: 0.09 }];
+const OPTIONS = [{ key: 'bots', label: '🤖 AI 상대', def: 0, values: [[0, '없음'], [1, '1명'], [2, '2명'], [3, '3명'], [4, '4명'], [5, '5명']] }];
 
 // 화투 20장: 각 월 2장. 1·3·8월에 광, 4·7·9월에 열끗
 const HWATU = [];
@@ -154,12 +160,90 @@ function cardsForRound(g) {
 }
 const evaluate = (g, hand) => (g.kind === 'seotda' ? evalSeotda(hand) : evalBest(hand));
 
+/* ───────── 섯다 AI ───────── */
+/** 봇이 아는 것(내 패 · 남이 보여준 카드)만 빼고 남은 화투 — 같은 달 같은 종류는 한 장씩만 빼요 */
+function unseen(g, id) {
+  const pool = HWATU.slice();
+  const drop = c => { const i = pool.findIndex(x => x.m === c.m && x.k === c.k); if (i >= 0) pool.splice(i, 1); };
+  g.seats[id].hand.forEach(drop);
+  for (const o of g.order) { const s = g.seats[o]; if (o !== id && g.opened && s.open >= 0 && s.hand[s.open]) drop(s.hand[s.open]); }
+  return pool;
+}
+/** 이길 확률 어림 (0~1) — pair: 3장 섯다에서 이 2장으로 정하면 · n: 뽑아 보는 횟수 */
+function equity(g, id, { n = 300, pair = null, rnd = Math.random } = {}) {
+  const me = g.seats[id], finalN = g.three ? 3 : 2;
+  const opps = g.order.filter(x => x !== id && !g.seats[x].folded);
+  if (!opps.length) return 1;
+  const base = unseen(g, id);
+  let win = 0;
+  for (let t = 0; t < n; t++) {
+    const pool = base.slice();
+    const draw = () => pool.splice(Math.floor(rnd() * pool.length), 1)[0];
+    const mine = me.hand.slice();
+    while (mine.length < finalN) mine.push(draw());
+    const myEv = pair ? seotdaPair(mine[pair[0]], mine[pair[1]]) : me.pick && me.ev ? me.ev : finalN === 3 ? bestPair(mine).ev : seotdaPair(mine[0], mine[1]);
+    const list = [{ id, ev: myEv }];
+    for (const o of opps) {
+      const s = g.seats[o], h = g.opened && s.open >= 0 && s.hand[s.open] ? [s.hand[s.open]] : [];
+      while (h.length < finalN) h.push(draw());
+      list.push({ id: o, ev: finalN === 3 ? bestPair(h).ev : seotdaPair(h[0], h[1]) });
+    }
+    const res = seotdaResolve(list);
+    if (res.replay) { win += 1 / list.length; continue; }
+    const best = Math.max(...list.map(c => res.eff[c.id]));
+    if (res.eff[id] === best) win += 1 / list.filter(c => res.eff[c.id] === best).length;
+  }
+  return win / n;
+}
+/** 베팅: 이길 확률 · 판돈 대비 콜 금액 · 봇 성격(조심성 · 허세)으로 */
+function botBetChoice(g, id, chips, style = BOT_STYLES[0], rnd = Math.random) {
+  const s = g.seats[id];
+  const call = Math.max(0, g.currentBet - s.roundBet);
+  const alive = g.order.filter(x => !g.seats[x].folded).length;
+  const eq = equity(g, id, { n: 320, rnd });
+  const rel = eq * alive;                                   // 1 = 평균, 2 = 평균의 두 배
+  const potOdds = call > 0 ? call / (g.pot + call) : 0;
+  const r = rnd(), raises = g.raises || 0, last = g.round >= g.maxRounds;
+  if (call > 0 && eq < potOdds * style.tight && !(r < style.bluff * 0.6 && raises === 0 && call < chips / 4)) return 'die';
+  if (call >= chips) return eq >= potOdds * 1.05 ? 'call' : 'die';          // 콜하면 올인이에요
+  if (chips > call && raises < 3) {
+    if (last && rel > 2.2 && eq > 0.72 && r < 0.3) return 'allin';
+    if (rel > 1.7 && r < 0.75) return 'half';
+    if (rel > 1.25 && r < 0.6) return 'quarter';
+    if (g.currentBet === 0 && rel > 0.95 && r < 0.45) return 'bbing';
+    if (r < style.bluff && raises === 0) return g.currentBet === 0 ? 'bbing' : 'quarter';
+  }
+  return 'call';
+}
+/** 3장 섯다: 보여줄 카드 — 대개 덜 센 카드(광 · 열끗보다 피, 낮은 달)를 보여 줘요 */
+function botOpenChoice(hand, rnd = Math.random) {
+  const v = c => (c.k === 'gwang' ? 20 : c.k === 'yeol' ? 6 : 0) + c.m;
+  const weak = v(hand[0]) <= v(hand[1]) ? 0 : 1;
+  return rnd() < 0.75 ? weak : 1 - weak;
+}
+/** 3장 섯다: 족보 2장 — 세 조합을 각각 어림해서 가장 이길 만한 것 (구사 · 땡잡이 · 암행어사도 셈에 들어가요) */
+function botPickChoice(g, id, rnd = Math.random) {
+  let best = null;
+  for (const pr of PAIRS) { const e = equity(g, id, { n: 300, pair: pr, rnd }); if (!best || e > best.e) best = { pr, e }; }
+  return best.pr.slice();
+}
+
 module.exports = H => {
-  const { emit, sys, later, cancel, getPlayer, finishGame, endToLobby, toPlayer, shuffle, won } = H;
+  const { emit, sys, later, cancel, finishGame, endToLobby, toPlayer, shuffle, won } = H;
+  const botsOf = room => (room.gameType === 'seotda' && room.cardBots) || [];
+  const isBot = (room, id) => botsOf(room).some(b => b.id === id);
+  const getPlayer = (room, id) => H.getPlayer(room, id) || botsOf(room).find(b => b.id === id);   // 사람 · 봇 모두
+  const seated = room => [...room.players, ...botsOf(room)];
+  const alone = room => room.players.length === 1 && botsOf(room).length > 0;                 // 사람 혼자 + AI → 시간 제한 없음
+  /** 봇 생각 시간 — 사람이 모두 다이했으면 빨리 */
+  const botWait = (room, lo = 700, hi = 1600) => {
+    const g = room.game, human = g && g.order.some(id => !isBot(room, id) && g.seats[id] && !g.seats[id].folded);
+    return human ? lo + Math.random() * (hi - lo) : 250 + Math.random() * 300;
+  };
 
   function startHand(room) {
-    const players = room.players;
-    if (players.length < 2) return endToLobby(room, '인원이 부족해서 대기실로 돌아갑니다.');
+    const players = seated(room);
+    if (players.length < 2 || !room.players.length) return endToLobby(room, '인원이 부족해서 대기실로 돌아갑니다.');
     const kind = room.gameType;
     const mode = kind === 'seotda' ? room.options.seotdaType : room.options.pokerType;
     if (!getPlayer(room, room.firstPlayerId)) room.firstPlayerId = players[0].id;
@@ -172,7 +256,7 @@ module.exports = H => {
       round: 0, maxRounds: kind === 'seotda' ? 2 : mode === '7card' ? 5 : 4,
       pot: room.carry, carry: room.carry, currentBet: 0, toAct: [], turnId: null, turnEndsAt: 0,
       phase: 'dealing', token: 0, turnTimer: null, handNo: prevHandNo + 1, revealAll: false, settled: false,
-      three: kind === 'seotda' && mode === '3card', opened: false, phaseEndsAt: 0, phaseSeconds: 0,
+      three: kind === 'seotda' && mode === '3card', opened: false, phaseEndsAt: 0, phaseSeconds: 0, raises: 0,
     };
     room.carry = 0;
     for (const p of players) {
@@ -196,7 +280,7 @@ module.exports = H => {
     const n = cardsForRound(g);
     for (let k = 0; k < n; k++) for (const id of alive) g.seats[id].hand.push(g.deck.pop());
     for (const id of alive) { const s = g.seats[id]; s.ev = g.three && s.hand.length > 2 ? null : evaluate(g, s.hand); }   // 3장은 고른 뒤에 정해요
-    g.currentBet = 0;
+    g.currentBet = 0; g.raises = 0;
     for (const id of g.order) { g.seats[id].roundBet = 0; if (!g.seats[id].folded) g.seats[id].lastAction = ''; }
     emit(room, 'card:log', `🎴 ${g.round}/${g.maxRounds} 라운드 카드를 나눠줍니다.`);
     if (g.three) return startChoice(room, g.round === 1 ? 'open' : 'pick');
@@ -227,6 +311,16 @@ module.exports = H => {
     g.phaseSeconds = sec; g.phaseEndsAt = Date.now() + sec * 1000;
     const token = ++g.token;
     emit(room, 'card:log', kind === 'open' ? '👀 모두 보여줄 카드 1장을 골라요.' : '🃏 3장 중 족보로 쓸 2장을 골라요.');
+    for (const b of botsOf(room)) {                        // 봇도 저마다 조금씩 생각하고 골라요
+      const s = g.seats[b.id];
+      if (!s || s.folded) continue;
+      later(room, botWait(room, 900, 3200), () => {
+        if (g.token !== token || g.phase !== kind || g.over || s.folded) return;
+        try { if (kind === 'open') chooseOpen(room, b.id, botOpenChoice(s.hand)); else choosePick(room, b.id, botPickChoice(g, b.id)); }
+        catch (e) { console.error('섯다 AI 고르기 오류:', e); if (kind === 'open') chooseOpen(room, b.id, 0); else choosePick(room, b.id, bestPair(s.hand).p); }
+      });
+    }
+    if (alone(room)) { g.phaseSeconds = 0; g.phaseEndsAt = 0; sync(room); return; }   // 혼자면 시간 제한 없이 기다려요
     g.turnTimer = later(room, sec * 1000, () => {
       if (g.token !== token || g.phase !== kind || g.over) return;
       for (const id of g.order) {
@@ -287,6 +381,18 @@ module.exports = H => {
     g.turnId = g.toAct[0];
     g.turnEndsAt = Date.now() + TURN_SECONDS * 1000;
     const token = ++g.token;
+    if (isBot(room, g.turnId)) {                           // 봇 차례: 조금 생각하고 베팅
+      const id = g.turnId, b = botsOf(room).find(x => x.id === id);
+      g.turnTimer = later(room, botWait(room), () => {
+        if (g.token !== token || g.turnId !== id) return;
+        let a = 'call';
+        try { a = botBetChoice(g, id, b.chips, b.style); } catch (e) { console.error('섯다 AI 베팅 오류:', e); }
+        if (performBet(room, id, a)) performBet(room, id, 'call');   // 안 되는 베팅이면 콜(체크)
+      });
+      sync(room);
+      return;
+    }
+    if (alone(room)) { g.turnEndsAt = 0; sync(room); return; }        // 사람 혼자 + AI: 시간 제한 없음
     g.turnTimer = later(room, TURN_SECONDS * 1000, () => {
       if (g.token !== token || !g.turnId) return;
       const s = g.seats[g.turnId];
@@ -319,7 +425,7 @@ module.exports = H => {
     if (action !== 'die') {
       if (pay >= p.chips) { pay = p.chips; s.allIn = true; label = '올인'; }
       p.chips -= pay; s.roundBet += pay; s.total += pay; g.pot += pay;
-      if (s.roundBet > g.currentBet) { g.currentBet = s.roundBet; raised = true; }
+      if (s.roundBet > g.currentBet) { g.currentBet = s.roundBet; raised = true; g.raises = (g.raises || 0) + 1; }
     }
     s.lastAction = pay ? `${label} ${won(pay)}` : label;
     g.toAct = g.toAct.filter(x => x !== id);
@@ -389,17 +495,18 @@ module.exports = H => {
   }
 
   function nextHand(room) {
-    const broke = room.players.filter(p => p.chips <= 0);
+    const all = seated(room);
+    const broke = all.filter(p => p.chips <= 0);
     if (broke.length) {
       return finishGame(room, {
         title: '💸 파산자 발생!',
         subtitle: `${broke.map(p => p.name).join(', ')} 님의 돈이 바닥났습니다. 대기실로 이동합니다.`,
-        ranking: room.players.slice().sort((a, b) => b.chips - a.chips).map(p => ({ id: p.id, name: p.name, value: won(p.chips) })),
-        lines: ['파산한 사람은 다음 게임을 시작할 때 100만원을 다시 받습니다.'],
+        ranking: all.slice().sort((a, b) => b.chips - a.chips).map(p => ({ id: p.id, name: p.name, value: won(p.chips) })),
+        lines: ['파산한 사람(AI 포함)은 다음 게임을 시작할 때 100만원을 다시 받습니다.'],
         returnIn: 8,
       });
     }
-    if (room.players.length < 2) return endToLobby(room, '인원이 부족해서 대기실로 돌아갑니다.');
+    if (all.length < 2 || !room.players.length) return endToLobby(room, '인원이 부족해서 대기실로 돌아갑니다.');
     startHand(room);
   }
 
@@ -410,14 +517,14 @@ module.exports = H => {
     return {
       kind: g.kind, mode: g.mode, round: g.round, maxRounds: g.maxRounds, pot: g.pot, carry: g.carry, currentBet: g.currentBet,
       ante: ANTE, phase: g.phase, handNo: g.handNo, turnId: g.turnId, turnLeft: g.turnId ? Math.max(0, g.turnEndsAt - Date.now()) : 0,
-      turnSeconds: TURN_SECONDS, firstId: room.firstPlayerId,
+      turnSeconds: TURN_SECONDS, firstId: room.firstPlayerId, limit: !alone(room),
       three: !!g.three, opened: !!g.opened,
       phaseLeft: choosing ? Math.max(0, g.phaseEndsAt - Date.now()) : 0, phaseSeconds: choosing ? g.phaseSeconds : 0,
       seats: g.order.map(id => {
         const s = g.seats[id], p = getPlayer(room, id), mine = id === viewer, open = mine || (reveal && !s.folded);
         const visible = s.hand.filter((c, i) => !isHidden(g, i, s));
         const out = {
-          id, name: s.name, chips: p ? p.chips : 0, folded: s.folded, allIn: s.allIn, left: s.left,
+          id, name: s.name, chips: p ? p.chips : 0, folded: s.folded, allIn: s.allIn, left: s.left, bot: isBot(room, id),
           roundBet: s.roundBet, total: s.total, lastAction: s.lastAction,
           cards: s.hand.map((c, i) => (open || !isHidden(g, i, s) ? c : null)),
           hid: s.hand.map((c, i) => isHidden(g, i, s)),
@@ -440,11 +547,17 @@ module.exports = H => {
 
   return {
     games: {
-      seotda: { name: '섯다', min: 2, max: 6 },
+      seotda: { name: '섯다', min: 1, max: 6, options: OPTIONS },
       poker: { name: '포커', min: 2, max: 6 },
     },
     start(room) {
-      room.players.forEach(p => {
+      if (room.gameType === 'seotda') {                    // AI 자리 (혼자면 1명은 꼭) — 돈은 다음 게임에도 이어져요
+        const want = Math.max(room.players.length < 2 ? 1 : 0, Math.min(Math.max(0, Math.floor(+room.options.bots || 0)), 6 - room.players.length));
+        const old = room.cardBots || [];
+        room.cardBots = Array.from({ length: want }, (_, i) => old[i] || { id: 'bot' + i, name: BOT_NAMES[i], chips: START_CHIPS, bot: true, style: BOT_STYLES[i] });
+        if (want) sys(room, `🤖 AI ${want}명이 같이 해요${alone(room) ? ' · 혼자 할 때는 시간 제한이 없어요' : ''}`);
+      } else room.cardBots = [];
+      seated(room).forEach(p => {
         if (p.chips <= 0) { p.chips = START_CHIPS; sys(room, `💰 ${p.name} 님에게 기본 자금 ${won(START_CHIPS)}이 다시 지급되었습니다.`); }
       });
       room.firstPlayerId = (room.players.find(p => p.isHost) || room.players[0]).id;   // 첫 판 선 = 방장
@@ -461,7 +574,10 @@ module.exports = H => {
       const g = room.game;
       const s = g.seats[p.id];
       if (s) { s.folded = true; s.left = true; s.lastAction = '나감'; g.toAct = g.toAct.filter(x => x !== p.id); }
-      if (room.players.length < 2) return endToLobby(room, '상대방이 나가서 대기실로 돌아갑니다.');
+      if (!room.players.length || seated(room).length < 2) return endToLobby(room, '상대방이 나가서 대기실로 돌아갑니다.');
+      if (alone(room) && !isBot(room, g.turnId) && ['betting', 'open', 'pick'].includes(g.phase)) {   // 이제 사람 혼자 → 시간 제한 없음
+        cancel(room, g.turnTimer); g.turnEndsAt = 0; g.phaseEndsAt = 0; g.phaseSeconds = 0;
+      }
       if (g.phase === 'betting') {
         const alive = g.order.filter(x => !g.seats[x].folded);
         if (g.turnId === p.id || alive.length <= 1) return advance(room);
@@ -478,8 +594,8 @@ module.exports = H => {
         g.settled = true;
       }
       if (room.carry > 0 && room.players.length) {
-        const share = Math.floor(room.carry / room.players.length);
-        room.players.forEach(p => { p.chips += share; });
+        const all = seated(room), share = Math.floor(room.carry / all.length);
+        all.forEach(p => { p.chips += share; });
       }
       room.carry = 0;
     },
@@ -487,4 +603,4 @@ module.exports = H => {
 };
 
 // 테스트용으로 계산 함수들을 내보냄
-Object.assign(module.exports, { seotdaPair, evalSeotda, bestPair, seotdaResolve, evalHand, evalBest, distribute, OPEN_SECONDS, PICK_SECONDS });
+Object.assign(module.exports, { seotdaPair, evalSeotda, bestPair, seotdaResolve, evalHand, evalBest, distribute, OPEN_SECONDS, PICK_SECONDS, equity, botBetChoice, botOpenChoice, botPickChoice, BOT_NAMES });

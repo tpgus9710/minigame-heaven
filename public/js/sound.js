@@ -4,6 +4,7 @@
  * ===================================================================== */
 const Sound = {
   ctx: null,
+  hush: false,                      // 잠깐 끄기 (일시정지 · 위장 화면 · 수업 모드 — js/pause.js) · 설정(on)은 그대로
   turns: {},
   get on() { return store.get('mgSnd', '1') !== '0'; },
   set on(v) { store.set('mgSnd', v ? '1' : '0'); this.paint(); },
@@ -11,6 +12,7 @@ const Sound = {
   set vol(v) { store.set('mgVol', String(Math.max(0, Math.min(1, +v || 0)))); },
   /** 브라우저는 화면을 한 번 누른 뒤에야 소리를 내게 해 줘요 */
   unlock() {
+    if (this.hush) return;
     try {
       if (!this.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; this.ctx = new AC(); }
       if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -30,7 +32,7 @@ const Sound = {
     bad: [[330, 0, 0.08], [247, 0.1, 0.2]],                    // 틀렸어요 (낮게 두 번: 노노그램 목숨)
   },
   play(kind) {
-    if (!this.on || !this.vol || !this.NOTES[kind]) return;
+    if (!this.on || this.hush || !this.vol || !this.NOTES[kind]) return;
     this.unlock();
     const c = this.ctx;
     if (!c || c.state !== 'running') return;

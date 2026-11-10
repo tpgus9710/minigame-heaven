@@ -78,7 +78,12 @@ if (compression) app.use(compression());           // 화면 파일을 압축해
 app.use(['/vendor', '/models'], (req, res, next) => { res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); next(); });
 app.use(express.static(path.join(__dirname, 'public')));
 const APP_VERSION = (() => { try { return require('./package.json').version; } catch { return ''; } })();   // 패치 버전 (화면 왼쪽 아래 · 메뉴에도 보여요)
-app.get('/health', (req, res) => res.json({ ok: true, version: APP_VERSION, rooms: rooms.size, players: io.engine.clientsCount, accounts: ACC.status() }));   // 클라우드 상태 확인용
+// 부팅 번호: 켜진 시각(36진수).무작위 — 새 버전으로 갈아탈 때 옛 서버가 '나보다 나중에 켜진 서버'가 떴는지 알아요 (lib/handoff.js)
+const BOOT_ID = `${Date.now().toString(36)}.${crypto.randomBytes(4).toString('hex')}`;
+app.get('/health', (req, res) => {                                                  // 클라우드 상태 확인용
+  res.set('Cache-Control', 'no-store');
+  res.json({ ok: true, version: APP_VERSION, boot: BOOT_ID, rooms: rooms.size, players: io.engine.clientsCount, accounts: ACC.status() });
+});
 
 // 🛡️ 어떤 오류가 나도 서버가 꺼지지 않게 (로그만 남김)
 process.on('uncaughtException', e => console.error('⚠️  처리되지 않은 오류 (서버는 계속 실행됩니다):', e));
@@ -93,6 +98,12 @@ const H = makeHelpers(io, rooms, moduleOf);
 const ACC = require('./lib/accounts')({ io, rooms, H, registry: () => REGISTRY, ipOf: s => ipOf(s), cloud: CLOUD });
 // 운영자 · 전체 공지 (환경 변수 ADMIN_KEY 로 최고 운영자 인증)
 const ADM = require('./lib/admin')({ io, rooms, acc: ACC, limiter: ACC._int.limiter });
+// 🍱 학식 메뉴 (폴리텍 로봇캠퍼스 홈페이지 식단을 서버가 읽어 둬요 — 30분에 한 번까지)
+const MEAL = require('./lib/meal')({ ACC });
+app.get('/api/meal', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try { res.json(await MEAL.view()); } catch (e) { res.json({ ok: false, err: e.message }); }
+});
 // 버그 · 불편 신고함 (운영자만 볼 수 있어요)
 const REP = require('./lib/report')({ io, rooms, acc: ACC, limiter: ACC._int.limiter });
 /** 화면 파일 버전: 패치로 화면 파일이 바뀌면 값이 달라져요 → 열려 있던 화면에 '새로 고침' 안내 (서버만 다시 켜진 것은 그대로) */
@@ -115,9 +126,22 @@ const MODULES = [
   'table',   // 차례형 보드·카드 게임들 (public/js/shared/*-core.js)
 ].map(name => require(`./games/${name}`)(H));
 for (const mod of MODULES) for (const [key, info] of Object.entries(mod.games)) REGISTRY[key] = { ...info, mod };
+// 새 버전으로 갈아타기: 업데이트해도 하던 판은 끝까지 → 끝나면 같은 방 그대로 새 서버로 (클라우드에서만)
+const HO = require('./lib/handoff')({ io, rooms, H, ACC, REGISTRY, cloud: CLOUD, boot: BOOT_ID, publicUrl: () => publicUrl,
+  makeRoom, addPlayer, leaveRoom, genCode });
+H.onLobby = room => HO.afterLobby(room);
 
 const { getPlayer, participants, pushRoom, sys, endToLobby, stopTimers, cleanName, rand } = H;
 
+/** 빈 방 하나 (방 만들기 · 새 버전으로 옮겨 온 방) */
+function makeRoom(code, gameType) {
+  const room = {
+    code, gameType, options: { seotdaType: '2card', pokerType: '5card' },
+    players: [], isStarted: false, game: null, timers: new Set(), loop: null, session: 0,
+  };
+  for (const o of REGISTRY[gameType].options || []) room.options[o.key] = o.def;   // 보드게임 옵션 기본값 (봇 수 · 시간 등)
+  return room;
+}
 function genCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // 헷갈리는 O/0, I/1 제외
   let c; do { c = Array.from({ length: 4 }, () => chars[rand(chars.length)]).join(''); } while (rooms.has(c));
@@ -180,6 +204,7 @@ function dropPlayer(room, id, msg) {
 /** 게임 시작 (방장이 누를 때 · 모두 '한 판 더'를 눌렀을 때). 시작 못 하면 이유를 say 로 알려요 */
 function tryStart(room, say) {
   if (room.isStarted) return false;
+  if (HO.blockStart(room, say)) return false;           // 새 버전으로 갈아타는 중
   const info = REGISTRY[room.gameType];
   const parts = participants(room);
   if (info.requireRoles && !info.requireRoles.every(r => room.players.some(p => p.role === r))) { say(info.requireMsg); return false; }
@@ -277,6 +302,7 @@ io.on('connection', socket => {
   ACC.attach(socket, on);                                                          // 계정 · 친구 이벤트 (acct:* · fr:*)
   ADM.attach(socket, on);                                                          // 운영자 · 전체 공지 (admin:* · notice:*)
   REP.attach(socket, on);                                                          // 신고함 (report:* · admin:report*)
+  HO.attach(socket, on);                                                           // 새 버전으로 옮겨 온 사람: 같은 방으로 (room:rejoin)
   on('ping:t', (t, cb) => { if (typeof cb === 'function') cb(t); });              // 화면 위 지연 시간(ms) 표시용
   /** 초대 링크로 들어온 사람에게 방 정보 미리 보여주기 */
   on('peekRoom', (code, cb) => {
@@ -290,17 +316,21 @@ io.on('connection', socket => {
   on('createRoom', d => {
     if (!d || !REGISTRY[d.gameType]) return toast('알 수 없는 게임입니다.');
     if (rooms.size >= LIMITS.rooms) return toast('지금은 열린 방이 너무 많아요. 잠시 후 다시 시도해 주세요.');
+    if (HO.redirect(socket)) return;                    // 새 버전으로 갈아타는 중이면 새 서버에서
     leaveRoom(socket);
-    const room = {
-      code: genCode(), gameType: d.gameType, options: { seotdaType: '2card', pokerType: '5card' },
-      players: [], isStarted: false, game: null, timers: new Set(), loop: null, session: 0,
-    };
-    for (const o of REGISTRY[d.gameType].options || []) room.options[o.key] = o.def;   // 보드게임 옵션 기본값 (봇 수 · 시간 등)
+    const room = makeRoom(genCode(), d.gameType);
+    const ai = (REGISTRY[d.gameType].options || []).find(o => o.key === 'bots');
+    if (d.ai && ai) {                                    // 싱글 「vs AI」: 비공개 방 + AI 자리 (섯다 v13.2)
+      room.private = true;
+      const v = ai.values.map(([x]) => x).filter(x => x <= Number(d.ai));
+      room.options.bots = v.length ? Math.max(...v) : ai.def;
+    }
     rooms.set(room.code, room);
     addPlayer(room, socket, d.playerName);
   });
 
   on('joinRoom', d => {
+    if (HO.redirect(socket)) return;
     const room = rooms.get(String((d && d.roomCode) || '').toUpperCase().trim());
     if (!room) return toast('존재하지 않는 방 코드입니다.');
     if (room.players.some(p => p.id === socket.id)) return;
@@ -328,6 +358,7 @@ io.on('connection', socket => {
     cb({ open: open.slice(0, 60), more: Math.max(0, open.length - 60), playing });
   });
   on('rooms:quick', (d, cb) => {
+    if (HO.redirect(socket)) return reply(cb, { ok: false, moving: true });
     const want = d && typeof d.game === 'string' && REGISTRY[d.game] ? d.game : null;
     let best = null;
     for (const room of rooms.values()) {
@@ -383,6 +414,16 @@ io.on('connection', socket => {
     pushRoom(room);
     const mod = moduleOf(room);
     if (room.isStarted && room.game && !room.game.over && mod && mod.resync) mod.resync(room, me, socket);
+  });
+
+  /** 🚨 방 친구 모두 숨기기 (수업 모드 — js/pause.js) · 한 사람당 10초에 한 번 */
+  on('room:hide', () => {
+    const { room, me } = ctx();
+    if (!room || !me) return;
+    const now = Date.now();
+    if (now - (socket.data.hideAt || 0) < 10000) return;
+    socket.data.hideAt = now;
+    socket.to(room.code).emit('room:hide', { by: me.name });
   });
 
   on('setOption', d => {
@@ -488,7 +529,9 @@ io.on('connection', socket => {
 ACC.init();                                            // 계정 불러오기 (DB가 느려도 서버는 먼저 켜져요)
 let closing = false;
 const shutdown = sig => {                              // 끄기 전에 바뀐 계정을 저장해요 (Render 재배포 · Ctrl+C · 창 닫기)
-  if (closing) return; closing = true;
+  if (closing) return;
+  if (sig === 'SIGTERM' && HO.onSigterm()) return;     // 클라우드 재배포: 하던 판이 끝날 때까지 기다렸다가 꺼요 (lib/handoff.js)
+  closing = true;
   ACC.flushSync();
   Promise.race([ACC.flush(), new Promise(r => setTimeout(r, 4000))]).finally(() => process.exit(sig === 'SIGINT' ? 130 : 0));
 };

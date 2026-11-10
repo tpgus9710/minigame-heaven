@@ -102,7 +102,8 @@ const Acct = {
   setToken(t) { store.set('mgAuth', t || ''); },
 
   /* ───────── 서버와 인사 (접속할 때마다) ───────── */
-  async hello() {
+  hello() { this.helloP = this.hello0(); return this.helloP; },     // helloP: 인사가 끝나기를 기다릴 때 (js/mover.js)
+  async hello0() {
     const r = await ask('acct:hello', this.token || '');
     this.persist = r.persist || this.persist;
     if (!r.ok) { this.state = r.why || 'loading'; this.renderAll(); return; }

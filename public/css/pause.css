@@ -1,0 +1,119 @@
+/* =====================================================================
+ *  ⏸ 일시정지(블라인드) · 🙈 위장 화면 · 📚 수업 모드 설정 (js/pause.js, v13.2)
+ * ===================================================================== */
+/* ── 제목 줄 · 위쪽 막대 버튼 ── */
+.pz-btn,.dg-btn,.dg-top{display:none}
+.pz-btn,.dg-btn{align-items:center;justify-content:center;padding-left:12px;padding-right:12px}
+.pz-btn .ic,.dg-btn .ic,.dg-top .ic{width:18px;height:18px;margin:0}
+body.pz-solo.gaming .pz-btn{display:inline-flex}                    /* 싱글 게임: 일시정지 */
+body.class-mode.gaming .dg-btn{display:inline-flex}                 /* 수업 모드: 게임 화면에서 바로 숨기기 */
+body.class-mode:not(.gaming) .dg-top{display:inline-grid;place-items:center;width:38px;height:36px;padding:0}
+body.gaming .game-head .pz-btn,body.gaming .game-head .dg-btn{padding:7px 10px}
+body.gaming .game-head h2 .tt{word-break:keep-all}                  /* 버튼이 늘어 제목이 줄바뀜할 때 낱말 단위로 (요트 / 다이스) */
+@media (max-width:520px){ body.gaming .game-head .pz-btn,body.gaming .game-head .dg-btn{padding:6px 9px;min-width:36px} }
+/* 휴대폰 · 폴드 겉화면: 제목 줄 칸에 ⏸ · 🙈 자리를 더해요 (숨긴 칸은 폭 0 · 간격도 0) */
+@media (max-width:760px){
+  body.gaming .game-head{grid-template-columns:minmax(0,1fr) auto auto auto auto auto;column-gap:0}
+  body.gaming .game-head > .btn{margin-left:6px}
+  body.gaming .game-head .pz-btn{grid-row:1;grid-column:2}
+  body.gaming .game-head .dg-btn{grid-row:1;grid-column:3}
+  body.gaming .game-head .chat-tgl,body.gaming .game-head .gh-rank{grid-row:1;grid-column:4}
+  body.gaming .game-head .gh-man{grid-row:1;grid-column:5}
+  body.gaming .game-head [data-act=leaveGame]{grid-row:1;grid-column:6}
+}
+/* 자기 제목 줄 격자를 가진 화면: 섯다 · 포커 [제목][그만하기][💬][🙈][나가기] · 윷놀이 싱글 [제목][차례][⏸][🙈][설명서][나가기] */
+@media (max-width:760px){
+  body.gaming #scr-card .game-head{grid-template-columns:minmax(0,1fr) auto auto auto auto}
+  body.gaming #scr-card .game-head .dg-btn{grid-row:1;grid-column:4}
+  body.gaming #scr-card .game-head [data-act=leaveGame]{grid-column:5}
+}
+@media (max-width:600px){
+  body.gaming:not(.in-room) #scr-yut .game-head .pz-btn{grid-column:3}
+  body.gaming:not(.in-room) #scr-yut .game-head .dg-btn{grid-column:4}
+}
+.dg-btn,.dg-top{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+
+/* ── 일시정지: 게임 화면을 통째로 가려요 (판 · 문양이 안 보이게) ── */
+body.pz-on #main .screen.active{visibility:hidden}
+body.pz-on #vpad{display:none!important}
+.pz-ov{position:fixed;inset:0;z-index:140;display:none;place-items:center;padding:16px;
+  background:radial-gradient(120% 90% at 50% 0%,color-mix(in srgb,var(--accent) 16%,var(--bg)) 0%,var(--bg) 62%);-webkit-tap-highlight-color:transparent}
+.pz-ov.show{display:grid}
+.pz-card{width:min(360px,100%);text-align:center;padding:26px 22px 18px;border-radius:24px;background:var(--panel);border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.35);animation:pzIn .18s ease-out}
+@keyframes pzIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.pz-ic{width:58px;height:58px;margin:0 auto 10px;border-radius:18px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#8b7bff,#4f46e5);box-shadow:0 10px 24px rgba(79,70,229,.4)}
+.pz-ic .ic{width:30px;height:30px}
+.pz-t{display:flex;align-items:center;justify-content:center;font:400 28px/1.2 'Black Han Sans',sans-serif;margin-bottom:6px;min-height:46px}
+.pz-cd{display:inline-block;font-size:44px;line-height:46px;color:var(--accent-2);animation:pzCd .5s ease-out}
+@keyframes pzCd{from{transform:scale(1.6);opacity:0}to{transform:none;opacity:1}}
+.pz-s{margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.5;word-break:keep-all}
+.pz-s small{font-size:12.5px;opacity:.85}
+.pz-go{width:100%;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.pz-go .ic{width:22px;height:22px}
+.pz-row{display:flex;gap:8px;margin-top:10px}
+.pz-row .btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:15px;padding:10px 8px}
+.pz-row .btn .ic{width:17px;height:17px}
+.pz-k{margin:12px 0 0;font-size:12px;color:var(--muted)}
+.pz-k kbd,.cm-help kbd,.cm-h kbd{font:700 11px/1 ui-monospace,Menlo,Consolas,monospace;padding:2px 6px;border-radius:5px;border:1px solid var(--line);background:var(--panel2);color:var(--text)}
+@media (hover:none),(pointer:coarse){ .pz-k{display:none} }
+
+/* ── 🙈 위장 화면 (테마와 상관없이 진짜 문서 · 편집기처럼) ── */
+.dg-ov{position:fixed;inset:0;z-index:2147483000;display:none;overflow:auto;overscroll-behavior:contain;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.dg-ov.show{display:block}
+.dg-ov.note{background:#f1f3f4;color:#202124;font-family:'Noto Sans KR',-apple-system,'Segoe UI',sans-serif}
+.dg-bar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:14px;padding:10px 16px;background:#fff;border-bottom:1px solid #dadce0;font-size:14px;color:#3c4043}
+.dg-file{display:inline-flex;align-items:center;gap:8px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dg-file .ic{width:20px;height:20px;color:#1a73e8;flex:none}
+.dg-tools{display:flex;gap:14px;color:#5f6368;font-size:15px}
+.dg-tools b,.dg-tools i,.dg-tools u{font-family:Georgia,serif}
+.dg-saved{margin-left:auto;font-size:12px;color:#5f6368;white-space:nowrap}
+.dg-page{max-width:780px;margin:22px auto 60px;background:#fff;padding:48px 56px 64px;box-shadow:0 1px 3px rgba(60,64,67,.3);line-height:1.75;font-size:15.5px}
+.dg-page h1{font:700 26px/1.35 'Noto Sans KR',sans-serif;margin:0 0 4px;color:#202124}
+.dg-page h2{font:700 18px/1.4 'Noto Sans KR',sans-serif;margin:26px 0 8px;color:#1a73e8}
+.dg-meta{margin:0 0 18px;color:#5f6368;font-size:13px}
+.dg-page p{margin:6px 0}
+.dg-page ul{margin:6px 0;padding-left:22px}
+.dg-eq{margin:10px 0;padding:10px 14px;border-left:3px solid #1a73e8;background:#f8f9fa;font-family:'Cambria Math','Times New Roman',serif;font-size:16px;line-height:1.8}
+.dg-tb{border-collapse:collapse;margin:8px 0 6px;font-size:14px}
+.dg-tb th,.dg-tb td{border:1px solid #dadce0;padding:5px 14px;text-align:center}
+.dg-tb th{background:#f1f3f4}
+.dg-arm{display:block;width:min(320px,100%);margin:10px 0}
+@media (max-width:640px){
+  .dg-tools,.dg-saved{display:none}
+  .dg-page{margin:0;padding:24px 18px 48px;box-shadow:none;font-size:15px}
+  .dg-page h1{font-size:22px}
+}
+.dg-ov.code{background:#1e1e1e;color:#d4d4d4;font-family:ui-monospace,'Cascadia Code',Menlo,Consolas,monospace}
+.dg-code{min-height:100%;display:flex;flex-direction:column}
+.dg-tabs{position:sticky;top:0;z-index:2;display:flex;background:#252526;border-bottom:1px solid #111;font-size:13px;overflow:hidden}
+.dg-tabs span{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;color:#969696;border-right:1px solid #111;white-space:nowrap}
+.dg-tabs span.on{background:#1e1e1e;color:#fff;border-top:2px solid #3b82f6}
+.dg-tabs .ic{width:15px;height:15px;color:#3b82f6}
+.dg-src{flex:1;padding:12px 0;font-size:14px;line-height:1.6;overflow-x:auto}
+.dg-ln{display:flex;white-space:pre}
+.dg-ln i{flex:none;width:44px;padding-right:14px;text-align:right;color:#6e7681;font-style:normal}
+.dg-ln .k{color:#c586c0} .dg-ln .f{color:#dcdcaa} .dg-ln .n{color:#b5cea8} .dg-ln .s{color:#ce9178} .dg-ln .c{color:#6a9955}
+.dg-term{border-top:1px solid #333;background:#181818;padding:8px 14px 10px;font-size:12.5px}
+.dg-term b{display:block;color:#ccc;font-weight:600;margin-bottom:4px;font-size:12px}
+.dg-term pre{margin:0;color:#cccccc;white-space:pre;overflow-x:auto}
+.dg-status{display:flex;gap:16px;justify-content:flex-end;padding:3px 12px;background:#3b82f6;color:#fff;font-size:12px}
+@media (max-width:640px){ .dg-src{font-size:12.5px} .dg-ln i{width:32px;padding-right:10px} }
+
+/* ── 메뉴 → 수업 모드 ── */
+.cm-h{margin:4px 4px 7px;font:700 13px/1.3 'Noto Sans KR',sans-serif;color:var(--muted);display:flex;align-items:center;gap:6px}
+.cm-h small{font-weight:500}
+.cm-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px}
+.cm-opt{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 8px 10px;border-radius:14px;border:2px solid transparent;background:var(--panel);color:var(--text);cursor:pointer;font:inherit;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent)}
+.cm-opt.on{border-color:var(--accent);box-shadow:none}
+.cm-opt b{font-size:14px;font-weight:800;margin-top:4px}
+.cm-opt small{font-size:11.5px;color:var(--muted)}
+.cm-prev{width:100%;height:64px;border-radius:9px;padding:9px 10px;display:flex;flex-direction:column;gap:6px;box-sizing:border-box;overflow:hidden}
+.cm-prev i{display:block;height:6px;border-radius:3px}
+.cm-prev.note{background:#fff;border:1px solid #dadce0}
+.cm-prev.note i{background:#dadce0} .cm-prev.note i:first-child{width:60%;height:8px;background:#1a73e8} .cm-prev.note i:nth-child(3){width:80%} .cm-prev.note i:last-child{width:45%}
+.cm-prev.code{background:#1e1e1e}
+.cm-prev.code i{background:#3a3d41} .cm-prev.code i:first-child{width:45%;background:#c586c0} .cm-prev.code i:nth-child(2){width:70%;margin-left:12px;background:#dcdcaa}
+.cm-prev.code i:nth-child(3){width:55%;margin-left:12px;background:#6a9955} .cm-prev.code i:last-child{width:35%;background:#b5cea8}
+.cm-help{line-height:1.9}
+@media (hover:none),(pointer:coarse){ .cm-help{line-height:1.7} }

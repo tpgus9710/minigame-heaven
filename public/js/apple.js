@@ -12,10 +12,11 @@ const Apple = {
       board.flat().map(v => `<div class="apple" data-v="${v}">${v}</div>`).join('');
     $('#apple-score').textContent = '0';
     $('#apple-mode').textContent = solo ? '혼자 하기 — 2분 동안 최고 점수에 도전!' : '모두 같은 판으로 대결 중! 합이 10이 되게 드래그하세요.';
-    this.end = Date.now() + duration * 1000;
+    this.clk = solo ? () => performance.now() : Date.now;           // 혼자: 일시정지하면 멈추는 시계 (pause.js)
+    this.end = this.clk() + duration * 1000;
     show('apple'); renderScores();
     every(250, () => {
-      const left = secLeft(this.end);
+      const left = Math.max(0, Math.ceil((this.end - this.clk()) / 1000));
       $('#apple-time').textContent = left;
       if (this.solo && left <= 0) {
         const best = Math.max(+store.get('best-apple', 0), this.score); store.set('best-apple', best);
@@ -49,7 +50,7 @@ const Apple = {
     tip.textContent = sum; tip.classList.toggle('ten', sum === 10);
   }
   board.addEventListener('pointerdown', e => {
-    if (!isScreen('apple') || (Apple.end && Date.now() > Apple.end)) return;
+    if (!isScreen('apple') || (Apple.end && Apple.clk() > Apple.end)) return;
     board.setPointerCapture(e.pointerId); start = local(e); update(e);
   });
   board.addEventListener('pointermove', e => { if (start) update(e); });

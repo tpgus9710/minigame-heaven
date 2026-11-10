@@ -8,6 +8,7 @@ services:
     buildCommand: npm install
     startCommand: node server.js
     healthCheckPath: /health
+    maxShutdownDelaySeconds: 300   # 새 버전이 뜬 뒤에도 옛 서버가 하던 판을 끝낼 수 있게 최대 5분 더 (lib/handoff.js)
     autoDeployTrigger: commit  # GitHub에 파일을 올리면 자동으로 다시 배포
     envVars:
       - key: KEEP_AWAKE        # 1 = 10분마다 스스로 깨워서 잠들지 않게 (무료 750시간이면 서버 1개는 한 달 내내 켜 둘 수 있어요)

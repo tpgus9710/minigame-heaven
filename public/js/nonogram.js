@@ -55,7 +55,7 @@ const NG = {
     Object.assign(this, { w: P.w, h: P.h, rows: P.rows, cols: P.cols, sol: P.sol, name: P.name, done: false, doneAt: 0, miss: 0, hints: 0, hist: [], hintCells: null, lastSent: '' });
     this.grid = new Uint8Array(P.w * P.h);
     if (grid && grid.length === P.w * P.h) for (let i = 0; i < grid.length; i++) this.grid[i] = +grid[i] || 0;
-    this.t0 = Date.now();
+    this.t0 = performance.now();                                 // 일시정지하면 멈추는 시계 (pause.js)
     this.build();
     this.paint();
     every(250, () => this.hud());
@@ -104,7 +104,7 @@ const NG = {
   },
   hud() {
     if (!this.grid) return;
-    const sec = this.solo ? Math.floor(((this.doneAt || Date.now()) - this.t0) / 1000) + this.hints * 30 : secLeft(this.endAt);
+    const sec = this.solo ? Math.floor(((this.doneAt || performance.now()) - this.t0) / 1000) + this.hints * 30 : secLeft(this.endAt);
     setStat('nonogram', 'time', `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
     const lab = $('#nonogram-time-label'); if (lab) lab.textContent = this.solo ? '시간' : '남은 시간';
     const ml = $('#nonogram-miss-label'); if (ml) ml.textContent = this.solo && this.check ? '목숨' : '실수';
@@ -179,7 +179,7 @@ const NG = {
   /** 정답 확인을 켜고 3번 틀리면 실패 (기록 없음) */
   fail() {
     if (this.done) return;
-    this.done = true; this.doneAt = Date.now();
+    this.done = true; this.doneAt = performance.now();
     this.paint();
     $('#ng-board').classList.add('lost');
     this.msg('💔 3번 틀렸어요. 이번 퍼즐은 실패! <b>새 퍼즐</b>로 다시 도전해요.');
@@ -223,7 +223,7 @@ const NG = {
     const allCols = this.cols.every((cl, c) => NonogramCore.lineDone(cl, Array.from({ length: h }, (_, r) => g[r * w + c])));
     if (!allRows || !allCols) return;
     if (!this.solo) { this.msg('🎉 모든 줄이 맞아요! 서버가 정답을 확인하는 중…'); this.send(true); return; }
-    this.done = true; this.doneAt = Date.now();
+    this.done = true; this.doneAt = performance.now();
     for (let i = 0; i < g.length; i++) if (g[i] === 2) g[i] = 0;
     this.paint();
     $('#ng-board').classList.add('win');

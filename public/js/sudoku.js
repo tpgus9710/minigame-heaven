@@ -65,7 +65,7 @@ const SU = {
     this.grid = grid ? SudokuCore.parse(grid).map((v, i) => this.givens[i] || v) : this.givens.slice();
     this.notes = new Uint16Array(81);
     this.hist = []; this.sel = this.grid.findIndex(v => !v); this.miss = 0; this.hints = 0; this.done = false; this.hintAt = -1; this.lastSent = '';
-    this.t0 = Date.now();
+    this.t0 = performance.now();                                 // 일시정지하면 멈추는 시계 (pause.js)
     this.paint();
     every(250, () => this.hud());
     this.fit();
@@ -109,7 +109,7 @@ const SU = {
   },
   hud() {
     if (!this.grid) return;
-    const sec = this.solo ? Math.floor(((this.doneAt || Date.now()) - this.t0) / 1000) + this.hints * 30 : secLeft(this.endAt);
+    const sec = this.solo ? Math.floor(((this.doneAt || performance.now()) - this.t0) / 1000) + this.hints * 30 : secLeft(this.endAt);
     setStat('sudoku', 'time', `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
     const lab = $('#sudoku-time-label'); if (lab) lab.textContent = this.solo ? '시간' : '남은 시간';
     setStat('sudoku', 'miss', this.solo && this.check ? this.miss : '-');
@@ -187,7 +187,7 @@ const SU = {
     if (this.done) return;
     if (!this.solo) { this.msg('🎉 다 채웠어요! 서버가 정답을 확인하는 중…'); this.send(); return; }
     if (this.sol && this.grid.some((v, i) => v !== this.sol[i])) return;     // 싱글: 정답과 같을 때만
-    this.done = true; this.doneAt = Date.now(); this.sel = -1; this.paint();
+    this.done = true; this.doneAt = performance.now(); this.sel = -1; this.paint();
     const sec = Math.floor((this.doneAt - this.t0) / 1000) + this.hints * 30;
     const key = 'best-sudoku-' + this.level, prev = +store.get(key, 0);
     const best = prev ? Math.min(prev, sec) : sec; store.set(key, best);

@@ -33,7 +33,7 @@ const Mine = {
   place(mines) {
     mines.forEach(i => { this.mine[i] = 1; });
     for (let i = 0; i < this.mine.length; i++) this.adj[i] = this.nb(i).filter(j => this.mine[j]).length;
-    this.started = true; this.t0 = Date.now();
+    this.started = true; this.t0 = performance.now();      // 일시정지하면 멈추는 시계 (pause.js)
   },
   startSolo(level) {
     stopLocal();
@@ -61,7 +61,7 @@ const Mine = {
   },
   hud() {
     $('#mine-left').textContent = this.n - this.flags;
-    const sec = this.solo ? (this.started && !this.over ? Math.floor((Date.now() - this.t0) / 1000) : this.finalSec || 0) : secLeft(this.endAt);
+    const sec = this.solo ? (this.started && !this.over ? Math.floor((performance.now() - this.t0) / 1000) : this.finalSec || 0) : secLeft(this.endAt);
     $('#mine-time').textContent = sec;
     $('#mine-time-label').textContent = this.solo ? '시간' : '남은 시간';
     $('#mine-flag').textContent = this.flagMode ? '🚩 깃발 모드 켬' : '⛏️ 열기 모드';
@@ -113,7 +113,7 @@ const Mine = {
     if (this.opened >= total) this.win();
   },
   boom(i) {
-    this.over = true; this.finalSec = Math.floor((Date.now() - this.t0) / 1000);
+    this.over = true; this.finalSec = Math.floor((performance.now() - this.t0) / 1000);
     for (let k = 0; k < this.mine.length; k++) if (this.mine[k]) { this.open[k] = 1; this.draw(k); }
     this.cells[i].classList.add('boom');
     $('#mine-status').textContent = '💥 펑! 지뢰를 밟았어요.';
@@ -121,7 +121,7 @@ const Mine = {
     else { socket.emit('mine:boom'); $('#mine-status').textContent = '💥 탈락! 다른 사람들을 기다리는 중…'; }
   },
   win() {
-    this.over = true; this.finalSec = Math.floor((Date.now() - this.t0) / 1000);
+    this.over = true; this.finalSec = Math.floor((performance.now() - this.t0) / 1000);
     for (let k = 0; k < this.mine.length; k++) if (this.mine[k] && !this.flag[k]) { this.flag[k] = 1; this.draw(k); }
     this.flags = this.n; this.hud();
     $('#mine-status').textContent = '🎉 모든 칸을 열었어요!';

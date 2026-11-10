@@ -1,6 +1,6 @@
 /* =====================================================================
  *  ☰ 메뉴 — 위쪽 오른쪽 버튼 하나에 iOS 설정처럼 모았어요
- *    소리 · 다크 모드 (스위치) / 신고 · 요청 · 패치 노트 · 게임 설명서 / 버전
+ *    학식 메뉴(js/meal.js) / 수업 모드 · 숨기기 설정(js/pause.js) / 소리 · 다크 모드 (스위치) / 신고 · 요청 · 패치 노트 · 게임 설명서 / 버전
  *  - 컴퓨터: 버튼 아래 작은 창 · 휴대폰: 아래에서 올라오는 시트
  *  - 패치 노트는 메뉴 안에서 넘어가요(‹ 메뉴). 새 버전을 아직 안 봤거나 신고 답장이 오면 메뉴 버튼에 빨간 점
  *  - 처음 화면 왼쪽 아래 버전 표시(v12.1 처럼)를 누르면 바로 패치 노트
@@ -13,6 +13,7 @@ const Menu = {
   open(page = 'main') {
     this.page = page; this.open1 = 0;
     this.render();
+    if (page === 'meal' && typeof Meal !== 'undefined') Meal.load(true).then(() => { if (this.isOpen() && this.page === 'meal') this.render(); });
     $('#ms-ov').classList.add('show');
     $('#menu-btn').setAttribute('aria-expanded', 'true');
     if (page === 'notes') this.seen();
@@ -33,7 +34,8 @@ const Menu = {
   },
   render() {
     const s = $('#ms-sheet');
-    s.innerHTML = this.page === 'notes' ? this.notesHTML() : this.mainHTML();
+    s.innerHTML = this.page === 'notes' ? this.notesHTML() : this.page === 'meal' && typeof Meal !== 'undefined' ? Meal.pageHTML()
+      : this.page === 'class' && typeof Class !== 'undefined' ? Class.pageHTML() : this.mainHTML();
     s.dataset.page = this.page;
   },
   mainHTML() {
@@ -45,6 +47,11 @@ const Menu = {
     const n = PATCH_NOTES[0] || {};
     return `<div class="ms-grab"></div>
       <div class="ms-head"><b>메뉴</b><button class="ms-x" data-act="msClose" aria-label="닫기">${icon('x')}</button></div>
+      ${typeof Meal !== 'undefined' ? `<div class="ms-group">${go('msMeal', 'tools-kitchen-2', '#ff9f0a', '학식 메뉴', esc(Meal.sub()))}</div>` : ''}
+      ${typeof Class !== 'undefined' ? `<div class="ms-group">
+        <label class="ms-row">${tile('school', '#30b158')}<span class="ms-t">수업 모드<small>${esc(Class.sub())}</small></span><input type="checkbox" class="ms-sw" data-act="clsQuick" ${Class.manual ? 'checked' : ''} aria-label="수업 모드"></label>
+        ${go('msClass', 'eye-off', '#8e8e93', '숨기기 · 일시정지 설정', '위장 화면 고르기 · 자동 일시정지 · 단축키')}
+      </div>` : ''}
       <div class="ms-group">
         ${sw('msSound', snd, 'volume', '#ff9f0a', '소리')}
         ${sw('msDark', dark, 'moon-stars', '#5e5ce6', '다크 모드')}

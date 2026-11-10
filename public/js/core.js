@@ -34,7 +34,7 @@ function gameLoop(fn) {
   const f = now => {
     if (gen !== S.gen) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    fn(dt, now);
+    if (!(typeof Pause !== 'undefined' && Pause.on)) fn(dt, now);      // 일시정지 중엔 멈춰요 (js/pause.js)
     if (gen === S.gen) S.raf = requestAnimationFrame(f);
   };
   S.raf = requestAnimationFrame(f);
@@ -306,8 +306,8 @@ applyTheme(store.get('theme', 'dark'));
 /* ─── 게임 정보 (cat = 메뉴 분류) ─── */
 const CATS = ['전체', '액션', '퍼즐', '보드·카드', '파티'];
 const GAME_INFO = {
-  seotda: { icon: '🎴', name: '섯다', desc: '화투로 한 장씩 받으며 베팅', cat: '보드·카드', players: '2~6명',
-    rules: '<b>진행</b> 한 장씩 받으며 다이·콜·삥·쿼터·하프·올인으로 베팅해요. 이긴 사람이 다음 판 선!<br><b>3장 섯다</b> 2장 중 1장을 골라 보여 주고 베팅 → 1장 더 받아 3장 중 2장을 직접 골라 마지막 베팅<br><b>족보</b> 38광땡 > 18·13광땡 > 장땡~1땡 > 알리 > 독사 > 구삥 > 장삥 > 장사 > 세륙 > 갑오(9끗) … 망통(0끗)<br><b>특수</b> 땡잡이(3광+7열끗)는 1~9땡을, 암행어사(4·7열끗)는 13·18광땡을 잡아요. 구사(4+9)는 상대가 알리 이하면 재경기!<br><b>자금</b> 기본 100만원 · 판돈 5천원 · 누군가 0원이 되면 대기실로' },
+  seotda: { icon: '🎴', name: '섯다', desc: '화투로 한 장씩 받으며 베팅 · AI 상대 가능', cat: '보드·카드', players: '1~6명 · AI',
+    rules: '<b>진행</b> 한 장씩 받으며 다이·콜·삥·쿼터·하프·올인으로 베팅해요. 이긴 사람이 다음 판 선!<br><b>3장 섯다</b> 2장 중 1장을 골라 보여 주고 베팅 → 1장 더 받아 3장 중 2장을 직접 골라 마지막 베팅<br><b>족보</b> 38광땡 > 18·13광땡 > 장땡~1땡 > 알리 > 독사 > 구삥 > 장삥 > 장사 > 세륙 > 갑오(9끗) … 망통(0끗)<br><b>특수</b> 땡잡이(3광+7열끗)는 1~9땡을, 암행어사(4·7열끗)는 13·18광땡을 잡아요. 구사(4+9)는 상대가 알리 이하면 재경기!<br><b>자금</b> 기본 100만원 · 판돈 5천원 · 누군가 0원이 되면 대기실로<br><b>AI</b> 대기실에서 🤖 AI 상대 수를 정해요 (혼자 시작하면 1명은 꼭) · 사람이 혼자면 시간 제한 없이 기다려 줘요' },
   poker: { icon: '🃏', name: '포커', desc: '5장 · 7장 스터드 포커', cat: '보드·카드', players: '2~6명',
     rules: '<b>5장 포커</b> 히든 1장+오픈 1장으로 시작해 한 장씩 오픈, 총 4번 베팅.<br><b>7장 포커</b> 히든 2장+오픈 1장 → 오픈 3장 → 마지막 히든 1장, 7장 중 가장 좋은 5장으로 승부.<br><b>족보</b> 로티플 > 스티플 > 포카드 > 풀하우스 > 플러시 > 스트레이트 > 트리플 > 투페어 > 원페어 > 탑<br><b>자금</b> 기본 100만원 · 판돈 5천원 · 누군가 0원이 되면 대기실로' },
   apple: { icon: '🍎', name: '사과 게임', desc: '합이 10이 되게 드래그', cat: '퍼즐', players: '1~8명',
@@ -410,6 +410,7 @@ const GAME_INFO = {
     rules: '방향키(또는 WASD)로 달리고 <b>Shift를 누른 채 꺾으면 드리프트</b>! 드리프트를 길게 하고 놓으면 순간 대시, 스피드전에서는 드리프트로 <b>부스터 게이지</b>가 차서 부스터를 얻어요(Ctrl 또는 E로 사용). 아이템전에서는 아이템 상자를 지나 바나나 · 물풍선 · 미사일 · 실드 · 부스터를 얻어요. 출발 신호 직전에 가속하면 출발 부스터! 벽에 끼면 R 키로 트랙 복귀. 정한 바퀴 수를 가장 먼저 도는 사람이 우승!' },
 };
 const SOLO_GAMES = [   // [키, 아이콘, 이름, 설명, NEW 표시, 분류]
+  ['seotda', '🎴', '섯다 vs AI', '2장 · 3장 섯다 · AI 1~5명 · 시간 제한 없음', true, '보드·카드'],
   ['setgame', '🔺', '세트 찾기', '3분 기록 도전 · AI 1~3명 대결 (SET 방식)', true, '퍼즐'],
   ['mahjong', '🀄', '마작 솔리테어', '쌓인 패를 짝 맞춰 비우기 (상하이) · 시간 기록', true, '퍼즐'],
   ['tilematch', '🧩', '타일 매치', '같은 그림 3개 모으기 · 레벨 깨기', true, '퍼즐'],
@@ -465,7 +466,7 @@ const avColor = id => AV_COLORS[[...String(id)].reduce((a, c) => a + c.charCodeA
 const EMOJIS = ['👍', '😂', '😱', '🔥', '👏', '💰', '😭', '🤔', '😎', '🙏'];
 
 /* 메뉴 카드 + 분류 칩 */
-const UPDATED = new Set(['word', 'seotda', 'yacht', 'marble', 'catch', 'liar']);   // 이번에 크게 바뀐 게임
+const UPDATED = new Set(['seotda', 'word', 'yacht']);   // 이번에 크게 바뀐 게임
 function fillGrid(sel, list) {
   const grid = $(sel);
   list = list.slice().sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));   // 새 게임을 앞쪽에
@@ -1066,7 +1067,8 @@ padEl.addEventListener('pointerdown', e => {
  *  자주 하는 게임 = 계정 기록(멀티 + 싱글 판수 · 최근 판, lib/accounts.js favOf) 과 이 기기 기록(mgPlays) 중 큰 쪽.
  *  누르면 많이 한 쪽으로 바로: 싱글이면 바로 시작 · 멀티면 그 게임 방을 바로 만들어요. 기록이 모자라면 같은 분류 → 기본 추천으로 채워요. */
 const NEW_GAMES = ['setgame', 'mahjong', 'tilematch', 'pinball'];                 // 새로 나온 게임 (최신이 앞)
-const HOME_DEFAULT = ['tetris', 'shisen', 'rummi', 'catch', 'g2048', 'omok', 'gostop', 'yut'];
+const HOME_DEFAULT = ['tetris', 'shisen', 'rummi', 'catch', 'g2048', 'omok', 'gostop', 'yut', 'seotda', 'apple', 'yacht', 'marble', 'mine', 'word', 'halli', 'kart', 'sudoku', 'mafia'];
+const REC_N = 12;                                                                  // 추천 게임 수 (v13.2: 4 → 12)
 const Home = {
   plays() { try { return JSON.parse(localStorage.getItem('mgPlays') || '{}') || {}; } catch { return {}; } },
   /** 이 기기에서 한 판 시작 (싱글 s · 멀티 m) */
@@ -1090,11 +1092,11 @@ const Home = {
       if (y) { y.p = Math.max(y.p, p); y.w = Math.max(y.w, p) + fresh; }
       else m.set(k, { k, p, mode: (x[1] || 0) > (x[0] || 0) ? 'm' : 's', w: p + fresh });
     }
-    const list = [...m.values()].filter(x => x.p > 0 && this.has(x.k)).sort((a, b) => b.w - a.w).slice(0, 4);
+    const list = [...m.values()].filter(x => x.p > 0 && this.has(x.k)).sort((a, b) => b.w - a.w).slice(0, REC_N);
     const played = list.length, top = list[0] && catOf(list[0].k);
     const pool = (top ? [...SOLO_GAMES.map(g => g[0]), ...Object.keys(GAME_INFO)].filter(k => catOf(k) === top) : []).concat(HOME_DEFAULT);
     for (const k of pool) {
-      if (list.length >= 4) break;
+      if (list.length >= REC_N) break;
       if (this.has(k) && !NEW_GAMES.includes(k) && !list.some(x => x.k === k)) list.push({ k, p: 0, mode: this.solo(k) ? 's' : 'm' });
     }
     return { list, played };
@@ -1105,8 +1107,9 @@ const Home = {
     $('#home-rec-sub').textContent = played ? '자주 하는 게임' : '처음이라면 이런 게임부터';
     el.innerHTML = list.map(x => {
       const mode = x.mode === 'm' && GAME_INFO[x.k] ? 'm' : this.solo(x.k) ? 's' : 'm';
-      const sub = x.p ? `${x.p.toLocaleString()}판 · ${mode === 'm' ? '친구와' : '싱글'}` : esc(mode === 'm' ? GAME_INFO[x.k].desc : this.solo(x.k)[3]);
-      return `<button class="home-chip rec" data-act="homeGo" data-game="${x.k}" data-mode="${mode}">${gameIcon(x.k, catOf(x.k), 'sm')}<span><b>${esc(this.name(x.k, mode))}</b><small>${sub}</small></span>${icon('chevron-right', 'go')}</button>`;
+      const sub = `${mode === 'm' ? '같이' : '혼자'}${x.p ? ` · ${x.p.toLocaleString()}판` : ''}`;
+      const tip = mode === 'm' ? GAME_INFO[x.k].desc : this.solo(x.k)[3];
+      return `<button class="home-app" data-act="homeGo" data-game="${x.k}" data-mode="${mode}" title="${esc(tip)}">${gameIcon(x.k, catOf(x.k))}<b>${esc(this.name(x.k, mode))}</b><small class="${mode}">${sub}</small></button>`;
     }).join('');
   },
 };

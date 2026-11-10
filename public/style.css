@@ -226,7 +226,7 @@ body.in-room .shell{grid-template-columns:minmax(0,1fr) 300px}
 .seat-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .seat-name{font-family:'Black Han Sans';font-size:18px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .badge{font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;color:#fff}
-.badge.first{background:#e2a400} .badge.die{background:#888} .badge.allin{background:#e2453c} .badge.out{background:#555}
+.badge.first{background:#e2a400} .badge.die{background:#888} .badge.allin{background:#e2453c} .badge.out{background:#555} .badge.bot{background:#5e5ce6}
 .seat-money{font-size:13px;color:#4b5068;display:flex;justify-content:space-between;margin-top:2px}
 .seat-money b{color:#0f7a4f}
 .cards{display:flex;gap:4px;justify-content:center;flex-wrap:nowrap;margin:8px 0 6px;min-height:68px;perspective:600px}
@@ -760,6 +760,13 @@ body.pad-side #vpad .tee [data-code=ArrowDown]{grid-area:d;justify-self:center}
 #reconn i{width:14px;height:14px;border-radius:50%;border:2px solid var(--warn);border-top-color:transparent;animation:spin 1s linear infinite;flex:none}
 #reconn small{font-weight:500;color:var(--muted)}
 @media (max-width:520px){ #reconn small{display:none} }
+/* 새 버전으로 갈아타는 중 (js/mover.js) */
+#mover{position:fixed;top:10px;left:50%;transform:translate(-50%,-140%);z-index:181;display:flex;align-items:center;gap:8px;max-width:calc(100vw - 20px);
+  padding:9px 16px;border-radius:99px;background:color-mix(in srgb,var(--info) 22%,var(--panel));border:1px solid color-mix(in srgb,var(--info) 55%,var(--line));
+  color:var(--text);font-size:14px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.35);transition:transform .25s;pointer-events:none;text-align:center}
+#mover.show{transform:translate(-50%,0)}
+#mover i{width:14px;height:14px;border-radius:50%;border:2px solid var(--info);border-top-color:transparent;animation:spin 1s linear infinite;flex:none}
+#mover small{font-weight:500;color:var(--muted)}
 .tag.away{background:rgba(255,194,75,.16);color:var(--warn)}
 
 /* 🕹️ 조이스틱 패드 (stick.js) — 세로: 아래 띠 + 게임판 아래 빈 곳까지 · 가로(pad-side): 게임판 양옆 */

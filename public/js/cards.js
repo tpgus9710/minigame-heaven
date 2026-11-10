@@ -2,7 +2,12 @@
  *  🃏 카드 게임 (섯다 · 포커)
  *   3장 섯다 (v12.8): 2장 받기 → 보여줄 카드 1장 고르기 → 베팅 → 1장 더 → 족보로 쓸 2장 고르기 → 마지막 베팅
  *   고르기: 아래 칸의 보기나 내 카드를 눌러 고르고 「결정」 (같은 보기를 한 번 더 눌러도 결정). 모두 동시에 골라요.
+ *   AI (v13.2): 대기실 🤖 AI 상대 · 싱글 「섯다 vs AI」(비공개 방 + AI 3명) · 사람이 혼자면 시간 제한 없음(v.limit = false)
  * ===================================================================== */
+// 대기실 옵션 (서버 games/cards.js 의 OPTIONS 와 같아요) — LOBBY_OPTIONS 는 뒤에 읽는 table.js 에 있어서 다 읽은 뒤에 넣어요
+document.addEventListener('DOMContentLoaded', () => {
+  LOBBY_OPTIONS.seotda = [{ key: 'bots', label: '🤖 AI 상대', def: 0, values: [[0, '없음'], [1, '1명'], [2, '2명'], [3, '3명'], [4, '4명'], [5, '5명']] }];
+});
 /* 화투 달마다 상징 한자와 색: 송학 · 매조 · 벚꽃 · 흑싸리 · 난초 · 모란 · 홍싸리 · 공산 · 국화 · 단풍 */
 const MONTH_SIGN = { 1: ['松', '#1f7a3a'], 2: ['梅', '#d81b60'], 3: ['櫻', '#ff6f91'], 4: ['藤', '#4a2d6b'], 5: ['蘭', '#1565c0'], 6: ['牡', '#b71c1c'], 7: ['萩', '#7b1fa2'], 8: ['月', '#e0a800'], 9: ['菊', '#f9a825'], 10: ['楓', '#d84315'] };
 const RN = r => ({ 11: 'J', 12: 'Q', 13: 'K', 14: 'A' }[r] || String(r));
@@ -37,6 +42,7 @@ const Cards = {
     const tap = mine && deciding && v.three;                                           // 내 카드를 눌러서 고르기
     const pick = s.pick || (tap && v.phase === 'pick' ? this.pickSel() : null);
     const badges = [
+      s.bot ? '<span class="badge bot">AI</span>' : '',
       v.firstId === s.id ? '<span class="badge first">선</span>' : '',
       s.left ? '<span class="badge out">나감</span>' : s.folded ? '<span class="badge die">DIE</span>' : '',
       s.allIn && !s.folded ? '<span class="badge allin">ALL-IN</span>' : '',
@@ -63,7 +69,7 @@ const Cards = {
       <div class="cards">${cards}</div>
       <div class="seat-hand">${esc(hand)}</div>
       <div class="seat-act">${esc(act)}</div>
-      ${turn || deciding ? '<div class="turnbar"><i data-turnbar></i></div>' : ''}
+      ${(turn || deciding) && v.limit !== false ? '<div class="turnbar"><i data-turnbar></i></div>' : ''}
     </div>`;
   },
   /** 3장 섯다 고르기 칸 — open: [카드 1 | 카드 2 | 보여주기] · pick: [조합 3개 | 결정] */
@@ -144,7 +150,7 @@ const Cards = {
     const v = this.v;
     if (!v) return;
     const choosing = this.choosing();
-    if (!v.turnId && !choosing) return;
+    if ((!v.turnId && !choosing) || v.limit === false) return;            // 혼자 + AI: 시간 제한 없음
     const left = Math.max(0, (choosing ? this.phaseEnd : this.turnEnd) - Date.now());
     const total = ((choosing ? v.phaseSeconds : v.turnSeconds) || 25) * 1000;
     $$('[data-turnbar]').forEach(i => { i.style.width = (left / total * 100) + '%'; });
@@ -212,3 +218,5 @@ socket.on('card:result', d => {
   const t = every(1000, () => { n = Math.max(0, n - 1); draw(); if (!n) clearInterval(t); });
 });
 register('card', {});
+// 싱글 「섯다 vs AI」: 비공개 방을 만들고 AI 3명을 앉혀요 → 대기실에서 2장/3장 · AI 수를 고르고 시작
+register('seotda', { solo: () => socket.emit('createRoom', { playerName: nick(), gameType: 'seotda', ai: 3 }) });
