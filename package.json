@@ -1,13 +1,13 @@
 {
   "name": "minigame-heaven",
-  "version": "13.3.0",
+  "version": "13.4.0",
   "description": "친구들과 함께하는 미니게임 (싱글 36종 · 멀티 43종) + 얼굴 로그인 · 기록 · 친구",
   "private": true,
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "online": "node server.js --online",
-    "test": "node tests/chess.test.js && node tests/gostop.test.js && node tests/seotda.test.js && node tests/word.test.js && node tests/handoff.test.js && node tests/meal.test.js && node tests/search.test.js && node tests/tank.test.js && node tests/puzzle.test.js && node tests/tutorial.test.js && node tests/pong.test.js && node tests/titles.test.js && node tests/version.test.js"
+    "test": "node tests/chess.test.js && node tests/gostop.test.js && node tests/seotda.test.js && node tests/word.test.js && node tests/handoff.test.js && node tests/meal.test.js && node tests/search.test.js && node tests/tank.test.js && node tests/memory.test.js && node tests/spot.test.js && node tests/puzzle.test.js && node tests/tutorial.test.js && node tests/pong.test.js && node tests/titles.test.js && node tests/version.test.js"
   },
   "dependencies": {
     "compression": "^1.8.2",

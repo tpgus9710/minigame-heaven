@@ -133,6 +133,68 @@ console.log('▶ 같은 씨앗이면 서버 · 화면 결과가 같아요');
   ok(run() === run(), '똑같이 다시 돌려도 결과가 같아요');
 }
 
+console.log('▶ ⛰️ 경사: 기울어서 서요 · 기울면서 오르내려요');
+{
+  /** 땅 모양을 높이 함수로 (x 마다 h(x) 아래는 땅, 바닥 없는 곳은 h = null) */
+  const shape = (s, h) => { s.m.fill(0); for (let x = 0; x < TC.W; x++) { const y = h(x); if (y == null) continue; for (let yy = Math.max(0, Math.round(y)); yy < TC.H; yy++) s.m[yy * TC.W + x] = 1; } };
+  const deg = r => Math.round((r * 180) / Math.PI);
+  const drive = (s, t, dir, secs) => { let n = 0; s.turn = s.tanks.indexOf(t); t.fuel = 1e9; for (let i = 0; i < secs * 60; i++) if (TC.move(s, t.id, dir, 1 / 60)) n++; return n; };
+  const s = game(2, 61);
+  const t = s.tanks[0]; s.tanks[1].x = 900;
+  shape(s, () => 400); t.x = 300; TC.place(s, t, 0);
+  ok(t.y === 400 && deg(t.tilt) === 0, '평평한 땅: 기울기 0°');
+  shape(s, x => 400 - (x - 300) * Math.tan(Math.PI / 6)); t.x = 300; TC.place(s, t, 0);   // 오른쪽이 높은 30° 비탈
+  ok(Math.abs(deg(t.tilt) + 30) <= 1 && Math.abs(t.y - 400) <= 1, `30° 비탈에 서면 몸체도 ${deg(t.tilt)}° (오른쪽이 높아요) · 바닥선이 땅에 닿아요 (y ${t.y.toFixed(1)})`);
+  // 경사로: 평지(400) → 45° 오르막 → 언덕 위 평지(300)
+  const ramp = (deg0, top = 300, x0 = 300) => x => { const k = Math.tan((deg0 * Math.PI) / 180); return x < x0 ? 400 : Math.max(top, 400 - (x - x0) * k); };
+  shape(s, ramp(45)); t.x = 260; TC.place(s, t, 0);
+  const tilts = [];
+  s.turn = 0; t.fuel = 1e9;
+  for (let i = 0; i < 240; i++) { TC.move(s, t.id, 1, 1 / 60); tilts.push(deg(t.tilt)); }
+  ok(t.x > 420 && Math.abs(t.y - 300) <= 1, `45° 오르막을 올라 언덕 위까지 (x ${Math.round(t.x)}, y ${Math.round(t.y)})`);
+  ok(Math.min(...tilts) <= -40 && deg(t.tilt) === 0, `오르는 동안 몸체가 기울어요 (가장 많이 ${Math.min(...tilts)}°) → 위에서는 다시 수평`);
+  drive(s, t, -1, 5);
+  ok(Math.abs(t.y - 400) <= 1 && t.x < 300, `내리막도 기울면서 내려와요 (x ${Math.round(t.x)}, y ${Math.round(t.y)})`);
+  shape(s, ramp(60)); t.x = 260; TC.place(s, t, 0); drive(s, t, 1, 4);
+  ok(Math.abs(t.y - 300) <= 1, `60° 가파른 비탈도 올라가요 (y ${Math.round(t.y)})`);
+  shape(s, ramp(78)); t.x = 260; TC.place(s, t, 0); drive(s, t, 1, 4);
+  ok(Math.abs(t.y - 400) <= 1 && t.x < 300 && Math.abs(deg(t.tilt)) <= 2, `78° 높은 비탈은 못 올라가요 — 벽 앞에서 수평으로 멈춰요 (x ${Math.round(t.x)}, y ${Math.round(t.y)}, ${deg(t.tilt)}°)`);
+  shape(s, x => (x < 320 ? 400 : 390)); t.x = 280; TC.place(s, t, 0); drive(s, t, 1, 3);
+  ok(t.x > 340 && Math.abs(t.y - 390) <= 1, '10px 턱은 기울면서 넘어가요');
+  shape(s, x => (x < 320 ? 400 : 350)); t.x = 280; TC.place(s, t, 0); drive(s, t, 1, 3);
+  ok(t.x < 312 && Math.abs(t.y - 400) <= 1 && Math.abs(deg(t.tilt)) <= 2, `50px 벽은 막혀요 (x ${Math.round(t.x)})`);
+  shape(s, x => (x < 320 ? 400 : 378)); t.x = 280; TC.place(s, t, 0); drive(s, t, 1, 3);
+  ok(t.x > 340 && Math.abs(t.y - 378) <= 1, '22px 턱(큰 구덩이 가장자리만큼)도 넘어가요');
+  shape(s, x => (x < 320 ? 400 : 480)); t.x = 280; TC.place(s, t, 0); drive(s, t, 1, 3);
+  ok(t.x > 340 && Math.abs(t.y - 480) <= 1, `80px 낭떠러지는 미끄러지듯 내려가요 (y ${Math.round(t.y)})`);
+  shape(s, x => (x < 320 ? 400 : null)); t.x = 280; TC.place(s, t, 0); drive(s, t, 1, 3);
+  ok(t.x <= 320 && Math.abs(t.y - 400) <= 1 && t.alive, `바닥 없는 구멍 쪽으로는 못 가요 (x ${Math.round(t.x)})`);
+  // 포탄 구덩이에서 빠져나오기 (보통탄 · 대형탄)
+  for (const r of [30, 46]) {
+    shape(s, () => 400); t.x = 480; TC.place(s, t, 0);
+    for (let y = 400 - r; y <= 400 + r; y++) { const half = Math.floor(Math.sqrt(Math.max(0, r * r - (y - 400) * (y - 400)))); for (let x = 480 - half; x <= 480 + half; x++) s.m[y * TC.W + x] = 0; }
+    TC.place(s, t);
+    const bottom = t.y;
+    drive(s, t, 1, 3);
+    const outR = t.x > 480 + r + 4 && Math.abs(t.y - 400) <= 1;
+    t.x = 480; t.y = bottom; TC.place(s, t); drive(s, t, -1, 3);
+    const outL = t.x < 480 - r - 4 && Math.abs(t.y - 400) <= 1;
+    ok(outR && outL && bottom > 400 + r - 4, `반지름 ${r} 구덩이(바닥 y ${Math.round(bottom)})에서 양쪽으로 빠져나와요`);
+  }
+  // 포신 뿌리도 같이 기울어요 · 오르막은 연료를 더 써요
+  shape(s, x => 400 - (x - 300) * Math.tan(Math.PI / 6)); t.x = 300; TC.place(s, t, 0);
+  const m = TC.muzzle(t, 90);
+  ok(Math.abs(m.x - (t.x - 6)) < 0.3, `오른쪽이 높은 30° 비탈: 포신 뿌리가 왼쪽 위로 기울어요 (위로 쏘면 포신 끝 x ${(m.x - t.x).toFixed(1)})`);
+  shape(s, () => 400); t.x = 300; TC.place(s, t, 0); t.fuel = 100; s.turn = 0;
+  for (let i = 0; i < 30; i++) TC.move(s, t.id, 1, 1 / 60);
+  const flatUse = 100 - t.fuel;
+  shape(s, ramp(45, 100, 200)); t.x = 300; TC.place(s, t, 0); t.fuel = 100;
+  for (let i = 0; i < 30; i++) TC.move(s, t.id, 1, 1 / 60);
+  ok(100 - t.fuel > flatUse * 1.3, `오르막은 연료를 더 써요 (평지 ${flatUse.toFixed(1)} · 45° ${(100 - t.fuel).toFixed(1)})`);
+  const v = TC.view(s).find(x => x.id === t.id);
+  ok(typeof v.tilt === 'number' && Math.abs(v.tilt + Math.PI / 4) < 0.05, `화면 · 서버로 보내는 정보에 기울기 (${v.tilt})`);
+}
+
 console.log('▶ AI 는 받은 특별탄을 써요');
 {
   const s = game(2, 51);

@@ -196,6 +196,45 @@ console.log('▶ 2장 섯다는 그대로');
   ok(T.out.results[0] && T.out.results[0].winners[0].hand === '13광땡', '2장으로 승부: 13광땡');
 }
 
+console.log('▶ 올인 뒤 재경기 (0원이 돼도 끝나지 않고 이어서)');
+{
+  const hands = [[C(4, 'pi'), C(9, 'yeol')], [C(2), C(5)]];         // P0 구사 · P1 7끗 → 재경기
+  const T = table(2, '2card', hands);
+  T.p(1).chips += 1000000;                                          // P1 은 돈이 더 많아요 (올인을 받아도 남게)
+  const total = T.chips();
+  let guard = 10;
+  while (T.g.phase === 'betting' && T.g.turnId && guard--) T.mod.events['card:bet'](T.room, T.room.players.find(x => x.id === T.g.turnId), T.g.turnId === 'p0' ? 'allin' : 'call');
+  ok(T.p(0).chips === 0 && T.g.seats.p0.allIn, 'P0 올인 (0원)');
+  T.run(4000);
+  const res = T.out.results[0];
+  ok(res && res.winners.length === 0 && /재경기/.test(res.message), '구사 → 재경기 (판돈 이월)');
+  const carry = T.room.carry;
+  hands.splice(0, 2, [C(1, 'gwang'), C(3, 'gwang')], [C(2, 'pi'), C(6)]);   // 재경기: P0 13광땡 · P1 8끗
+  T.run(7000);
+  ok(!T.out.finished, '0원이 됐다고 「파산자 발생」으로 끝나지 않아요', T.out.finished && T.out.finished.title);
+  ok(T.g.handNo === 2 && T.g.seats.p0 && T.g.seats.p0.allIn && T.g.seats.p0.total === 0 && T.g.carry === carry, `재경기 판: P0 은 돈 없이 올인 상태로 참가 (이월 ${carry}원)`);
+  ok(T.out.logs.some(l => /재경기 — P0 님은 앞 판에서 올인/.test(l)), '「올인 상태로 이어서」 안내');
+  for (let i = 0; i < 6 && T.g.phase !== 'showdown'; i++) { T.betAll('call'); T.run(1600); }
+  const r2 = T.out.results[1];
+  ok(r2 && r2.winners[0] && r2.winners[0].id === 'p0' && r2.winners[0].hand === '13광땡', '재경기에서 이기면 이월된 판돈을 가져가요');
+  ok(T.p(0).chips === carry && T.money() === total, `P0 ${T.p(0).chips}원 (= 이월 판돈) · 돈 합계 그대로`);
+  // 재경기에서 지면 그때는 파산
+  const h2 = [[C(4, 'pi'), C(9, 'yeol')], [C(2), C(5)]];
+  const T2 = table(2, '2card', h2);
+  T2.p(1).chips += 1000000;
+  guard = 10;
+  while (T2.g.phase === 'betting' && T2.g.turnId && guard--) T2.mod.events['card:bet'](T2.room, T2.room.players.find(x => x.id === T2.g.turnId), T2.g.turnId === 'p0' ? 'allin' : 'call');
+  T2.run(4000);
+  h2.splice(0, 2, [C(2, 'pi'), C(6)], [C(1, 'gwang'), C(3, 'gwang')]);       // 이번엔 P1 13광땡
+  T2.run(7000);
+  for (let i = 0; i < 6 && T2.g.phase !== 'showdown'; i++) { T2.betAll('call'); T2.run(1600); }
+  T2.run(7000);
+  ok(T2.out.finished && /파산/.test(T2.out.finished.title) && T2.p(0).chips === 0, '재경기에서도 지면 그때 파산으로 끝나요');
+  // 나눠 주기만 따로: 모두 0원 올인으로 재경기 → 이월된 판돈이 사라지지 않아요
+  const pay = makeCards.distribute({ seats: { a: { total: 0, folded: false }, b: { total: 0, folded: false } }, carry: 3000 }, id => (id === 'b' ? 5 : 1));
+  ok(pay.b === 3000 && !pay.a, '모두 0원이어도 이월 판돈은 이긴 사람에게');
+}
+
 console.log('▶ 무작위 3장 섯다 300판 (돈 합계 · 단계 순서)');
 {
   let bad = 0, hands = 0, replays = 0;
@@ -245,8 +284,9 @@ console.log('▶ 섯다 AI: 이길 확률 어림 (자기 패 · 남이 보여준
   const acts = Array.from({ length: 40 }, () => botBetChoice(strong, 'a', 1000000));
   ok(!acts.includes('die') && acts.filter(a => ['half', 'quarter', 'allin'].includes(a)).length >= 15, `18광땡이면 다이 없이 올려요 (${[...new Set(acts)].join(' · ')})`);
   const p3 = G([C(4, 'yeol'), C(9, 'yeol'), C(1, 'gwang')], [C(5), C(6), C(2)], { three: true });
-  const picks = Array.from({ length: 10 }, () => botPickChoice(p3, 'a').join());
-  ok(!picks.includes('0,1') && picks.filter(x => x === '0,2').length >= 6, `3장: 4열 · 9열 · 1광 → 재경기 멍텅구리구사 대신 독사(가끔 비슷한 구삥): ${[...new Set(picks)].join(' · ')}`);
+  const picks = Array.from({ length: 40 }, () => botPickChoice(p3, 'a').join());   // 독사 · 구삥은 세기가 비슷해서 독사가 60%쯤 (40번이면 흔들리지 않게)
+  const dok = picks.filter(x => x === '0,2').length;
+  ok(!picks.includes('0,1') && picks.every(x => x === '0,2' || x === '1,2') && dok >= 15, `3장: 4열 · 9열 · 1광 → 재경기 멍텅구리구사 대신 독사(가끔 비슷한 구삥): 독사 ${dok}/40`);
   const oc = Array.from({ length: 200 }, () => botOpenChoice([C(1, 'gwang'), C(2)]));
   ok(oc.filter(i => i === 1).length > 120, '보여줄 카드는 대개 약한 카드 (광은 숨겨요)');
 }

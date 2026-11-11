@@ -131,19 +131,24 @@ function evalBest(cards) {
 function distribute(g, scoreOf) {
   const ids = Object.keys(g.seats);
   const alive = ids.filter(id => !g.seats[id].folded);
-  const levels = [...new Set(ids.map(id => g.seats[id].total).filter(v => v > 0))].sort((a, b) => a - b);
   const payout = {};
-  let prev = 0, first = true;
-  for (const lv of levels) {
-    let slice = 0;
-    for (const id of ids) slice += Math.max(0, Math.min(g.seats[id].total, lv) - prev);
-    if (first) { slice += g.carry; first = false; }
-    let eligible = alive.filter(id => g.seats[id].total >= lv);
-    if (!eligible.length) { const mx = Math.max(...alive.map(id => g.seats[id].total)); eligible = alive.filter(id => g.seats[id].total === mx); }
+  const give = (slice, eligible) => {
+    if (slice <= 0 || !eligible.length) return;
     const best = Math.max(...eligible.map(scoreOf));
     const winners = eligible.filter(id => scoreOf(id) === best);
     const share = Math.floor(slice / winners.length);
     winners.forEach((id, i) => { payout[id] = (payout[id] || 0) + share + (i === 0 ? slice - share * winners.length : 0); });
+  };
+  // 재경기로 넘어온 판돈: 끝까지 남은 사람 모두가 다퉈요 — 앞 판에서 올인해 0원이 된 사람도 (이번 판에 낸 돈이 없어도)
+  give(g.carry || 0, alive);
+  const levels = [...new Set(ids.map(id => g.seats[id].total).filter(v => v > 0))].sort((a, b) => a - b);
+  let prev = 0;
+  for (const lv of levels) {
+    let slice = 0;
+    for (const id of ids) slice += Math.max(0, Math.min(g.seats[id].total, lv) - prev);
+    let eligible = alive.filter(id => g.seats[id].total >= lv);
+    if (!eligible.length) { const mx = Math.max(...alive.map(id => g.seats[id].total)); eligible = alive.filter(id => g.seats[id].total === mx); }
+    give(slice, eligible);
     prev = lv;
   }
   return payout;
@@ -267,6 +272,8 @@ module.exports = H => {
     room.game = g;
     emit(room, 'card:start', { handNo: g.handNo });
     emit(room, 'card:log', `🃏 ${g.handNo}번째 판 시작! 참가비 ${won(ANTE)} · 선: ${getPlayer(room, room.firstPlayerId).name}`);
+    const zero = g.carry > 0 ? players.filter(p => g.seats[p.id].total === 0) : [];
+    if (zero.length) emit(room, 'card:log', `🔁 재경기 — ${zero.map(p => p.name).join(', ')} 님은 앞 판에서 올인해서 돈 없이 그대로 참가해요 (이월된 판돈 ${won(g.carry)}을 걸고 승부)`);
     sync(room);
     later(room, 900, () => dealRound(room));
   }
@@ -495,8 +502,10 @@ module.exports = H => {
   }
 
   function nextHand(room) {
-    const all = seated(room);
-    const broke = all.filter(p => p.chips <= 0);
+    const all = seated(room), prev = room.game;
+    // 재경기(판돈 이월)면 올인해서 0원이 된 사람도 끝까지 남았던 사람은 이어서 해요 — 판돈에 내 돈이 들어 있으니까
+    const replay = room.carry > 0 && prev && prev.type === 'card';
+    const broke = all.filter(p => p.chips <= 0 && !(replay && prev.seats[p.id] && !prev.seats[p.id].folded));
     if (broke.length) {
       return finishGame(room, {
         title: '💸 파산자 발생!',

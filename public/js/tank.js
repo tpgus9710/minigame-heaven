@@ -267,19 +267,29 @@ const Tank = {
     if (this.terr) c.drawImage(this.terr, 0, 0);
     this.drawItems(c, now);
     c.textAlign = 'center';
+    const ease = Math.min(1, dt * 14);
     for (const t of v.tanks) {
-      if (!t.alive) { c.fillStyle = '#333'; c.beginPath(); c.roundRect(t.x - 15, t.y - 8, 30, 8, 3); c.fill(); continue; }
-      const a = (t.angle * Math.PI) / 180;
-      c.strokeStyle = '#222'; c.lineWidth = 5; c.beginPath(); c.moveTo(t.x, t.y - 12); c.lineTo(t.x + Math.cos(a) * 22, t.y - 12 - Math.sin(a) * 22); c.stroke();
-      c.fillStyle = t.color; c.beginPath(); c.arc(t.x, t.y - 11, 9, Math.PI, 0); c.fill();
-      c.beginPath(); c.roundRect(t.x - 16, t.y - 12, 32, 10, 4); c.fill();
-      c.fillStyle = '#2b2b2b'; c.beginPath(); c.roundRect(t.x - 17, t.y - 4, 34, 6, 3); c.fill();
-      c.fillStyle = '#111'; c.fillRect(t.x - 18, t.y - 34, 36, 5); c.fillStyle = t.hp > 50 ? '#3fcf9b' : t.hp > 25 ? '#ffc24b' : '#ff5d73'; c.fillRect(t.x - 18, t.y - 34, 36 * t.hp / 100, 5);
-      c.fillStyle = '#fff'; c.font = 'bold 12px "Noto Sans KR", sans-serif'; c.fillText(t.id === this.myId ? `나 (${t.name})` : t.name, t.x, t.y - 40);
-      if (t.id === v.activeId && !this.anim) { const bob = Math.sin(now / 150) * 4; c.fillStyle = '#ffe066'; c.beginPath(); c.moveTo(t.x - 8, t.y - 62 + bob); c.lineTo(t.x + 8, t.y - 62 + bob); c.lineTo(t.x, t.y - 52 + bob); c.fill(); }
+      // 보이는 자리는 실제 자리를 부드럽게 따라가요 (멀티는 1초에 15번 오는 위치 사이를, 떨어질 때는 툭 떨어지지 않게)
+      if (t.dx == null || Math.abs(t.x - t.dx) > 120) { t.dx = t.x; t.dy = t.y; t.dr = t.tilt || 0; }
+      t.dx += (t.x - t.dx) * ease; t.dy += (t.y - t.dy) * ease; t.dr += ((t.tilt || 0) - t.dr) * ease;
+      const x = t.dx, y = t.dy, r = Math.max(-1.35, Math.min(1.35, t.dr));
+      c.save(); c.translate(x, y); c.rotate(r);                    // ⛰️ 몸체는 바퀴 밑 땅 경사만큼 기울어요
+      if (!t.alive) { c.fillStyle = '#333'; c.beginPath(); c.roundRect(-15, -8, 30, 8, 3); c.fill(); c.restore(); continue; }
+      c.fillStyle = t.color; c.beginPath(); c.arc(0, -11, 9, Math.PI, 0); c.fill();
+      c.beginPath(); c.roundRect(-16, -12, 32, 10, 4); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.22)'; c.fillRect(-14, -11, 28, 2);
+      c.fillStyle = '#2b2b2b'; c.beginPath(); c.roundRect(-17, -4, 34, 6, 3); c.fill();
+      c.fillStyle = '#555'; for (const wx of [-12, -4, 4, 12]) { c.beginPath(); c.arc(wx, -1, 2, 0, 7); c.fill(); }
+      c.restore();
+      const a = (t.angle * Math.PI) / 180, px = x + Math.sin(r) * 12, py = y - Math.cos(r) * 12;   // 포신 뿌리도 같이 기울고, 각도는 땅 기준
+      c.strokeStyle = '#222'; c.lineWidth = 5; c.beginPath(); c.moveTo(px, py); c.lineTo(px + Math.cos(a) * 22, py - Math.sin(a) * 22); c.stroke();
+      c.fillStyle = t.color; c.beginPath(); c.arc(px, py, 4, 0, 7); c.fill();
+      c.fillStyle = '#111'; c.fillRect(x - 18, y - 38, 36, 5); c.fillStyle = t.hp > 50 ? '#3fcf9b' : t.hp > 25 ? '#ffc24b' : '#ff5d73'; c.fillRect(x - 18, y - 38, 36 * t.hp / 100, 5);
+      c.fillStyle = '#fff'; c.font = 'bold 12px "Noto Sans KR", sans-serif'; c.fillText(t.id === this.myId ? `나 (${t.name})` : t.name, x, y - 44);
+      if (t.id === v.activeId && !this.anim) { const bob = Math.sin(now / 150) * 4; c.fillStyle = '#ffe066'; c.beginPath(); c.moveTo(x - 8, y - 66 + bob); c.lineTo(x + 8, y - 66 + bob); c.lineTo(x, y - 56 + bob); c.fill(); }
       if (t.id === this.myId && this.myTurn()) {
         c.strokeStyle = 'rgba(255,255,255,.7)'; c.setLineDash([4, 5]); c.lineWidth = 2;
-        c.beginPath(); c.moveTo(t.x + Math.cos(a) * 24, t.y - 12 - Math.sin(a) * 24); c.lineTo(t.x + Math.cos(a) * 80, t.y - 12 - Math.sin(a) * 80); c.stroke(); c.setLineDash([]);
+        c.beginPath(); c.moveTo(px + Math.cos(a) * 24, py - Math.sin(a) * 24); c.lineTo(px + Math.cos(a) * 80, py - Math.sin(a) * 80); c.stroke(); c.setLineDash([]);
       }
     }
     if (this.anim) {
@@ -347,7 +357,7 @@ socket.on('tank:turn', d => {
   Sound.turn('tank', d.id === S.myId);
 });
 socket.on('tank:aim', d => { const t = Tank.v && Tank.v.tanks.find(x => x.id === d.id); if (t) { t.angle = d.angle; } });
-socket.on('tank:pos', d => { const t = Tank.v && Tank.v.tanks.find(x => x.id === d.id); if (t) Object.assign(t, { x: d.x, y: d.y, fuel: d.fuel }); if (d.id === Tank.myId) Tank.updateBar(); });
+socket.on('tank:pos', d => { const t = Tank.v && Tank.v.tanks.find(x => x.id === d.id); if (t) Object.assign(t, { x: d.x, y: d.y, fuel: d.fuel, tilt: d.tilt || 0 }); if (d.id === Tank.myId) Tank.updateBar(); });
 socket.on('tank:shot', r => { if (isScreen('tank') && Tank.mode === 'multi') { Tank.v.activeId = null; Tank.playShot(r, null); } });
 socket.on('tank:log', d => { if (isScreen('tank')) Tank.note(d.msg); else toast(d.msg, 'info'); });
 socket.on('tank:item', d => {                                              // 이동하다 상자에 닿았어요

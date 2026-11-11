@@ -6,6 +6,10 @@
  *     ❤️ 회복 키트 (+30 HP) · 🔆 광역 레이저 · ☄️ 유성우 (특별탄 1발)
  *     가져가기: 탱크가 상자에 닿거나(이동) · 내 포탄이 상자 근처에서 터지면 쏜 사람이 가져가요
  *     상자 밑 땅이 파이면 상자도 떨어지고, 화면 아래로 빠지면 없어져요
+ *  ⛰️ 경사 (v13.4): 탱크는 바퀴 밑 땅에 얹혀서 경사만큼 기울어요 (바퀴 폭 안 땅의 위쪽 볼록 껍질 = 탱크 바닥선).
+ *     65°까지의 비탈은 기울면서 오르고, 내리막 · 낭떠러지는 미끄러지듯 내려가요.
+ *     65°보다 가파른 면은 높이 28px 까지(구덩이 가장자리 · 턱)만 넘고, 더 높으면 벽이라 바로 앞에서 멈춰요. 바닥 없는 구멍 쪽으로는 못 가요.
+ *     포신 뿌리도 몸체와 함께 기울어요 (각도는 그대로 땅 기준 절대 각도).
  * ===================================================================== */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -30,6 +34,9 @@
   const rad = a => (a * Math.PI) / 180;
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const FOOT = 10;                                   // 탱크 바퀴 반 너비: 이 안에 땅이 한 곳이라도 있으면 걸쳐서 서 있어요
+  const CLIMB = 28, STEP = 28, SPEED = 45;          // 땅 표면을 찾는 높이(가운데 기준) · 넘을 수 있는 가파른 면 높이 · 초당 이동
+  const MAX_TILT = (65 * Math.PI) / 180, MAX_PITCH = (80 * Math.PI) / 180, STEEP = Math.tan(MAX_TILT);   // 오를 수 있는 비탈 · 몸체가 기울 수 있는 끝
+  const SLIDE = (68 * Math.PI) / 180;                // 이보다 기울어 서 있으면 (낭떠러지 가장자리 등) 낮은 쪽으로 미끄러져 내려가요
 
   /* ── 픽셀 땅 지도: m[y*W+x] = 1 이면 땅 ── */
   function buildMask(h) {
@@ -50,11 +57,84 @@
     for (let y = Math.max(0, Math.round(y0)); y < H; y++) if (s.m[y * W + x]) return y;
     return H;
   }
-  /** 탱크가 x에서 y0 높이부터 내려오면 멈추는 곳 (바퀴 폭 안에서 가장 높은 땅) */
-  function restY(s, x, y0) {
-    let best = H;
-    for (let c = Math.round(x) - FOOT; c <= Math.round(x) + FOOT; c++) if (c >= 0 && c < W) best = Math.min(best, below(s, c, y0));
-    return best;
+  /** c 줄에서 기준 높이 y0 근처의 땅 표면 — 땅 속이면 위로(CLIMB 까지, 더 높으면 벽), 하늘이면 아래로 찾아요 (H = 바닥 없음) */
+  function surface(s, c, y0) {
+    let y = Math.max(0, Math.round(y0));
+    if (y >= H) return { y: H };
+    if (s.m[y * W + c]) {
+      for (let k = 0; y > 0 && s.m[(y - 1) * W + c]; k++) { if (k >= CLIMB) return { y, wall: true }; y--; }
+      return { y };
+    }
+    while (y < H && !s.m[y * W + c]) y++;
+    return { y };
+  }
+  /** 탱크 자세: 바퀴 폭 안 땅 표면의 위쪽 볼록 껍질에 바닥이 얹혀요 → 가운데 높이 y · 기울기 tilt(라디안, + 는 오른쪽이 낮음)
+   *  wallL · wallR: 그쪽에 벽 · over: 가운데가 땅 밖(구멍 위)이라 가장자리에 걸쳐 있음 */
+  function pose(s, x, y0) {
+    const xi = Math.round(x), pts = [];
+    let wallL = false, wallR = false;
+    for (let c = xi - FOOT; c <= xi + FOOT; c++) {
+      if (c < 0 || c >= W) continue;
+      const g = surface(s, c, y0);
+      if (g.wall) { if (c < x) wallL = true; else wallR = true; continue; }
+      if (g.y < H) pts.push([c, g.y]);
+    }
+    if (!pts.length) return { y: H, tilt: 0, wallL, wallR, over: true };
+    const hull = [];
+    for (const p of pts) {
+      while (hull.length >= 2) {                        // 가운데 점이 양옆을 잇는 선보다 낮으면(같아도) 빼요
+        const a = hull[hull.length - 2], b = hull[hull.length - 1];
+        if ((b[1] - a[1]) * (p[0] - a[0]) >= (p[1] - a[1]) * (b[0] - a[0])) hull.pop(); else break;
+      }
+      hull.push(p);
+    }
+    const first = hull[0], last = hull[hull.length - 1];
+    if (x < first[0] - 0.5 || x > last[0] + 0.5) return { y: (x < first[0] ? first : last)[1], tilt: 0, wallL, wallR, over: true };
+    if (hull.length === 1) return { y: first[1], tilt: 0, wallL, wallR, over: false };
+    let a = hull[hull.length - 2], b = last;
+    for (let i = 0; i < hull.length - 1; i++) if (x <= hull[i + 1][0]) { a = hull[i]; b = hull[i + 1]; break; }
+    const k = (b[1] - a[1]) / (b[0] - a[0]);
+    return { y: a[1] + k * (clamp(x, a[0], b[0]) - a[0]), tilt: Math.atan(k), wallL, wallR, over: false };
+  }
+  /** 바퀴 앞 끝(x0)에서 앞(dir)으로 땅 모양을 따라가며: 65°보다 가파른 면이 바로 앞(3칸 안)에서 시작하면 그 면의 높이 (한 칸에 확 솟은 벽이면 Infinity, 없으면 0) */
+  function faceAhead(s, x0, dir, y0) {
+    const c0 = Math.round(x0);
+    if (c0 < 0 || c0 >= W) return 0;
+    const g0 = surface(s, c0, y0);
+    if (g0.wall) return Infinity;
+    if (g0.y >= H) return 0;
+    const ys = [g0.y];
+    for (let i = 1; i <= 48; i++) {
+      const c = c0 + dir * i;
+      if (c < 0 || c >= W) break;
+      const g = surface(s, c, ys[i - 1]);
+      if (g.wall) { if (i <= 4) return Infinity; break; }
+      if (g.y >= H) break;
+      ys.push(g.y);
+    }
+    const steep = i => i + 2 < ys.length && ys[i] - ys[i + 2] > 2 * STEEP;   // 두 칸에 걸쳐 65°보다 가파르게 오르면
+    let start = -1;
+    for (let i = 0; i <= 3; i++) if (steep(i)) { start = i; break; }
+    if (start < 0) return 0;
+    let end = start;
+    while (steep(end)) end++;
+    return ys[start] - ys[Math.min(ys.length - 1, end)];
+  }
+  /** 탱크가 x에서 y0 근처에 섰을 때 가운데 높이 */
+  const restY = (s, x, y0) => pose(s, x, y0).y;
+  /** 탱크를 그 자리 땅에 얹기 (높이 · 기울기) */
+  function place(s, t, y0) { const p = pose(s, t.x, y0 == null ? t.y : y0); t.y = p.y; t.tilt = p.tilt; return p; }
+  /** 너무 기울어 서 있으면 낮은 쪽으로 미끄러져요 (dir 을 주면 그쪽이 낮을 때만) */
+  function slide(s, t, dir) {
+    for (let i = 0; i < 120 && Math.abs(t.tilt || 0) > SLIDE; i++) {
+      const d = t.tilt > 0 ? 1 : -1;                    // + 는 오른쪽이 낮아요
+      if (dir && d !== dir) break;
+      const nx = clamp(t.x + d, 8, W - 8);
+      if (nx === t.x) break;
+      const p = pose(s, nx, t.y);
+      if (p.over || p.y >= H - 2 || (d > 0 ? p.wallR : p.wallL)) break;
+      t.x = nx; t.y = p.y; t.tilt = p.tilt;
+    }
   }
   /** 줄마다 맨 위 땅 높이 (예전 화면과 맞추려고 보내요) */
   const tops = s => Array.from({ length: W }, (_, x) => below(s, x, 0));
@@ -93,7 +173,7 @@
     };
     s.tanks.forEach(t => flatten(s, t.x));
     s.m = buildMask(h); s.carves = [];
-    s.tanks.forEach(t => { t.y = restY(s, t.x, 0); });
+    s.tanks.forEach(t => place(s, t, 0));
     return s;
   }
   /** 탱크가 설 자리를 살짝 평평하게 */
@@ -102,7 +182,8 @@
     for (let i = x - 12; i <= x + 12; i++) if (i >= 0 && i < W) s.h[i] = Math.round((s.h[i] + y) / 2);
   }
   const active = s => s.tanks[s.turn];
-  const muzzle = (t, a) => ({ x: t.x + Math.cos(rad(a)) * 20, y: t.y - 12 - Math.sin(rad(a)) * 20 });
+  /** 포신 끝: 포신 뿌리(몸체 위 12px)는 몸체와 함께 기울고, 각도는 땅 기준 */
+  const muzzle = (t, a) => { const ti = t.tilt || 0; return { x: t.x + Math.sin(ti) * 12 + Math.cos(rad(a)) * 20, y: t.y - Math.cos(ti) * 12 - Math.sin(rad(a)) * 20 }; };
 
   /** 포탄 궤적 계산 (땅이나 탱크에 닿을 때까지) — 한 칸씩 잘게 나눠 봐서 얇은 벽도 뚫고 지나가지 않아요 */
   function simulate(s, x, y, vx, vy, shooterId) {
@@ -115,7 +196,7 @@
         if (solid(s, px, py)) { path.push([Math.round(px), Math.round(py)]); return { path, hit: { x: px, y: py } }; }
         for (const t of s.tanks) {
           if (!t.alive || (t.id === shooterId && i < 8)) continue;
-          const dx = t.x - px, dy = t.y - 9 - py;
+          const ti = t.tilt || 0, dx = t.x + Math.sin(ti) * 9 - px, dy = t.y - Math.cos(ti) * 9 - py;
           if (dx * dx + dy * dy < TANK_R * TANK_R) { path.push([Math.round(px), Math.round(py)]); return { path, hit: { x: px, y: py } }; }
         }
       }
@@ -186,12 +267,13 @@
     const falls = [];
     for (const t of s.tanks) {
       if (!t.alive) continue;
-      const y = restY(s, t.x, t.y);                     // 바퀴 밑 땅이 사라지면 떨어져요
-      if (y > t.y + 1) {
-        const fall = y - t.y;
-        t.y = y;
+      const y0 = t.y;
+      place(s, t, t.y);                                  // 바퀴 밑 땅이 사라지면 떨어지고, 비스듬히 남으면 기울어요
+      slide(s, t);                                       // 가장자리에 아슬아슬하게 걸리면 미끄러져 내려가요
+      if (t.y > y0 + 1) {
+        const fall = t.y - y0;
         if (fall > 30) { const dmg = Math.round((fall - 30) / 3); t.hp -= dmg; falls.push({ id: t.id, dmg }); }
-        if (y >= H - 2) t.hp = 0;
+        if (t.y >= H - 2) t.hp = 0;
       }
     }
     for (const t of s.tanks) if (t.alive && t.hp > 0) touch(s, t);   // 떨어진 자리에 상자가 있으면 가져가요
@@ -238,19 +320,25 @@
     s.turns = (s.turns || 0) + 1;                         // 🚁 두 번째 차례부터, 판 위 상자가 2개보다 적으면 가끔
     s.drop = s.turns >= 2 && s.items.length < MAX_ITEMS && s.rnd() < DROP_CHANCE ? spawnDrop(s) : null;
   }
-  /** 내 차례에 좌우 이동 (연료 소모, 너무 가파르면 못 올라감) */
+  /** 내 차례에 좌우 이동 (연료 소모) — 경사를 따라 기울며 오르내려요. 높은 벽 · 바닥 없는 구멍 쪽으로는 못 가요 */
   function move(s, id, dir, dt) {
     const t = active(s);
     if (!t || t.id !== id || !dir || t.fuel <= 0) return false;
-    const nx = clamp(t.x + dir * 45 * dt, 8, W - 8), up = 45 * dt * 1.6;
-    const ny = restY(s, nx, t.y - up - 1);              // 조금 높은 곳까지는 올라가고, 더 높으면 벽이에요
-    if (ny < t.y - up || ny >= H - 2) return false;     // 너무 가파르거나 · 바닥 없는 구멍으로는 못 가요
-    t.fuel = Math.max(0, t.fuel - Math.abs(nx - t.x));
-    t.x = nx; t.y = ny;
+    dir = dir > 0 ? 1 : -1;
+    const nx = clamp(t.x + dir * SPEED * Math.min(dt, 0.1), 8, W - 8);
+    if (nx === t.x) return false;
+    const p = pose(s, nx, t.y);
+    if ((dir > 0 ? p.wallR : p.wallL) || p.over || p.y >= H - 2) return false;
+    if (faceAhead(s, nx + dir * FOOT, dir, p.y) > STEP) return false;   // 바로 앞이 높고 가파른 벽이면 멈춰요 (벽에 기대 서지 않게)
+    const up = -dir * p.tilt;                           // + 면 오르막
+    if (up > MAX_PITCH) return false;
+    t.fuel = Math.max(0, t.fuel - Math.abs(nx - t.x) * (1 + 0.5 * Math.max(0, Math.tan(up))));   // 오르막은 연료를 더 써요
+    t.x = nx; t.y = p.y; t.tilt = p.tilt;
+    slide(s, t, dir);                                   // 낭떠러지로 가면 미끄러지듯 내려가요 (연료는 안 써요)
     touch(s, t);                                        // 상자에 닿으면 가져가요 (s.got 에 쌓여요)
     return true;
   }
-  const view = s => s.tanks.map(t => ({ id: t.id, x: Math.round(t.x), y: Math.round(t.y), hp: t.hp, alive: t.alive, angle: t.angle, power: t.power, fuel: Math.round(t.fuel), ammo: t.ammo }));
+  const view = s => s.tanks.map(t => ({ id: t.id, x: Math.round(t.x * 10) / 10, y: Math.round(t.y * 10) / 10, tilt: Math.round((t.tilt || 0) * 1000) / 1000, hp: t.hp, alive: t.alive, angle: t.angle, power: t.power, fuel: Math.round(t.fuel), ammo: t.ammo }));
 
   /** AI: 각도·힘을 바꿔 가며 미리 쏴 보고 가장 가까이 떨어지는 값을 고름 (level 0~1) */
   function aiPlan(s, id, level) {
@@ -276,5 +364,5 @@
       : t.ammo.big > 0 && s.rnd() < 0.3 ? 'big' : t.ammo.triple > 0 && s.rnd() < 0.25 ? 'triple' : 'normal';
     return { angle: clamp(Math.round(best.angle + (s.rnd() - 0.5) * 10 * err), 0, 180), power: clamp(Math.round(best.power + (s.rnd() - 0.5) * 16 * err), 10, 100), weapon };
   }
-  return { W, H, G, TANK_R, MAX_FUEL, WEAPONS, ITEMS, HEAL, COLORS, newGame, fire, nextTurn, move, aiPlan, view, items, active, muzzle, solid, restY, tops, collect, spawnDrop };
+  return { W, H, G, TANK_R, MAX_FUEL, MAX_TILT, STEP, WEAPONS, ITEMS, HEAL, COLORS, newGame, fire, nextTurn, move, aiPlan, view, items, active, muzzle, solid, restY, pose, place, faceAhead, tops, collect, spawnDrop };
 });

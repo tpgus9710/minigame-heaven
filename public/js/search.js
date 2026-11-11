@@ -26,6 +26,8 @@ const Find = (() => {
     mafia: '마피아 mafia 추리', thief: '도둑 조커 카드뽑기', yut: '윷 윷놀이 명절', yacht: '요트 야추 yacht yahtzee 주사위', blackjack: '블랙잭 21 카지노',
     liardice: '주사위 허세 라이어', davinci: '다빈치코드 다빈치 암호 추리', reversi: '오델로 othello 리버시', shisen: '사천성 짝맞추기',
     mahjong: '마작 상하이 솔리테어 짝맞추기', tilematch: '타일 양 3개모으기 모으기', setgame: '세트 set 카드찾기', pinball: '핀볼 pinball',
+    memory: '카드 짝맞추기 짝 맞추기 기억력 메모리 memory 같은그림 뒤집기 신경쇠약',
+    spot: '틀린그림찾기 틀린그림 틀린 그림 다른그림 다른 그림 찾기 숨은그림 spot difference',
     sudoku: '스도쿠 sudoku 숫자퍼즐', nonogram: '네모로직 노노그램 picross 그림퍼즐', chess: '체스 chess', gostop: '맞고 고스톱 화투 고도리',
     rummi: '루미큐브 러미 rummikub 숫자타일', bang: '뱅 bang 총잡이 서부', coup: '쿠 coup 블러핑', dalmuti: '달무티 계급 신분',
     relay: '텔레스트레이션 그림릴레이 그림', kart: '카트라이더 카트 레이싱 드리프트 자동차 마리오카트', breakout: '벽돌깨기 공', zombie: '좀비 부대',

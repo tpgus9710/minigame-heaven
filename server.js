@@ -122,7 +122,7 @@ const BUILD = (() => {
 const MODULES = [
   'cards', 'apple', 'race', 'catch', 'liar', 'tetris', 'omok', 'pong',
   'mine', 'g2048', 'snake', 'rain', 'bingo',
-  'dodge', 'plat', 'volley', 'bomb', 'tank', 'onecard', 'halli', 'ox', 'word', 'setgame', 'mole', 'scorerace', 'kart', 'puzzle',
+  'dodge', 'plat', 'volley', 'bomb', 'tank', 'onecard', 'halli', 'ox', 'word', 'setgame', 'mole', 'scorerace', 'kart', 'puzzle', 'spot',
   'table',   // 차례형 보드·카드 게임들 (public/js/shared/*-core.js)
 ].map(name => require(`./games/${name}`)(H));
 for (const mod of MODULES) for (const [key, info] of Object.entries(mod.games)) REGISTRY[key] = { ...info, mod };

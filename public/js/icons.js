@@ -287,6 +287,8 @@ const GAME_ICONS = {
   setgame: 'shapes',
   mahjong: 'mahjong',
   tilematch: 'tiles-3',
+  memory: 'layout-grid',
+  spot: 'search',
 };
 /** 분류별 색 (아이콘 타일 그라데이션) */
 const CAT_COLORS = { '액션': ['#ff6b4a', '#c2185b'], '퍼즐': ['#3aa0ff', '#4f46e5'], '보드·카드': ['#22c38e', '#0f766e'], '파티': ['#b06cff', '#7c3aed'] };

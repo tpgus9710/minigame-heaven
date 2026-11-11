@@ -1,12 +1,15 @@
 'use strict';
 /* 🛡️ 탱크 대포 — 차례대로 이동·조준·발사. 궤적과 결과는 서버가 계산해서 모두에게 보냅니다.
  *   🚁 헬기 보급 (v13.3): 차례가 바뀔 때 tank-core 가 정한 보급(drop)을 tank:turn 에 실어 보내요.
- *      이동하다 상자에 닿으면 tank:item, 포탄으로 가져가면 tank:shot 의 got 으로 알려요. */
+ *      이동하다 상자에 닿으면 tank:item, 포탄으로 가져가면 tank:shot 의 got 으로 알려요.
+ *   ⛰️ 경사 (v13.4): 탱크가 땅 경사만큼 기울어요 — tank:pos · 모든 tanks 목록에 tilt(라디안)가 같이 가요. */
 const TC = require('../public/js/shared/tank-core');
 const TURN_SEC = 30;
 
 module.exports = H => {
   const active = g => TC.active(g.s);
+  /** 움직이는 탱크 위치 (⛰️ v13.4: 기울기 tilt 도 같이) */
+  const pos = t => ({ id: t.id, x: Math.round(t.x * 10) / 10, y: Math.round(t.y * 10) / 10, tilt: Math.round((t.tilt || 0) * 1000) / 1000, fuel: Math.round(t.fuel) });
 
   function finish(room) {
     const g = room.game, s = g.s;
@@ -42,7 +45,7 @@ module.exports = H => {
       H.loop(room, 1000 / 30, () => {                   // 이동 중인 탱크 움직이기
         if (g.phase !== 'aim' || !g.moveDir) return;
         const t = active(g);
-        if (TC.move(s, t.id, g.moveDir, 1 / 30) && ++n % 2 === 0) H.emit(room, 'tank:pos', { id: t.id, x: Math.round(t.x), y: Math.round(t.y), fuel: Math.round(t.fuel) });
+        if (TC.move(s, t.id, g.moveDir, 1 / 30) && ++n % 2 === 0) H.emit(room, 'tank:pos', pos(t));
         if (s.got.length) H.emit(room, 'tank:item', { got: s.got.splice(0), tanks: TC.view(s), items: TC.items(s) });   // 이동하다 상자에 닿았어요
       });
     },
@@ -51,7 +54,7 @@ module.exports = H => {
         const g = room.game;
         if (g.phase !== 'aim' || active(g).id !== me.id) return;
         g.moveDir = H.clamp(H.int(dir), -1, 1);
-        if (!g.moveDir) { const t = active(g); H.emit(room, 'tank:pos', { id: t.id, x: Math.round(t.x), y: Math.round(t.y), fuel: Math.round(t.fuel) }); }
+        if (!g.moveDir) H.emit(room, 'tank:pos', pos(active(g)));
       },
       'tank:aim'(room, me, d, socket) {
         const g = room.game;
