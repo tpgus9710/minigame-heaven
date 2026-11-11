@@ -1,51 +1,62 @@
 /* =====================================================================
- *  🔍 틀린그림찾기
- *   싱글: 혼자 단계 도전(그림마다 시간 안에 다른 곳 모두 찾기 · 갈수록 많고 작게 · 점수 기록) · AI 1~3명과 먼저 찾기
- *   멀티: 모두 같은 그림에서 먼저 찾은 사람이 가져가요 (서버: games/spot.js) · 그림 · 정답: shared/spot-core.js
- *  왼쪽 · 오른쪽 어느 그림을 눌러도 돼요. 찾으면 두 그림에 동그라미, 틀리면 빨간 X (혼자: -3초 · 대결: 1.5초 쉬기).
+ *  🔍 틀린그림찾기 (v13.5 리뉴얼: 실사풍 그림 · 장면 8가지 · 생존 도전)
+ *   싱글: 혼자 도전(시간 저금통: 찾을 때마다 시간이 늘고, 틀리면 줄어요 · 단계마다 더 많고 · 더 헷갈리게 → 언젠가는 시간이 바닥나요)
+ *         · AI 1~3명과 먼저 찾기 (AI 실력 = 그림 난이도도 같이)
+ *   멀티: 모두 같은 그림에서 먼저 찾은 사람이 가져가요 (서버: games/spot.js) · 그림 · 정답: shared/spot-core.js + shared/spot/*.js
+ *  왼쪽 · 오른쪽 어느 그림을 눌러도 돼요. 찾으면 두 그림에 동그라미, 틀리면 빨간 X (혼자: -5초 · 대결: 1.5초 쉬기).
  * ===================================================================== */
 const DF = {
   COLORS: ['#22c55e', '#f97316', '#3b82f6', '#e11d8f', '#a855f7', '#eab308', '#14b8a6', '#ef4444'],
   BOT_NAMES: ['봇 돋보기', '봇 망원경', '봇 현미경'], BOT_MS: { easy: [10000, 20000], normal: [5500, 12000], hard: [2800, 6500] },
-  LOCK: 1500, PENALTY: 3, HINTS: 3,
+  AI_PIC: { easy: 1.8, normal: 2.6, hard: 3.4 },                  // AI 실력 = 그림 난이도
+  LOCK: 1500, PENALTY: 5, HINT_COST: 5, START: 60, MAX: 99,
 };
 makeScreen('spot', {
-  title: '🔍 틀린그림찾기', status: '두 그림에서 다른 곳을 찾아 눌러요. 왼쪽 · 오른쪽 어느 그림을 눌러도 돼요!',
+  title: '🔍 틀린그림찾기', status: '두 그림에서 다른 곳을 찾아 눌러요. 찾을 때마다 시간이 늘고, 틀리면 줄어요!',
   stats: [['score', '점수'], ['stage', '단계'], ['time', '남은 시간']],
   body: `<div class="mode-row df-modes" id="df-solo">
-      <button class="seg-btn on" data-act="dfMode" data-m="stage">혼자 단계 도전</button><button class="seg-btn" data-act="dfMode" data-m="ai1">AI 1명</button><button class="seg-btn" data-act="dfMode" data-m="ai2">AI 2명</button><button class="seg-btn" data-act="dfMode" data-m="ai3">AI 3명</button>
+      <button class="seg-btn on" data-act="dfMode" data-m="stage">혼자 도전</button><button class="seg-btn" data-act="dfMode" data-m="ai1">AI 1명</button><button class="seg-btn" data-act="dfMode" data-m="ai2">AI 2명</button><button class="seg-btn" data-act="dfMode" data-m="ai3">AI 3명</button>
       <span class="df-opt" id="df-aiopt"><span class="muted small">AI 실력</span><button class="seg-btn" data-act="dfLv" data-lv="easy">쉬움</button><button class="seg-btn on" data-act="dfLv" data-lv="normal">보통</button><button class="seg-btn" data-act="dfLv" data-lv="hard">고수</button></span></div>
     <div class="df-players" id="df-players"></div>
     <div class="df-bar"><div class="df-dots" id="df-dots"></div><div class="df-time"><i id="df-tbar"></i></div></div>
     <div class="df-wrap" id="df-wrap">
-      <div class="df-pic" data-side="0"><svg class="df-art" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" aria-label="왼쪽 그림"></svg><svg class="df-mk" viewBox="0 0 400 300"></svg></div>
-      <div class="df-pic" data-side="1"><svg class="df-art" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" aria-label="오른쪽 그림"></svg><svg class="df-mk" viewBox="0 0 400 300"></svg></div>
-      <div class="df-msg" id="df-msg"></div></div>
-    <div class="df-tools"><button class="btn ghost sm" data-act="dfHint" id="df-hint">💡 힌트 <small>-5초</small></button><span class="muted small" id="df-info"></span></div>`,
+      <div class="df-pic" data-side="0"><canvas class="df-art" width="800" height="600" aria-label="왼쪽 그림"></canvas><svg class="df-mk" viewBox="0 0 400 300"></svg></div>
+      <div class="df-pic" data-side="1"><canvas class="df-art" width="800" height="600" aria-label="오른쪽 그림"></canvas><svg class="df-mk" viewBox="0 0 400 300"></svg></div>
+      <div class="df-msg" id="df-msg"></div><div class="df-plus" id="df-plus"></div></div>
+    <div class="df-tools"><button class="btn ghost sm" data-act="dfHint" id="df-hint">💡 힌트</button><span class="muted small" id="df-info"></span></div>`,
 });
 $('#scr-spot').dataset.fitSelf = '1';
 LOBBY_OPTIONS.spot = [                                            // 대기실 옵션 (서버 games/spot.js 와 같아요)
   { key: 'bots', label: '🤖 봇', def: 0, values: [[0, '없음'], [1, '1명'], [2, '2명'], [3, '3명']] },
   { key: 'dfLv', label: '🤖 봇 실력', def: 'normal', values: [['easy', '쉬움'], ['normal', '보통'], ['hard', '고수']] },
+  { key: 'dfPic', label: '🖼️ 그림 난이도', def: 2.5, values: [[1.5, '쉬움'], [2.5, '보통'], [3.5, '어려움'], [4.5, '지옥']] },
   { key: 'rounds', label: '🖼️ 그림 수', def: 5, values: [[3, '3장'], [5, '5장'], [7, '7장']] },
-  { key: 'diffs', label: '🔍 그림마다 다른 곳', def: 5, values: [[3, '3곳'], [5, '5곳'], [7, '7곳']] },
+  { key: 'diffs', label: '🔍 그림마다 다른 곳', def: 5, values: [[3, '3곳'], [5, '5곳'], [7, '7곳'], [9, '9곳']] },
   { key: 'dfSec', label: '⏱️ 그림마다 시간', def: 60, values: [[45, '45초'], [60, '60초'], [90, '90초']] },
 ];
 
 const Spot = {
-  mode: 'stage', lv: 'normal', me: 'me', players: [], score: {}, puz: null, found: {}, phase: 'idle', round: 0, rounds: 0, lockUntil: 0, st: null, gen: 0,
+  mode: 'stage', lv: 'normal', me: 'me', players: [], score: {}, puz: null, found: {}, phase: 'idle', round: 0, rounds: 0, lockUntil: 0, st: null, gen: 0, Q: 0,
   color(id) { const k = Math.max(0, this.players.findIndex(p => p.id === id)); return id === this.me ? DF.COLORS[0] : DF.COLORS[1 + ((k + DF.COLORS.length - 2) % (DF.COLORS.length - 1))]; },
 
   /* ─── 그림 · 표시 ─── */
+  /** 그림이 보이는 크기에 맞춘 선명도 (캔버스 배율) */
+  qNeed() {
+    const pic = $('#df-wrap .df-pic'), w = pic ? pic.getBoundingClientRect().width : 400;
+    return Math.max(1.5, Math.min(3, Math.ceil((w * (window.devicePixelRatio || 1)) / 400 * 2) / 2));
+  },
+  paint() {
+    if (!this.puz) return;
+    this.Q = this.qNeed(); this.pz = this.puz;
+    $$('#df-wrap .df-art').forEach((cv, side) => SpotCore.paint(cv, this.puz, side, this.Q));
+  },
   draw(puz) {
     this.puz = puz; this.found = {};
-    const arts = $$('#df-wrap .df-art');
-    arts[0].innerHTML = SpotCore.render(puz.bg, puz.left);
-    arts[1].innerHTML = SpotCore.render(puz.bg, puz.right);
     $$('#df-wrap .df-mk').forEach(m => { m.innerHTML = ''; });
     $('#df-wrap').classList.remove('locked', 'done');
-    this.dots();
     this.fit();
+    if (this.pz !== puz) this.paint();
+    this.dots();
   },
   /** 찾은 곳: 두 그림에 같은 색 동그라미 */
   mark(i, color, cls = '') {
@@ -72,6 +83,11 @@ const Spot = {
     const m = $('#df-msg'); m.innerHTML = html; m.className = 'df-msg show ' + cls;
     clearTimeout(this.mt); this.mt = setTimeout(() => m.classList.remove('show'), ms);
   },
+  /** 시간 +/- 를 그림 위에 잠깐 */
+  plus(txt, good) {
+    const el = $('#df-plus'); el.textContent = txt; el.className = 'df-plus show ' + (good ? 'good' : 'bad');
+    clearTimeout(this.pt); this.pt = setTimeout(() => { el.className = 'df-plus'; }, 900);
+  },
   timeBar(left, total) {
     const k = total > 0 ? Math.max(0, Math.min(1, left / total)) : 0;
     const b = $('#df-tbar'); b.style.width = (k * 100) + '%'; b.classList.toggle('low', left < 10000);
@@ -97,6 +113,7 @@ const Spot = {
     const useSide = side >= stack * 0.96;
     wrap.classList.toggle('side', useSide); wrap.classList.toggle('stack', !useSide);
     wrap.style.setProperty('--pw', Math.floor(Math.max(150, useSide ? side : stack)) + 'px');
+    if (this.puz && (this.pz !== this.puz || Math.abs(this.qNeed() - this.Q) >= 0.5)) this.paint();       // 새 그림 · 그림이 많이 커지면 다시 선명하게
   },
   modeUI(multi) {
     $('#scr-spot').classList.toggle('mp', multi);                 // 멀티: 위쪽 점수판이 있어서 낮은 화면에서는 이름 줄을 접어요 (spot.css)
@@ -107,6 +124,10 @@ const Spot = {
     $$('#df-solo [data-act=dfLv]').forEach(b => b.classList.toggle('on', b.dataset.lv === this.lv));
   },
   labels(a, b, c) { $('#spot-score-label').textContent = a; $('#spot-stage-label').textContent = b; $('#spot-time-label').textContent = c; },
+  info() {
+    const lvName = l => (l < 2 ? '쉬움' : l < 3 ? '보통' : l < 4 ? '어려움' : '지옥');
+    $('#df-info').textContent = this.puz ? `${SpotCore.THEME_NAMES[this.puz.theme]} · ${lvName(this.puz.lv)}${this.st ? ` · 힌트 ${this.st.hints}번` : ''}` : '';
+  },
 
   /* ─── 누르기 ─── */
   tap(e) {
@@ -116,7 +137,7 @@ const Spot = {
     const x = (e.clientX - ox) / k, y = (e.clientY - oy) / k, side = +pic.dataset.side;
     if (x < 0 || x > 400 || y < 0 || y > 300) return;
     if (this.phase !== 'play') return;
-    if (performance.now() < this.lockUntil) { this.msg('잠깐! 틀려서 쉬는 중이에요', 'bad', 700); return; }
+    if (performance.now() < this.lockUntil) { if (!this.st) this.msg('잠깐! 틀려서 쉬는 중이에요', 'bad', 700); return; }
     const tol = Math.max(9, 14 / k);                                // 작은 화면은 손가락 여유를 조금 더
     if (this.mode === 'multi') { socket.emit('df:tap', { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, r: this.round }); this.lastTap = { side, x, y }; return; }
     const i = SpotCore.hit(this.puz.diffs, x, y, this.found, tol);
@@ -132,14 +153,20 @@ const Spot = {
     this.mark(i, this.color(id), mine ? 'mine' : 'other');
     if (typeof Sound !== 'undefined') Sound.play(mine ? 'pop' : 'tap');
     if (!mine) { const p = this.players.find(x => x.id === id); this.msg(`${esc(p ? p.name : '')} 님이 찾았어요`, '', 800); }
-    if (this.st) { this.st.score += 100; this.paintStage(); }
+    if (this.st) this.foundStage();
     this.dots(); this.scores(); this.statsVs();
     if (Object.keys(this.found).length >= this.puz.diffs.length && this.mode !== 'multi') this.roundDone();
   },
   miss(side, x, y) {
     this.cross(side, x, y);
     if (typeof Sound !== 'undefined') Sound.play('bad');
-    if (this.st) { this.st.endAt -= DF.PENALTY * 1000; this.msg(`틀렸어요 <b>-${DF.PENALTY}초</b>`, 'bad', 700); return; }
+    if (this.st) {
+      const st = this.st;
+      st.endAt -= DF.PENALTY * 1000; st.streak = 0; st.miss++;
+      this.lockUntil = performance.now() + 350;                     // 마구 누르기 방지
+      this.plus(`-${DF.PENALTY}초`, false);
+      return;
+    }
     this.lockUntil = performance.now() + DF.LOCK;
     $('#df-wrap').classList.add('locked'); setTimeout(() => $('#df-wrap').classList.remove('locked'), DF.LOCK);
     this.msg('틀렸어요 — 1.5초 쉬기', 'bad', DF.LOCK);
@@ -147,70 +174,89 @@ const Spot = {
   /** 못 찾은 곳 보여 주기 */
   reveal(list) { list.forEach(i => this.mark(i, '#9aa3b5', 'missed')); $('#df-wrap').classList.add('done'); },
 
-  /* ─── 혼자 단계 도전 ─── */
+  /* ─── 혼자 도전 (시간 저금통) ─── */
   startSolo() { if (this.mode === 'stage') this.startStage(); else this.startVs(+this.mode.slice(2) || 1); },
   startStage() {
     stopLocal();
     S.solo = 'spot';
     show('spot');
     this.mode = 'stage'; this.me = 'me'; this.players = [{ id: 'me', name: nick() }]; this.score = { me: 0 };
-    this.st = { stage: 0, score: 0, hints: DF.HINTS, over: false };
+    this.st = { stage: 0, score: 0, hints: 2, over: false, bank: DF.START * 1000, endAt: 0, streak: 0, miss: 0, last: '', best: +store.get('best-spot2', 0) || 0, rec: false };
     this.modeUI(false); this.players1();
     this.labels('점수', '단계', '남은 시간');
-    setStatus('spot', '그림마다 시간 안에 다른 곳을 모두 찾아요. 틀리면 -3초 · 힌트는 -5초. 단계가 오를수록 다른 곳이 많고 작아져요.');
+    setStatus('spot', '찾을 때마다 시간 +, 틀리면 -5초. 단계가 오를수록 다른 곳이 많아지고 더 헷갈려요 — 시간이 바닥나면 끝!');
     this.stage(0);
     every(150, () => this.tickStage());
   },
+  /** k단계 (0부터): 다른 곳 3 → 9곳, 난이도 1.2 → 4.5, 찾을 때 늘어나는 시간 8초 → 2초 */
   stage(k) {
-    const st = this.st, n = Math.min(7, 3 + Math.floor(k / 2)), lv = k < 2 ? 1 : k < 5 ? 2 : 3;
-    Object.assign(st, { stage: k, n, sec: 40 + n * 8 });
+    const st = this.st, n = Math.min(9, 3 + Math.ceil(k / 2)), lv = Math.min(4.5, 1.2 + k * 0.3);
+    Object.assign(st, { stage: k, n, lv, gain: Math.max(2, 8 - 0.4 * k), t0: 0 });
+    this.pauseClock();
     this.phase = 'ready';
-    this.draw(SpotCore.make(1 + Math.floor(Math.random() * 2147480000), n, lv));
-    this.msg(`<b>${k + 1}단계</b> 다른 곳 ${n}곳 · ${st.sec}초`, 'info', 900);
-    $('#df-info').textContent = `${SpotCore.THEME_NAMES[this.puz.theme]} · 힌트 ${st.hints}번 남음`;
-    st.endAt = performance.now() + 900 + st.sec * 1000; st.total = st.sec * 1000;
+    let th; do { th = SpotCore.THEMES[Math.floor(Math.random() * SpotCore.THEMES.length)]; } while (th === st.last && SpotCore.THEMES.length > 1);
+    st.last = th;
+    this.draw(SpotCore.make(1 + Math.floor(Math.random() * 2147480000), n, lv, th));
+    this.msg(`<b>${k + 1}단계</b> 다른 곳 ${n}곳 · 찾으면 +${Math.round(st.gain * 10) / 10}초`, 'info', 1000);
+    this.info();
     const id = st.token = (st.token || 0) + 1;
-    after(900, () => { if (st.token === id && !st.over) this.phase = 'play'; });
+    after(1000, () => { if (st.token === id && !st.over) { this.phase = 'play'; this.runClock(); st.t0 = performance.now(); } });
+    this.paintStage();
+  },
+  runClock() { const st = this.st; st.endAt = performance.now() + st.bank; },
+  pauseClock() { const st = this.st; if (st.endAt) st.bank = Math.max(0, st.endAt - performance.now()); st.endAt = 0; },
+  left() { const st = this.st; return st.endAt ? st.endAt - performance.now() : st.bank; },
+  foundStage() {
+    const st = this.st, k = st.stage;
+    st.streak++;
+    const pts = Math.round(100 * (1 + 0.15 * k) * (1 + Math.min(10, st.streak - 1) * 0.1));
+    st.score += pts;
+    if (st.endAt) st.endAt = Math.min(performance.now() + DF.MAX * 1000, st.endAt + st.gain * 1000);
+    this.plus(`+${Math.round(st.gain * 10) / 10}초`, true);
     this.paintStage();
   },
   paintStage() {
     const st = this.st;
     setStat('spot', 'score', st.score.toLocaleString('ko-KR') + '점');
     setStat('spot', 'stage', `${st.stage + 1}단계`);
-    $('#df-hint').disabled = !st.hints || this.phase !== 'play';
-    $('#df-hint').innerHTML = `💡 힌트 <small>${st.hints}번 · -5초</small>`;
+    const h = $('#df-hint');
+    h.disabled = !st.hints || this.phase !== 'play';
+    h.innerHTML = `💡 힌트 <small>${st.hints}번 · -${DF.HINT_COST}초</small>`;
+    if (!st.rec && st.best > 0 && st.score > st.best) { st.rec = true; this.msg('🎉 <b>신기록!</b>', 'good', 1100); if (typeof Sound !== 'undefined') Sound.play('title'); }
   },
   tickStage() {
     const st = this.st;
     if (!st || st.over || this.mode !== 'stage') return;
-    const left = st.endAt - performance.now();
-    if (this.phase === 'play' || this.phase === 'ready') {
-      setStat('spot', 'time', Math.max(0, Math.ceil(left / 1000)) + '초');
-      this.timeBar(left, st.total);
-      $('#df-hint').disabled = !st.hints || this.phase !== 'play';
-      if (left <= 0 && this.phase === 'play') this.endStage();
-    }
+    const left = this.left();
+    setStat('spot', 'time', Math.max(0, Math.ceil(left / 1000)) + '초');
+    this.timeBar(left, DF.MAX * 1000);
+    $('#df-hint').disabled = !st.hints || this.phase !== 'play';
+    if (left <= 0 && this.phase === 'play') this.endStage();
   },
   hint() {
     const st = this.st;
     if (!st || this.phase !== 'play' || !st.hints) return;
     const left = this.puz.diffs.map((_, i) => i).filter(i => this.found[i] == null);
     if (!left.length) return;
-    st.hints--; st.endAt -= 5000;
+    st.hints--; st.endAt -= DF.HINT_COST * 1000;
     this.hintRing(left[Math.floor(Math.random() * left.length)]);
-    $('#df-info').textContent = `${SpotCore.THEME_NAMES[this.puz.theme]} · 힌트 ${st.hints}번 남음`;
-    this.paintStage();
+    this.plus(`-${DF.HINT_COST}초`, false);
+    this.info(); this.paintStage();
   },
   roundDone() {
     if (this.mode === 'stage') {
-      const st = this.st;
+      const st = this.st, k = st.stage;
       this.phase = 'gap';
-      const left = Math.max(0, Math.ceil((st.endAt - performance.now()) / 1000)), bonus = left * 5;
-      st.score += bonus; this.paintStage();
+      if (st.endAt) st.endAt += 4000;                                   // 다 찾으면 +4초
+      this.pauseClock();
+      const fast = st.t0 ? (performance.now() - st.t0) / 1000 : 99, bonus = 300 * (k + 1) + Math.max(0, Math.round((st.n * 6 - fast) * 20)) * (k + 1);
+      st.score += bonus;
+      if ((k + 1) % 3 === 0 && st.hints < 3) st.hints++;                  // 3단계마다 힌트 +1 (최대 3)
+      this.paintStage(); this.info();
       $('#df-wrap').classList.add('done');
-      this.msg(`<b>${st.stage + 1}단계 성공!</b><br>남은 시간 ${left}초 × 5 = +${bonus}`, 'good', 1700);
+      this.msg(`<b>${k + 1}단계 성공!</b><br>+4초 · 보너스 +${bonus.toLocaleString('ko-KR')}점`, 'good', 1700);
       if (typeof Sound !== 'undefined') Sound.play('mission');
-      after(1900, () => { if (this.st === st && !st.over) this.stage(st.stage + 1); });
+      after(1900, () => { if (this.st === st && !st.over) this.stage(k + 1); });
       return;
     }
     this.endVsRound();
@@ -220,11 +266,11 @@ const Spot = {
     if (st.over) return;
     st.over = true; this.phase = 'over';
     this.reveal(this.puz.diffs.map((_, i) => i).filter(i => this.found[i] == null));
-    const best = Math.max(+store.get('best-spot', 0), st.score); store.set('best-spot', best);
-    this.msg('⏰ 시간 끝! 못 찾은 곳은 회색 동그라미', 'bad', 2000);
-    after(2200, () => showResult({
-      title: `⏰ ${st.stage + 1}단계에서 시간 끝!`, subtitle: `${st.stage}단계 성공 · ${st.score.toLocaleString('ko-KR')}점 · 최고 ${best.toLocaleString('ko-KR')}점`,
-      solo: 'spot', win: st.stage >= 5, rec: { v: st.score },
+    const best = Math.max(st.best, st.score); store.set('best-spot2', best);
+    this.msg('⏰ 시간 끝! 못 찾은 곳은 회색 동그라미', 'bad', 2200);
+    after(2400, () => showResult({
+      title: `⏰ ${st.stage + 1}단계에서 시간 끝!`, subtitle: `${st.stage}단계 성공 · ${st.score.toLocaleString('ko-KR')}점${st.score > st.best ? ' · 🎉 신기록!' : ` · 최고 ${best.toLocaleString('ko-KR')}점`}`,
+      solo: 'spot', win: st.stage >= 6, rec: { v: st.score },
     }));
   },
 
@@ -252,11 +298,11 @@ const Spot = {
   vsNext() {
     if (this.round >= this.rounds) return this.endVs();
     this.round++;
-    this.draw(SpotCore.make(1 + Math.floor(Math.random() * 2147480000), this.vsN, 2));
+    this.draw(SpotCore.make(1 + Math.floor(Math.random() * 2147480000), this.vsN, DF.AI_PIC[this.lv] || 2.6));
     this.phase = 'ready';
     this.statsVs();
     this.msg(`<b>그림 ${this.round} / ${this.rounds}</b>`, 'info', 800);
-    $('#df-info').textContent = SpotCore.THEME_NAMES[this.puz.theme];
+    this.info();
     const gen = ++this.gen;
     this.vsEnd = performance.now() + 900 + this.vsSec * 1000;
     after(900, () => {
@@ -320,7 +366,7 @@ const Spot = {
     (d.found || []).forEach(([i, id]) => { this.found[i] = id; this.mark(i, this.color(id), id === this.me ? 'mine' : 'other'); });
     this.dots(); this.scores(); this.statsVs();
     this.vsEnd = performance.now() + d.left;                       // left 는 준비 시간까지 들어 있어요
-    $('#df-info').textContent = SpotCore.THEME_NAMES[this.puz.theme];
+    this.info();
     if (d.gap) { this.phase = 'gap'; return; }
     this.phase = 'ready';
     if (!d.resync) this.msg(`<b>그림 ${d.round} / ${d.rounds}</b>`, 'info', 800);

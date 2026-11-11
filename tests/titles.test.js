@@ -49,5 +49,56 @@ const got = acc._test.award(u2, true);
 ok(got.length === Titles.LIST.length - 3 && Object.keys(u2.ttl).length === got.length, `칭호 주기 (친구 칭호 3개 빼고 ${got.length}개)`);
 ok(acc._test.award(u2, true).length === 0, '이미 받은 칭호는 다시 안 줘요');
 
-console.log(fails ? `\n❌ ${fails}개 실패` : '\n✅ 모두 통과');
-process.exit(fails ? 1 : 0);
+(async () => {
+  console.log('▶ 「골목대장」은 로그인한 사람 6명부터 (AI·봇 · 손님은 안 세요)');
+  // 진짜 계정 파일은 건드리지 않게 임시 폴더에서 계정 모듈을 새로 만들어요
+  const fs = require('fs'), os = require('os'), path = require('path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mg-ttl-'));
+  const keep = { DATA_DIR: process.env.DATA_DIR, DATABASE_URL: process.env.DATABASE_URL, ACCT_MIN_GAME_MS: process.env.ACCT_MIN_GAME_MS };
+  Object.assign(process.env, { DATA_DIR: dir, ACCT_MIN_GAME_MS: '0' }); delete process.env.DATABASE_URL;
+  delete require.cache[require.resolve('../lib/accounts')];
+  const make2 = require('../lib/accounts');
+  const doc = (id, extra) => ({ id, name: '사람' + id, code: 'C0DE' + id.padStart(4, '0'), created: Date.now(), ...extra });
+  const users0 = Array.from({ length: 8 }, (_, i) => doc(String(i + 1)));
+  users0[0] = doc('1', { st: { big: 12 }, ttl: { big10: 1 }, tt: 'big10', solo: { zombie: { p: 3, w: 0, b: 42 }, spot: { p: 1, w: 1, b: 900 }, g2048: { p: 2, w: 0, b: 2048 } } });   // 예전에 AI랑 해서 받은 사람
+  users0[1] = doc('2', { st: { big: 3 }, mig: 1 });                                   // 이미 고친 계정은 그대로
+  fs.writeFileSync(path.join(dir, 'accounts.json'), JSON.stringify({ v: 1, users: users0 }));
+  const H2 = { endToLobby() {}, finishGame() {}, participants: room => room.players.filter(p => p.role !== 'spectator') };
+  const A = make2({ io: { emit() {}, to: () => ({ emit() {} }) }, rooms: new Map(), H: H2, registry: () => ({}), ipOf: () => '', cloud: false });
+  await A.init();
+  const U = A._test.users;
+  ok(U.get('1').st.big === 0 && !U.get('1').ttl.big10 && U.get('1').tt === '' && U.get('1').mig >= 1, '예전 숫자(AI 포함)는 지우고, 받았던 「골목대장」도 거둬요 (달고 있었으면 내려요)');
+  ok(U.get('2').st.big === 3, '이미 새 규칙으로 센 계정은 그대로');
+  const so = U.get('1').solo;
+  ok(so.zombie.b === undefined && so.zombie.p === 3 && so.spot.b === undefined && so.g2048.b === 2048, '좀비 웨이브 · 틀린그림찾기는 기록 방식이 바뀌어 예전 최고 기록만 지워요 (판 수 · 다른 게임 기록은 그대로)');
+  const play = (players, ranking) => {
+    const room = { code: 'T', gameType: 'spot', players, game: { over: false } };
+    A.onStart(room);
+    H2.finishGame(room, { ranking });
+  };
+  const P = (uid, i) => ({ id: 's' + i, name: uid ? '사람' + uid : '손님' + i, uid });
+  const bots = k => Array.from({ length: k }, (_, i) => ({ name: '🤖 봇' + i, value: '0점' }));
+  // ① 로그인 2명 + 봇 5 = 7명 판 → 안 세요
+  play([P('3', 1), P('4', 2)], [{ id: 's1', name: '사람3', value: '9점' }, { id: 's2', name: '사람4', value: '1점' }, ...bots(5)]);
+  ok(U.get('3').st.big === 0 && U.get('3').wins === 1, 'AI 5 + 사람 2 (7명 판) 1등 → 승리는 기록, 골목대장 숫자는 그대로');
+  // ② 로그인 4명 + 손님 2명 → 안 세요
+  const six = [P('3', 1), P('4', 2), P('5', 3), P('6', 4), P(null, 5), P(null, 6)];
+  play(six, six.map((p, i) => ({ id: p.id, name: p.name, value: (9 - i) + '점' })));
+  ok(U.get('3').st.big === 0, '로그인 4명 + 손님 2명 → 안 세요');
+  // ③ 로그인 6명 → 1등만 하나 올라가요
+  const real = ['3', '4', '5', '6', '7', '8'].map((u, i) => P(u, i + 1));
+  play(real, real.map((p, i) => ({ id: p.id, name: p.name, value: (9 - i) + '점' })));
+  ok(U.get('3').st.big === 1 && U.get('4').st.big === 0, '로그인한 사람 6명 판 1등 → +1 (2등은 그대로)');
+  // ④ 10번 채우면 칭호
+  for (let k = 0; k < 9; k++) play(real, real.map((p, i) => ({ id: p.id, name: p.name, value: (9 - i) + '점' })));
+  ok(U.get('3').st.big === 10 && !!U.get('3').ttl.big10, '10번 → 「골목대장」');
+  // ⑤ 같은 계정이 두 자리 (탭 두 개) → 한 명으로 세요
+  const dup = [P('4', 1), P('4', 2), P('5', 3), P('6', 4), P('7', 5), P('8', 6)];
+  play(dup, dup.map((p, i) => ({ id: p.id, name: p.name, value: (9 - i) + '점' })));
+  ok(U.get('4').st.big === 0, '같은 계정 두 자리는 한 명 → 5명이라 안 세요');
+  A.flushSync();
+  for (const [k, v] of Object.entries(keep)) if (v === undefined) delete process.env[k]; else process.env[k] = v;
+  try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+  console.log(fails ? `\n❌ ${fails}개 실패` : '\n✅ 모두 통과');
+  process.exit(fails ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });

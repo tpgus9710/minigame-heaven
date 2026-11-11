@@ -64,7 +64,7 @@ const Titles = (() => {
     { id: 'lv99', n: '만렙', r: 4, cat: '레벨', d: 'Lv.99 되기', v: s => n(s.lv), goal: 99 },
     // 특별
     { id: 'og', n: '원년 멤버', r: 3, cat: '특별', lim: true, d: '2026년 안에 가입 (지금만 받을 수 있어요)', v: s => (n(s.created) && n(s.created) < OG_END ? 1 : 0), goal: 1 },
-    { id: 'big10', n: '골목대장', r: 3, cat: '특별', hid: true, h: '사람이 많은 판에서 …', d: '6명 이상이 한 판에서 1등 10번', v: s => n(s.big), goal: 10 },
+    { id: 'big10', n: '골목대장', r: 3, cat: '특별', hid: true, h: '사람이 많은 판에서 …', d: '로그인한 6명 이상 판에서 1등 10번 (AI 제외)', v: s => n(s.big), goal: 10 },
     { id: 'acr7', n: '완벽주의자', r: 4, cat: '특별', hid: true, h: '매일매일 빠짐없이 …', d: '7일 연속 오늘의 미션 모두 끝내기', v: s => n(s.acRow), goal: 7 },
   ];
   const CATS = [...new Set(LIST.map(t => t.cat))];

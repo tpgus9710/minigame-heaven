@@ -25,7 +25,7 @@ const FACE_TIP = {
 const SOLO_SUB = { 'dodge:bullet': '총알 모드', 'dodge:bamboo': '대나무 모드', 'mine:easy': '초급', 'mine:normal': '중급', 'mine:hard': '고급' };
 const REC_FMT = {
   race: v => v.toFixed(2) + '초', dodge: v => v.toFixed(2) + '초', mine: v => v + '초', apple: v => v + '개', snake: v => '길이 ' + v,
-  stack: v => v + '층', breakout: v => v + '단계', zombie: v => '스테이지 ' + v, plat: v => '스테이지 ' + v,
+  stack: v => v + '층', breakout: v => v + '단계', zombie: v => v.toLocaleString('ko-KR') + '점', plat: v => '스테이지 ' + v,
   setgame: v => v + '세트', memory: v => v.toLocaleString('ko-KR') + '점', spot: v => v.toLocaleString('ko-KR') + '점', mahjong: v => (v >= 60 ? `${Math.floor(v / 60)}분 ` : '') + `${Math.round(v % 60)}초`, tilematch: v => '레벨 ' + v,
 };
 /** 랭킹에서 고를 수 있는 싱글 기록 */

@@ -1,5 +1,6 @@
 'use strict';
 /* 🔍 틀린그림찾기 — 모두 같은 그림 두 장을 보고, 다른 곳을 먼저 찾아 누른 사람이 가져가요 (1곳 = 1점).
+ *  v13.5: 실사풍 장면 8가지 · 그림 난이도 옵션(쉬움 ~ 지옥: 더 비슷한 색 · 작은 부분 · 글자 · 개수 차이)
  *  그림마다 새 씨앗 → shared/spot-core.js 가 화면 · 서버에서 똑같은 그림과 정답을 만들어요. 서버는 누른 자리만 확인해요.
  *  틀리면 1.5초 동안 못 눌러요. 다 찾거나 시간이 끝나면 다음 그림 (못 찾은 곳은 모두에게 보여 줘요).
  *  봇 0~3명 (쉬움 · 보통 · 고수: 찾는 데 걸리는 시간). 혼자 방을 시작하면 봇 1명과 해요. */
@@ -11,8 +12,9 @@ const BOT_MS = { easy: [10000, 20000], normal: [5500, 12000], hard: [2800, 6500]
 const OPTIONS = [
   { key: 'bots', label: '🤖 봇', def: 0, values: [[0, '없음'], [1, '1명'], [2, '2명'], [3, '3명']] },
   { key: 'dfLv', label: '🤖 봇 실력', def: 'normal', values: [['easy', '쉬움'], ['normal', '보통'], ['hard', '고수']] },
+  { key: 'dfPic', label: '🖼️ 그림 난이도', def: 2.5, values: [[1.5, '쉬움'], [2.5, '보통'], [3.5, '어려움'], [4.5, '지옥']] },
   { key: 'rounds', label: '🖼️ 그림 수', def: 5, values: [[3, '3장'], [5, '5장'], [7, '7장']] },
-  { key: 'diffs', label: '🔍 그림마다 다른 곳', def: 5, values: [[3, '3곳'], [5, '5곳'], [7, '7곳']] },
+  { key: 'diffs', label: '🔍 그림마다 다른 곳', def: 5, values: [[3, '3곳'], [5, '5곳'], [7, '7곳'], [9, '9곳']] },
   { key: 'dfSec', label: '⏱️ 그림마다 시간', def: 60, values: [[45, '45초'], [60, '60초'], [90, '90초']] },
 ];
 
@@ -53,8 +55,8 @@ module.exports = H => {
   }
   /** 봇: 실력만큼 기다렸다가 아직 아무도 못 찾은 곳 하나를 찾아요 (찾으면 다음 곳을 또) */
   function planBot(room, id, round) {
-    const g = room.game, [lo, hi] = BOT_MS[g.lv] || BOT_MS.normal;
-    H.later(room, READY_MS + lo + Math.random() * (hi - lo), () => {
+    const g = room.game, [lo, hi] = BOT_MS[g.lv] || BOT_MS.normal, k = 1 + 0.2 * (g.lvPic - 2.5);   // 어려운 그림은 봇도 오래 걸려요
+    H.later(room, READY_MS + (lo + Math.random() * (hi - lo)) * k, () => {
       if (g.over || g.round !== round || g.phase !== 'play') return;
       const left = g.puz.diffs.map((_, i) => i).filter(i => g.found[i] == null);
       if (!left.length) return;
@@ -88,7 +90,7 @@ module.exports = H => {
       const all = humans.concat(bots), n = opt(room, 'diffs');
       room.game = {
         type: 'spot', order: all.map(p => p.id), names: Object.fromEntries(all.map(p => [p.id, p.name])), bots: bots.map(b => b.id),
-        score: Object.fromEntries(all.map(p => [p.id, 0])), lock: {}, round: 0, rounds: opt(room, 'rounds'), n, lvPic: n >= 7 ? 2 : n <= 3 ? 1 : 2,
+        score: Object.fromEntries(all.map(p => [p.id, 0])), lock: {}, round: 0, rounds: opt(room, 'rounds'), n, lvPic: opt(room, 'dfPic'),
         sec: opt(room, 'dfSec'), lv: opt(room, 'dfLv'), total: 0, phase: 'ready', found: {}, puz: null, over: false,
       };
       H.emit(room, 'df:start', { players: all.map(p => ({ id: p.id, name: p.name, bot: !!p.bot })), rounds: room.game.rounds, n, sec: room.game.sec, lv: room.game.lv });
