@@ -1,6 +1,6 @@
 {
   "name": "minigame-heaven",
-  "version": "13.5.0",
+  "version": "13.6.0",
   "description": "친구들과 함께하는 미니게임 (싱글 36종 · 멀티 43종) + 얼굴 로그인 · 기록 · 친구",
   "private": true,
   "main": "server.js",

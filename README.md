@@ -80,6 +80,14 @@ Render 같은 클라우드에서는 서버를 다시 시작하면 파일이 지�
 - **싱글 (45종)**: ★섯다 vs AI · ★세트 찾기 · ★마작 솔리테어 · ★타일 매치 · ★핀볼 · 스도쿠 · 노노그램 · 고스톱 vs AI · 체스 vs AI · 드리프트 카트 · 계급 전쟁 vs AI · 궁정 음모 vs AI · 황야의 총잡이 vs AI · 러미 타일 vs AI · 사천성 · 리버시 vs AI · 암호 해독 vs AI · 라이어 다이스 · 블랙잭 · 요트 다이스 · 윷놀이 vs AI · 도둑잡기 vs AI · 인생 게임 vs AI · 세계여행 vs AI · 벽돌깨기 · 총알피하기 · 점프 어드벤처 · 좀비 웨이브 · 점프 배구 vs AI · 폭탄 배틀 vs 봇 · 탱크 대포 vs AI · 우주 슈팅 · 보석 맞추기 · 과일 합치기 · 탑 쌓기 · 두더지 잡기 · 지뢰찾기 · 2048 · 스네이크 · 산성비 타자 · 테트리스 보스전 · 사과 게임 · 오목 vs AI · 핑퐁 vs AI · 1 to 50
 - **멀티 (51종)**: ★세트 찾기 · ★마작 솔리테어 대결 · ★타일 매치 대결 · ★핀볼 점수 대결 · 스도쿠 대결 · 노노그램 대결 · 고스톱 · 체스 · 러미 타일 · 황야의 총잡이 · 궁정 음모 · 계급 전쟁 · 그림 릴레이 · 드리프트 카트 · 세계여행 보드게임 · 인생 게임 · 마피아 · 도둑잡기 · 윷놀이 · 요트 다이스 · 블랙잭 · 라이어 다이스 · 암호 해독 · 리버시 · 사천성 대결 · 총알피하기 배틀 · 점프 레이스 · 점프 배구 · 폭탄 배틀 · 탱크 대포 · 원카드 · 과일 종치기 · OX 퀴즈 · 끝말잇기 · 두더지 잡기 대결 · 보석 맞추기 대결 · 과일 합치기 대결 · 섯다 · 포커 · 사과 게임 · 1 to 50 · 캐치마인드 · 라이어 게임 · 테트리스 배틀 · 오목 · 4인 핑퐁 · 스네이크 배틀 · 산성비 타자 대결 · 지뢰찾기 대결 · 2048 대결 · 빙고
 
+## v13.6에서 바뀐 점
+- **틀린그림찾기: 진짜 사진으로 다시 (`public/js/shared/spot-photos.js` 사진 목록 · `public/js/shared/spot-core.js` 판 만들기 · 화면 `public/js/spot.js` · 서버 `games/spot.js` · 사진 `public/img/spot/`)**
+  - 사진: CC0 사진 27장(WordPress Photo Directory · 2017년 전 Unsplash). 1200 × 900 으로 자르고(`<id>.jpg`), 고친 곳은 조각 그림 하나에 모아요(`<id>-d.webp` · 알파). 그림 그리기 장면 파일 `public/js/shared/spot/*.js` 는 더 안 써요(빈 파일 · 지워도 돼요).
+  - 고친 곳 만들기(개발 PC): SAM(물체 오리기) + LaMa(지운 자리 채우기) ONNX · GrabCut · LAB 색 돌리기로 없애기 · 생기기 · 색 · 뒤집기 → 하나하나 눈으로 보고 골랐어요(187곳). 고친 곳마다 [x, y, r, 어려움 1~3, 종류, 조각 위치, 붙일 곳, 같이 못 나오는 곳].
+  - 판 = 씨앗 → 사진(그 수만큼 낼 수 있는 사진 중, 난이도가 높을수록 어려운 곳이 많은 사진을 자주 · 최근 본 사진은 피하기) · 고친 곳 고르기(어려움 비율 · 겹치는 곳은 같이 안 나오게) · 쪽(왼/오) · 좌우 뒤집기(글자 없는 사진만). 화면 · 서버가 같은 코드라 서버는 누른 자리만 확인해요(`df:round` 에 사진 번호 · 씨앗).
+  - 화면: 사진을 받으면 두 캔버스에 사진 + 그쪽 조각만 그려요. 확대(두 손가락 · 휠 · ＋ － · 키보드 + - 0, 최대 4배)는 두 사진을 같이 움직여요. 누르기는 손가락을 떼고 움직이지 않았을 때만 · 손가락 여유는 화면에서 약 15px.
+  - 혼자 도전: 다른 곳 3 → 7곳 · 사진 난이도 1.5 → 4.5 · 찾으면 +9초 → +3초. 멀티 옵션: 다른 곳 3 · 5 · 7곳, 시간 60 · 90 · 120초. 계정 고치기 번호 `mig` 2: 틀린그림찾기 최고 기록을 한 번 더 지워요.
+
 ## v13.5에서 바뀐 점
 - **좀비 웨이브 리뉴얼 (규칙 `public/js/shared/zombie-core.js` · 화면 `public/js/zombie.js` · `public/css/zombie.css` · 검사 `tests/zombie.test.js`)**
   - 규칙과 그리기를 나눴어요. 규칙은 씨앗 난수만 쓰고(같은 씨앗 + 같은 조작 = 같은 판) 1/60초 단위로 나눠 계산해요 → node 에서 봇으로 수천 판을 돌려 균형을 맞췄어요.
@@ -503,7 +511,7 @@ public/js/meal.js       학식 메뉴 화면 (v13.1: 들어올 때 끼니마다 
 public/js/search.js     게임 검색 (v13.2: 처음 화면 · 게임 목록, 디자인: public/css/find.css — 추천 게임 12개 격자도)
 public/js/pause.js      일시정지 · 위장 화면 · 수업 모드 (v13.2, 멈출 수 있는 시계 · 타이머, 디자인: public/css/pause.css)
 public/js/whisper.js    게임 중 귓속말 막대 · 답장 칸 (v13.3, 디자인: public/css/whisper.css)
-public/js/spot.js       틀린그림찾기 (v13.5 리뉴얼, 그림 · 정답: public/js/shared/spot-core.js + public/js/shared/spot/*.js(장면 8가지) · 서버: games/spot.js · 디자인: public/css/spot.css)
+public/js/spot.js       틀린그림찾기 (v13.6 진짜 사진, 사진 목록: public/js/shared/spot-photos.js · 판: public/js/shared/spot-core.js · 사진: public/img/spot/ · 서버: games/spot.js · 디자인: public/css/spot.css)
 public/js/memory.js     카드 짝 맞추기 (v13.4, 규칙: public/js/shared/memory-core.js · 디자인: public/css/memory.css)
 public/js/zombie.js     좀비 웨이브 (v13.5 리뉴얼, 규칙: public/js/shared/zombie-core.js · 디자인: public/css/zombie.css)
 public/js/menu.js       위쪽 ☰ 메뉴 · 패치 노트 창 · 버전 표시 (v12, 내용: public/js/patchnotes.js · 디자인: public/css/menu.css)

@@ -1,5 +1,6 @@
 /* ═════════════ 🔍 틀린그림찾기 (#scr-spot) ═════════════
- * 그림 크기는 spot.js 의 fit() 이 정해요 (--pw · 옆으로 두 장 .side / 위아래 두 장 .stack). 찾은 곳은 두 그림에 같은 색 동그라미. */
+ * 사진 크기는 spot.js 의 fit() 이 정해요 (--pw · 옆으로 두 장 .side / 위아래 두 장 .stack). 찾은 곳은 두 사진에 같은 색 동그라미.
+ * 확대: .df-z 를 두 사진에 똑같이 transform (spot.js zoom) · 동그라미 선은 확대해도 같은 굵기 (non-scaling-stroke). */
 #scr-spot .df-modes{align-items:center;margin-bottom:8px}
 #scr-spot .df-modes .seg-btn{padding:7px 13px}
 .df-opt{display:inline-flex;align-items:center;gap:6px;margin-left:8px}
@@ -19,13 +20,21 @@
 .df-time i.low{background:linear-gradient(90deg,var(--bad),#ff9aa8)}
 .df-wrap{position:relative;display:flex;justify-content:center;align-items:center;gap:10px;user-select:none;-webkit-user-select:none}
 .df-wrap.stack{flex-direction:column}
-.df-pic{position:relative;width:var(--pw,360px);aspect-ratio:4/3;border-radius:14px;overflow:hidden;cursor:crosshair;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-  box-shadow:0 0 0 2px rgba(255,255,255,.08),0 8px 22px rgba(0,0,0,.35);background:#1a1d26}
+.df-pic{position:relative;width:var(--pw,360px);aspect-ratio:4/3;border-radius:14px;overflow:hidden;cursor:crosshair;touch-action:none;-webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none;box-shadow:0 0 0 2px rgba(255,255,255,.08),0 8px 22px rgba(0,0,0,.35);background:#1a1d26}
+.df-z{position:absolute;inset:0;transform-origin:0 0}
+.df-wrap.zoomed .df-pic{cursor:grab} .df-wrap.zoomed .df-pic:active{cursor:grabbing}
 .df-art,.df-mk{position:absolute;inset:0;width:100%;height:100%;display:block}
+.df-art{image-rendering:auto}
 .df-mk{pointer-events:none;overflow:visible}
+.df-mk circle,.df-mk path{vector-effect:non-scaling-stroke}
+.df-load{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none;align-items:center;gap:10px;padding:10px 18px;border-radius:999px;background:rgba(17,20,38,.88);color:#fff;font-weight:700;font-size:14px;z-index:2;pointer-events:none}
+.df-load.show{display:flex}
+.df-load i{width:16px;height:16px;border-radius:50%;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;animation:dfSpin .8s linear infinite}
+@keyframes dfSpin{to{transform:rotate(360deg)}}
 .df-wrap.locked .df-pic{filter:saturate(.35) brightness(.8);cursor:not-allowed}
-.df-ring circle{fill:none;stroke:var(--c);stroke-width:3.6}
-.df-ring .df-glow{stroke-width:9;opacity:.28}
+.df-ring circle{fill:none;stroke:var(--c);stroke-width:3.4}
+.df-ring .df-glow{stroke-width:9;opacity:.3}
 .df-ring{animation:dfRing .42s cubic-bezier(.3,1.6,.5,1);transform-box:fill-box;transform-origin:center}
 .df-ring.missed circle{stroke-dasharray:6 5;stroke-width:3}
 .df-ring.missed{animation:dfMissed 1s ease-in-out 2}
@@ -45,9 +54,13 @@
 .df-plus{position:absolute;left:50%;top:8px;transform:translate(-50%,6px);padding:4px 14px;border-radius:999px;font-family:'Black Han Sans',sans-serif;font-size:19px;color:#fff;opacity:0;pointer-events:none;z-index:4;transition:opacity .15s,transform .2s;box-shadow:0 6px 18px rgba(0,0,0,.35)}
 .df-plus.show{opacity:1;transform:translate(-50%,0)}
 .df-plus.good{background:rgba(22,160,90,.94)} .df-plus.bad{background:rgba(214,48,52,.94)}
-.df-tools{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap;min-height:34px}
+.df-tools{display:flex;justify-content:center;align-items:center;gap:10px 12px;margin-top:8px;flex-wrap:wrap;min-height:34px}
 .df-tools .btn small{opacity:.75;font-size:11px;margin-left:4px}
+.df-zoom{display:inline-flex;gap:4px} .df-zoom .btn{min-width:38px;padding-left:9px;padding-right:9px;font-weight:800}
+.df-zoom .df-zv{min-width:48px;font-variant-numeric:tabular-nums}
+#df-info{max-width:min(100%,640px);text-align:center;line-height:1.35}
+.df-credit{opacity:.75}
 @media (max-width:620px) and (max-height:940px){ body.gaming #scr-spot .game-head .status{display:none} }
 @media (max-height:560px){ #scr-spot.mp .df-players{display:none} }   /* 가로 휴대폰 멀티: 점수는 위쪽 점수판으로 (그림을 크게) */
-@media (max-width:520px){ #scr-spot .df-modes{gap:6px} #scr-spot .df-modes .seg-btn{padding:6px 10px;font-size:13.5px} .df-opt{margin-left:0} .df-p{font-size:12.5px} .df-pic{border-radius:10px} .df-dots i{width:12px;height:12px} }
+@media (max-width:520px){ .df-credit{display:none} #scr-spot .df-modes{gap:6px} #scr-spot .df-modes .seg-btn{padding:6px 10px;font-size:13.5px} .df-opt{margin-left:0} .df-p{font-size:12.5px} .df-pic{border-radius:10px} .df-dots i{width:12px;height:12px} }
 @media (prefers-reduced-motion:reduce){ .df-ring,.df-ring.missed,.df-hintc{animation:none} }
