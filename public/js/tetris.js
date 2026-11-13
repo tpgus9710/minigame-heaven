@@ -1,5 +1,9 @@
 /* =====================================================================
  *  🧱 테트리스
+ *  싱글 (v13.7): 들어올 때 고르는 카드(#tet-pick) — 👿 보스전 · 🧱 일반전 · 하는 중에는 옆 칸 [보스전 | 일반전]으로 바꿔요 (새 판)
+ *   · 보스전: 2줄 이상 지워 보스 체력 20을 깎아요 · 보스는 12초마다 방해 줄 (기록 'tetris')
+ *   · 일반전: 10줄마다 레벨 업 · 떨어지는 속도는 가이드라인 공식(레벨 1 = 1초 → 레벨 10 = 0.06초 → 13부터 거의 바로)
+ *            빠를 때도 놓을 수 있게 바닥에 닿은 뒤 굳기까지 0.5초 (옮기거나 돌리면 다시 0.5초, 한 블록에 15번까지) (기록 'tetris:normal')
  *  터치 화면 조작 (TetTouch, 아래):
  *   · 손가락(기본): 화면 어디든 끌면 이동 · 톡 누르면 회전 · 아래로 끌면 천천히 · 아래로 휙 쓸면 바로 내리기 · 위로 쓸면 회전
  *   · 버튼: 왼손 ◀ ▶ (아래 ▼) · 오른손 큰 ⟳ (위에 따로 ⤓) — 자주 누르는 회전과 바로 내리기를 떨어뜨려 잘못 누르지 않게
@@ -9,36 +13,81 @@ const Tetris = {
     O: [[1, 1], [1, 1]], S: [[0, 1, 1], [1, 1, 0], [0, 0, 0]], T: [[0, 1, 0], [1, 1, 1], [0, 0, 0]], Z: [[1, 1, 0], [0, 1, 1], [0, 0, 0]] },
   COLORS: { I: '#3fd6f0', J: '#4d7cff', L: '#ff9f43', O: '#ffd23f', S: '#3fcf9b', T: '#a77cff', Z: '#ff5d73', G: '#59627e' },
   running: false,
-  start(solo) {
+  mode: store.get('tet-mode', 'boss') === 'normal' ? 'normal' : 'boss',
+  MODE_NAME: { boss: '보스전', normal: '일반전' },
+  /** 일반전 속도 (한 칸 떨어지는 ms) — 가이드라인 공식 (0.8 - (레벨-1)×0.007)^(레벨-1) 초 */
+  speed(lv) { return Math.max(16, Math.round(1000 * Math.pow(0.8 - (lv - 1) * 0.007, lv - 1))); },
+  normal() { return this.solo && this.mode === 'normal'; },
+  bestOf(m) { return +store.get(m === 'normal' ? 'best-tetris-normal' : 'best-tetris', 0) || 0; },
+  /** 싱글로 들어오기: 메뉴에서 오면 고르는 카드 · 「다시 하기」면 같은 게임으로 바로 */
+  enter() {
+    if (isScreen('tetris') && this.solo && this.picked) return this.start(true);
+    this.choose();
+  },
+  /** 보스전 · 일반전 고르는 카드 (판은 아직 시작 안 해요) */
+  choose() {
     stopLocal();
-    this.solo = solo; S.solo = solo ? 'tetris' : null;
+    this.solo = true; this.picked = false; this.running = false; this.dead = false; S.solo = 'tetris';
     this.grid = Array.from({ length: 20 }, () => Array(10).fill(null));
-    this.bag = []; this.score = 0; this.lines = 0; this.level = 1; this.dropMs = 800; this.acc = 0; this.pending = 0; this.dead = false;
+    this.p = null; this.next = null; this.pending = 0; this.score = 0; this.lines = 0; this.level = 1; this.bossHp = 20;
+    $('#tetris-title .tt').textContent = '테트리스';
+    $('#tetris-status').textContent = '보스전 · 일반전 중에서 골라요';
+    $('#boss-box').classList.add('hidden'); $('#t-best-line').classList.add('hidden'); $('#tet-mode-box').classList.add('hidden');
+    for (const m of ['boss', 'normal']) { const b = this.bestOf(m); $('#tet-pb-' + m).textContent = b ? `최고 ${b.toLocaleString()}점` : '첫 기록 도전!'; }
+    const had = store.get('tet-mode', null) !== null;    // 한 번이라도 골랐을 때만 「지난번」 표시
+    $$('#tet-pick .pick-opt').forEach(b => b.classList.toggle('last', had && b.dataset.m === this.mode));
+    $('#tet-pick').classList.remove('hidden');
+    TetTouch.paint();
+    show('tetris'); renderScores(); this.hud(); this.render();
+    if (typeof Fit !== 'undefined') Fit.schedule();
+    setTimeout(() => { const b = $(`#tet-pick .pick-opt[data-m="${this.mode}"]`); if (b && !TOUCH) b.focus(); }, 60);
+  },
+  start(solo, mode) {
+    stopLocal();
+    this.solo = solo; S.solo = solo ? 'tetris' : null; this.picked = solo;
+    if (solo && mode) { this.mode = mode === 'normal' ? 'normal' : 'boss'; store.set('tet-mode', this.mode); }
+    const normal = this.normal();
+    this.grid = Array.from({ length: 20 }, () => Array(10).fill(null));
+    this.bag = []; this.score = 0; this.lines = 0; this.level = 1; this.acc = 0; this.pending = 0; this.dead = false;
+    this.dropMs = normal ? this.speed(1) : 800;
+    this.lockMs = normal ? Math.max(this.dropMs, 500) : 0;          // 일반전만: 바닥에 닿은 뒤 굳기까지 (0 = 다음 칸 차례에 바로)
+    this.best = solo ? this.bestOf(this.mode) : 0; this.rec = false;
     this.next = this.take(); this.spawn();
     this.bossHp = 20;
-    $('#boss-box').classList.toggle('hidden', !solo);
-    $('#tetris-title .tt').textContent = solo ? '테트리스 보스전' : '테트리스 배틀';
+    $('#tet-pick').classList.add('hidden');
+    $('#boss-box').classList.toggle('hidden', !solo || normal);
+    $('#t-best-line').classList.toggle('hidden', !solo);
+    $('#tet-mode-box').classList.toggle('hidden', !solo);
+    $$('#tet-mode-box .t-seg button').forEach(b => b.classList.toggle('on', b.dataset.m === this.mode));
+    $('#tetris-title .tt').textContent = solo ? `테트리스 ${this.MODE_NAME[this.mode]}` : '테트리스 배틀';
     $('#tetris-status').textContent = TOUCH && TetTouch.mode === 'swipe' ? '끌면 이동 · 톡 누르면 회전 · 아래로 휙 쓸면 바로 내려요'
-      : solo ? '2줄 이상 지우면 보스에게 데미지! 보스는 12초마다 방해 줄을 보내요.' : '2줄 이상 지우면 상대에게 공격! 마지막까지 살아남으세요.';
+      : normal ? '10줄마다 레벨 업! 레벨이 오를수록 블록이 빨라져요.' : solo ? '2줄 이상 지우면 보스에게 데미지! 보스는 12초마다 방해 줄을 보내요.' : '2줄 이상 지우면 상대에게 공격! 마지막까지 살아남으세요.';
     TetTouch.paint();
     outSet.clear();
     show('tetris'); renderScores(); this.hud();
+    if (typeof Fit !== 'undefined') Fit.schedule();
     this.running = true; this.last = performance.now();
     const loop = t => {
       if (!this.running) return;
-      this.acc += t - this.last; this.last = t;
+      const dt = Math.min(250, Math.max(0, t - this.last)); this.last = t;
+      this.acc += dt;
       if (this.acc >= this.dropMs) { this.acc = 0; this.step(); }
+      if (this.lockMs && this.running && this.p) {                  // 일반전: 바닥에 닿아 있는 시간을 재서 굳혀요
+        if (this.hit(this.p.m, this.p.x, this.p.y + 1)) { if ((this.landT += dt) >= this.lockMs) this.lock(); }
+        else this.landT = 0;
+      }
       this.render();
       S.raf = requestAnimationFrame(loop);
     };
     S.raf = requestAnimationFrame(loop);
-    if (solo) every(12000, () => { this.pending += this.bossHp < 10 ? 2 : 1; this.flash('👿 보스의 공격! 방해 줄이 올라와요'); });
+    if (solo && !normal) every(12000, () => { this.pending += this.bossHp < 10 ? 2 : 1; this.flash('👿 보스의 공격! 방해 줄이 올라와요'); });
   },
   take() { if (!this.bag.length) this.bag = shuffle(Object.keys(this.SHAPES)); return this.bag.pop(); },
   spawn() {
     const t = this.next; this.next = this.take();
     const m = this.SHAPES[t].map(r => [...r]);
     this.p = { t, m, x: Math.floor((10 - m[0].length) / 2), y: t === 'I' ? -1 : 0 };
+    this.landT = 0; this.resets = 0;
     if (this.hit(this.p.m, this.p.x, this.p.y)) this.die();
   },
   hit(m, x, y) {
@@ -50,14 +99,17 @@ const Tetris = {
     }
     return false;
   },
-  move(dx, dy) { if (this.hit(this.p.m, this.p.x + dx, this.p.y + dy)) return false; this.p.x += dx; this.p.y += dy; return true; },
+  move(dx, dy) { if (this.hit(this.p.m, this.p.x + dx, this.p.y + dy)) return false; this.p.x += dx; this.p.y += dy; if (dx) this.nudge(); return true; },
   rotate() {
     const m = this.p.m, n = m.length, rot = m.map((row, r) => row.map((_, c) => m[n - 1 - c][r]));
-    for (const k of [0, 1, -1, 2, -2]) if (!this.hit(rot, this.p.x + k, this.p.y)) { this.p.m = rot; this.p.x += k; return; }
+    for (const k of [0, 1, -1, 2, -2]) if (!this.hit(rot, this.p.x + k, this.p.y)) { this.p.m = rot; this.p.x += k; this.nudge(); return; }
   },
-  step() { if (!this.move(0, 1)) this.lock(); },
+  /** 일반전: 바닥에 닿은 채 옮기거나 돌리면 굳는 시간을 처음부터 (한 블록에 15번까지) */
+  nudge() { if (this.lockMs && this.landT > 0 && this.resets < 15) { this.landT = 0; this.resets++; } },
+  step() { if (!this.move(0, 1) && !this.lockMs) this.lock(); },
   hardDrop() { while (this.move(0, 1)) this.score += 2; this.lock(); },
   lock() {
+    if (!this.p || this.dead) return;
     const { m, x, y, t } = this.p;
     let top = false;
     m.forEach((row, r) => row.forEach((v, c) => { if (!v) return; if (y + r < 0) top = true; else this.grid[y + r][x + c] = t; }));
@@ -67,9 +119,13 @@ const Tetris = {
     if (cleared) {
       this.lines += cleared;
       this.score += [0, 100, 300, 500, 800][cleared] * this.level;
+      const lv0 = this.level;
       this.level = 1 + Math.floor(this.lines / 10);
-      this.dropMs = Math.max(90, 800 - (this.level - 1) * 70);
-      const atk = cleared === 4 ? 4 : cleared - 1;
+      if (this.normal()) {
+        this.dropMs = this.speed(this.level); this.lockMs = Math.max(this.dropMs, 500);
+        this.flash(this.level > lv0 ? `⬆️ 레벨 ${this.level}! 더 빨라져요` : cleared === 4 ? '🎉 테트리스! 4줄' : `${cleared}줄 지웠어요`);
+      } else this.dropMs = Math.max(90, 800 - (this.level - 1) * 70);
+      const atk = this.normal() ? 0 : cleared === 4 ? 4 : cleared - 1;
       if (atk > 0) {
         const cancel = Math.min(this.pending, atk); this.pending -= cancel;   // 받을 공격을 먼저 상쇄
         const send = atk - cancel;
@@ -91,21 +147,36 @@ const Tetris = {
     }
     $('#tetris-cv').classList.remove('flash'); void $('#tetris-cv').offsetWidth; $('#tetris-cv').classList.add('flash');
   },
+  /** 이 기기 최고 점수 저장 → [이전 최고, 신기록인지] */
+  keepBest() {
+    const key = this.mode === 'normal' ? 'best-tetris-normal' : 'best-tetris', prev = this.bestOf(this.mode);
+    if (this.score > prev) store.set(key, this.score);
+    return [prev, this.score > prev && prev > 0];
+  },
   die() {
     if (this.dead) return;
     this.dead = true; this.running = false; this.render(true);
-    if (this.solo) after(600, () => showResult({ title: '💀 게임 오버', subtitle: `점수 ${this.score} · 남은 보스 체력 ${this.bossHp}`, solo: 'tetris', rec: { v: this.score } }));
-    else { socket.emit('tetris:dead'); $('#tetris-status').textContent = '💀 탈락! 다른 사람들의 경기를 기다리는 중…'; }
+    if (this.solo) {
+      const [prev, rec] = this.keepBest(), sc = this.score.toLocaleString();
+      if (this.normal()) after(600, () => showResult({ title: '🧱 게임 오버', subtitle: `일반전 · 레벨 ${this.level} · ${this.lines}줄 · 점수 ${sc}${rec ? ' · 🎉 신기록!' : prev ? ` · 최고 ${Math.max(prev, this.score).toLocaleString()}점` : ''}`, solo: 'tetris', rec: { k: 'normal', v: this.score } }));
+      else after(600, () => showResult({ title: '💀 게임 오버', subtitle: `보스전 · 점수 ${sc} · 남은 보스 체력 ${this.bossHp}${rec ? ' · 🎉 신기록!' : ''}`, solo: 'tetris', rec: { v: this.score } }));
+    } else { socket.emit('tetris:dead'); $('#tetris-status').textContent = '💀 탈락! 다른 사람들의 경기를 기다리는 중…'; }
   },
   win() {
     this.running = false; this.render();
-    after(500, () => showResult({ title: '🏆 보스 처치!', subtitle: `점수 ${this.score} · ${this.lines}줄`, solo: 'tetris', win: true, rec: { v: this.score } }));
+    const [, rec] = this.keepBest();
+    after(500, () => showResult({ title: '🏆 보스 처치!', subtitle: `보스전 · 점수 ${this.score.toLocaleString()} · ${this.lines}줄${rec ? ' · 🎉 신기록!' : ''}`, solo: 'tetris', win: true, rec: { v: this.score } }));
   },
   flash(msg) { $('#tetris-status').textContent = msg; },
   hud() {
     $('#t-score').textContent = this.score.toLocaleString();
     $('#t-lines').textContent = `${this.lines} / ${this.level}`;
     $('#boss-hp-text').textContent = this.bossHp; $('#boss-hp-bar').style.width = this.bossHp / 20 * 100 + '%';
+    if (this.solo) {
+      $('#t-best').textContent = Math.max(this.best || 0, this.running || this.dead ? this.score : 0).toLocaleString();
+      if (!this.rec && this.best > 0 && this.score > this.best && this.running) { this.rec = true; this.flash('🎉 신기록 갱신 중!'); $('#t-score-box').classList.add('rec'); }
+      else if (!this.rec) $('#t-score-box').classList.remove('rec');
+    }
   },
   cell(c, x, y, color, sz = 30, alpha = 1) {
     c.globalAlpha = alpha; c.fillStyle = color; c.fillRect(x * sz + 1, y * sz + 1, sz - 2, sz - 2);
@@ -126,6 +197,7 @@ const Tetris = {
     if (this.pending) { c.fillStyle = '#ff5d73'; c.fillRect(0, 600 - this.pending * 30, 4, this.pending * 30); }
     if (gray) { c.fillStyle = 'rgba(0,0,0,.5)'; c.fillRect(0, 0, 300, 600); c.fillStyle = '#fff'; c.font = '32px \"Black Han Sans\", sans-serif'; c.textAlign = 'center'; c.fillText('GAME OVER', 150, 300); }
     const n = $('#tetris-next').getContext('2d'); n.fillStyle = '#0b0e1a'; n.fillRect(0, 0, 110, 80);
+    if (!this.next) return;
     const m = this.SHAPES[this.next], ox = (110 - m[0].length * 22) / 2 / 22, oy = (80 - m.length * 22) / 2 / 22;
     m.forEach((row, r) => row.forEach((v, cc) => { if (v) this.cell(n, cc + ox, r + oy, this.COLORS[this.next], 22); }));
   },
@@ -176,19 +248,26 @@ const TetTouch = {
   drop(g) { g.done = true; g.moved = true; Tetris.hardDrop(); this.buzz(16); Tetris.render(); },
   buzz(ms = 7) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch { /* 무시 */ } },
   /** 옆 칸의 [손가락 | 버튼] 표시 */
-  paint() { $$('#scr-tetris .t-seg button').forEach(b => b.classList.toggle('on', b.dataset.m === this.mode)); },
+  paint() { $$('#scr-tetris .t-ctl .t-seg button').forEach(b => b.classList.toggle('on', b.dataset.m === this.mode)); },
 };
 TouchArea.add('tetris', TetTouch);                                // 화면 어디든 (판 바깥 빈 곳까지)
 ACT.tetCtl = el => {
   TetTouch.mode = el.dataset.m; TetTouch.paint(); updatePad(); Fit.schedule();
   toast(TetTouch.mode === 'btn' ? '버튼으로 조작해요. ◀ ▶ 이동 · ⟳ 회전 · ⤓ 바로 내리기' : '손가락으로 조작해요. 끌면 이동 · 톡 회전 · 아래로 휙 바로 내리기');
 };
-register('tetris', { solo: () => Tetris.start(true), stop: () => { Tetris.running = false; TetTouch.g = null; },
+Object.assign(ACT, {
+  tetPick: el => Tetris.start(true, el.dataset.m),                                  // 고르는 카드
+  tetMode: el => { if (Tetris.solo && el.dataset.m !== Tetris.mode) Tetris.start(true, el.dataset.m); },   // 하는 중에 바꾸기 (새 판)
+});
+register('tetris', { solo: () => Tetris.enter(), stop: () => { Tetris.running = false; TetTouch.g = null; },
   // 버튼 조작일 때만 패드 (왼손 ◀ ▶ / ▼ · 오른손 ⤓ / ⟳) — 손가락 조작이면 패드 없이 판을 크게
   get pad() { return TetTouch.mode === 'btn' ? ['ArrowLeft', 'ArrowRight', 'ArrowDown', '|', 'Space', 'ArrowUp'] : null; },
   padLabel: { ArrowUp: '⟳', Space: '⤓' }, padRepeat: ['ArrowLeft', 'ArrowRight', 'ArrowDown'],
   key: e => {
-  if (!Tetris.running) return;
+  if (!Tetris.running) {                                                          // 고르는 카드: 1 보스전 · 2 일반전
+    if (!$('#tet-pick').classList.contains('hidden') && (e.key === '1' || e.key === '2')) { e.preventDefault(); Tetris.start(true, e.key === '1' ? 'boss' : 'normal'); }
+    return;
+  }
   const k = e.key;
   if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', ' '].includes(k)) e.preventDefault(); else return;
   if (k === 'ArrowLeft') Tetris.move(-1, 0);

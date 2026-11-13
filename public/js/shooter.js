@@ -1,5 +1,7 @@
 /* =====================================================================
  *  🚀 우주 슈팅 — 무기 3종(발칸·레이저·유도 미사일) × 5단계, 보조 드론, 실드·폭탄 아이템, 5웨이브마다 보스
+ *  v13.7: 캡슐을 글자 한 자(P · V · L · M …) 대신 모양 · 그림 · 이름표로 — 무기는 육각형, 파워는 동그라미 별빛,
+ *         실드는 방패, 폭탄은 둥근 폭탄, 드론은 마름모. 캡슐 아래에 「발칸 · 레이저 · 미사일 · 파워 · 실드 · 폭탄 · 드론」 이름표
  * ===================================================================== */
 const SH = { W: 480, H: 640 };
 const SH_WEAPON = {
@@ -7,9 +9,14 @@ const SH_WEAPON = {
   L: { name: '레이저', color: '#5ce1ff', desc: '적을 꿰뚫는 광선' },
   M: { name: '유도 미사일', color: '#ff6b5b', desc: '알아서 쫓아가는 미사일' },
 };
-const SH_ITEM = { P: '#ffffff', V: '#ffd23f', L: '#5ce1ff', M: '#ff6b5b', S: '#4aa8ff', B: '#ff9f43', D: '#b388ff' };
+/** 캡슐: 이름 · 색 · 모양 (무기 V · L · M 는 육각형) */
+const SH_ITEM = {
+  P: { name: '파워', color: '#fff6c8', shape: 'circle' }, V: { name: '발칸', color: '#ffd23f', shape: 'hex' },
+  L: { name: '레이저', color: '#5ce1ff', shape: 'hex' }, M: { name: '미사일', color: '#ff6b5b', shape: 'hex' },
+  S: { name: '실드', color: '#3fe0a0', shape: 'shield' }, B: { name: '폭탄', color: '#ff9f43', shape: 'bomb' }, D: { name: '드론', color: '#c39bff', shape: 'diamond' },
+};
 makeScreen('shooter', {
-  title: '🚀 우주 슈팅', status: '마우스(터치)·방향키로 이동, 총은 자동 발사! 아이템: P 파워업 · V/L/M 무기 교체 · D 드론 · S 실드 · B 폭탄 (B·X 키로 사용)',
+  title: '🚀 우주 슈팅', status: '마우스(터치)·방향키로 이동, 총은 자동 발사! 캡슐 이름표를 보고 먹어요: 파워 · 발칸 · 레이저 · 미사일 · 드론 · 실드 · 폭탄 (폭탄은 B·X 키)',
   stats: [['score', '점수'], ['wave', '웨이브'], ['life', '목숨']],
   body: `<div class="center col"><canvas id="sh-cv" class="game-cv" width="${SH.W}" height="${SH.H}"></canvas><button class="btn sm ghost" data-act="shBomb" style="margin-top:8px">💣 폭탄 쓰기 (B)</button></div>`,
 });
@@ -183,7 +190,7 @@ const Shooter = {
     else if (k === 'S') { this.shield = true; txt = '실드!'; }
     else if (k === 'B') { this.bombs = Math.min(5, this.bombs + 1); txt = '폭탄 +1'; }
     else if (k === 'D') { if (this.drones < 2) this.drones++; else this.power = Math.min(5, this.power + 1); txt = `드론 ${this.drones}기`; }
-    this.fx.push({ x: this.p.x, y: this.p.y - 30, t: 0.9, txt, c: SH_ITEM[k] }); this.hud();
+    this.fx.push({ x: this.p.x, y: this.p.y - 30, t: 0.9, txt, c: SH_ITEM[k].color }); this.hud();
   },
   hurt() {
     if (this.shield) { this.shield = false; this.inv = 1; return; }
@@ -202,6 +209,69 @@ const Shooter = {
     for (const e of this.enemies) this.damage(e, e.t === 'boss' ? 40 : 99, e.x, e.y);
   },
 
+  /** 캡슐 하나: 모양(무기 육각형 · 파워 동그라미 · 실드 방패 · 폭탄 · 드론 마름모) + 그림 + 아래 이름표 */
+  drawItem(c, k, x, y, s = 1, ph = 0) {
+    const I = SH_ITEM[k], col = I.color, t = this.t + ph;
+    c.save(); c.translate(x, y); c.scale(s, s);
+    c.shadowColor = col; c.shadowBlur = 16;
+    c.fillStyle = 'rgba(8,12,28,.92)'; c.strokeStyle = col; c.lineWidth = 2.6; c.lineJoin = 'round';
+    this.itemShape(c, I.shape); c.fill(); c.stroke();
+    c.shadowBlur = 0;
+    this.itemIcon(c, k, col, t);
+    c.font = '700 13px "Noto Sans KR", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    const w = c.measureText(I.name).width + 12;
+    c.fillStyle = 'rgba(5,8,20,.9)'; c.strokeStyle = col; c.lineWidth = 1.2;
+    c.beginPath(); c.roundRect(-w / 2, 20, w, 18, 9); c.fill(); c.globalAlpha = 0.6; c.stroke(); c.globalAlpha = 1;
+    c.fillStyle = col; c.fillText(I.name, 0, 29.5);
+    c.restore();
+  },
+  itemShape(c, shape) {
+    c.beginPath();
+    if (shape === 'hex') for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; c[i ? 'lineTo' : 'moveTo'](Math.cos(a) * 17.5, Math.sin(a) * 17.5); }
+    else if (shape === 'shield') { c.moveTo(0, -17); c.lineTo(14.5, -11); c.lineTo(13.5, 3); c.quadraticCurveTo(10, 12, 0, 17.5); c.quadraticCurveTo(-10, 12, -13.5, 3); c.lineTo(-14.5, -11); }
+    else if (shape === 'diamond') { c.moveTo(0, -18.5); c.lineTo(17.5, 0); c.lineTo(0, 18.5); c.lineTo(-17.5, 0); }
+    else c.arc(0, 0, 16, 0, Math.PI * 2);
+    c.closePath();
+  },
+  itemIcon(c, k, col, t) {
+    c.save();
+    if (k === 'P') {                                                                  // 파워: 위로 겹화살표 + 반짝
+      c.strokeStyle = col; c.lineWidth = 3.2; c.lineCap = 'round'; c.lineJoin = 'round';
+      for (const oy of [-3, 4]) { c.beginPath(); c.moveTo(-7, oy + 3); c.lineTo(0, oy - 4); c.lineTo(7, oy + 3); c.stroke(); }
+      c.fillStyle = '#ffd23f'; c.globalAlpha = 0.6 + Math.sin(t * 7) * 0.4; c.beginPath(); c.arc(9, -9, 2.2, 0, 7); c.fill();
+    } else if (k === 'V') {                                                           // 발칸: 부채꼴로 퍼지는 총알 3발
+      c.fillStyle = col;
+      for (const a of [-0.5, 0, 0.5]) { c.save(); c.translate(0, 8); c.rotate(a); c.beginPath(); c.ellipse(0, -11, 2.4, 5.2, 0, 0, 7); c.fill(); c.restore(); }
+      c.beginPath(); c.arc(0, 8, 2.6, 0, 7); c.fill();
+    } else if (k === 'L') {                                                           // 레이저: 세로 광선
+      c.fillStyle = col; c.globalAlpha = 0.3; c.fillRect(-5.5, -12, 11, 24); c.globalAlpha = 1;
+      c.fillRect(-2.2, -12, 4.4, 24); c.fillStyle = '#fff'; c.fillRect(-0.7, -12, 1.4, 24);
+    } else if (k === 'M') {                                                           // 미사일: 비스듬히 날아가는 미사일 + 연기
+      c.fillStyle = 'rgba(255,170,90,.55)'; for (let i = 1; i <= 3; i++) { c.beginPath(); c.arc(-4 - i * 3.2, 4 + i * 3.2, 1.6 + i * 0.4, 0, 7); c.fill(); }
+      c.rotate(Math.PI / 4);
+      c.fillStyle = '#ffd6c9'; c.fillRect(-2.6, -7, 5.2, 12);
+      c.fillStyle = col; c.beginPath(); c.moveTo(-2.6, -7); c.lineTo(0, -12); c.lineTo(2.6, -7); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(-2.6, 2); c.lineTo(-5.5, 6.5); c.lineTo(-2.6, 5); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(2.6, 2); c.lineTo(5.5, 6.5); c.lineTo(2.6, 5); c.closePath(); c.fill();
+      c.fillStyle = '#ffb347'; c.beginPath(); c.moveTo(-1.8, 5); c.lineTo(0, 9 + Math.sin(t * 20) * 1.5); c.lineTo(1.8, 5); c.closePath(); c.fill();
+    } else if (k === 'S') {                                                           // 실드: 안쪽 방패 + 빛
+      c.fillStyle = col; c.globalAlpha = 0.32; c.scale(0.62, 0.62); this.itemShape(c, 'shield'); c.fill();
+      c.globalAlpha = 1; c.strokeStyle = col; c.lineWidth = 3; c.stroke();
+      c.strokeStyle = '#fff'; c.lineWidth = 2.6; c.lineCap = 'round'; c.beginPath(); c.moveTo(-6, 0); c.lineTo(-1.5, 5); c.lineTo(7, -5); c.stroke();
+    } else if (k === 'B') {                                                           // 폭탄: 둥근 몸통 · 심지 · 불꽃
+      c.fillStyle = '#2a2f45'; c.strokeStyle = col; c.lineWidth = 1.6; c.beginPath(); c.arc(-1, 3, 8.5, 0, 7); c.fill(); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(-4, 0, 2.4, 0, 7); c.fill();
+      c.strokeStyle = '#d9c7a0'; c.lineWidth = 1.8; c.beginPath(); c.moveTo(4, -4); c.quadraticCurveTo(7, -9, 10, -9); c.stroke();
+      const f = 2.2 + Math.abs(Math.sin(t * 14)) * 1.6; c.fillStyle = Math.floor(t * 10) % 2 ? '#fff3a0' : col;
+      c.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? f * 0.45 : f; c[i ? 'lineTo' : 'moveTo'](10.5 + Math.cos(a) * r, -9.5 + Math.sin(a) * r); } c.closePath(); c.fill();
+    } else if (k === 'D') {                                                           // 드론: 작은 비행기 + 양쪽 프로펠러
+      c.strokeStyle = col; c.lineWidth = 1.6;
+      for (const sx of [-1, 1]) { c.beginPath(); c.ellipse(sx * 9, -5, 4.6, 1.8, Math.sin(t * 25) * 0.6, 0, 7); c.stroke(); }
+      c.fillStyle = col; c.beginPath(); c.moveTo(0, -9); c.lineTo(-7.5, 7); c.lineTo(7.5, 7); c.closePath(); c.fill();
+      c.fillStyle = '#fff'; c.beginPath(); c.arc(0, 2, 2.1, 0, 7); c.fill();
+    }
+    c.restore();
+  },
   drawShip(c, x, y) {
     const t = this.t;
     c.save(); c.translate(x, y);
@@ -257,19 +327,14 @@ const Shooter = {
     c.globalCompositeOperation = 'source-over';
     for (const e of this.enemies) this.drawEnemy(c, e);
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    for (const it of this.items) {                                                    // 아이템 캡슐
-      const col = SH_ITEM[it.k], pulse = 1 + Math.sin(this.t * 6 + it.ph) * 0.08;
-      c.save(); c.translate(it.x, it.y); c.scale(pulse, pulse); c.shadowColor = col; c.shadowBlur = 14;
-      c.fillStyle = 'rgba(10,14,30,.9)'; c.strokeStyle = col; c.lineWidth = 2.5; c.beginPath(); c.roundRect(-13, -10, 26, 20, 8); c.fill(); c.stroke();
-      c.shadowBlur = 0; c.fillStyle = col; c.font = '15px "Black Han Sans", sans-serif'; c.fillText(it.k, 0, 1); c.restore();
-    }
+    for (const it of this.items) this.drawItem(c, it.k, it.x, it.y, 1 + Math.sin(this.t * 6 + it.ph) * 0.06, it.ph);   // 아이템 캡슐
     if (!this.over && !(this.inv > 0 && Math.floor(this.t * 11) % 2)) {
       for (const d of this.dronePos()) {
         c.fillStyle = '#b388ff'; c.beginPath(); c.moveTo(d.x, d.y - 9); c.lineTo(d.x - 7, d.y + 6); c.lineTo(d.x + 7, d.y + 6); c.fill();
         c.fillStyle = '#fff'; c.beginPath(); c.arc(d.x, d.y, 2, 0, 7); c.fill();
       }
       this.drawShip(c, p.x, p.y);
-      if (this.shield) { c.strokeStyle = `rgba(120,200,255,${0.5 + Math.sin(this.t * 8) * 0.3})`; c.lineWidth = 2.5; c.beginPath(); c.arc(p.x, p.y, 28, 0, 7); c.stroke(); }
+      if (this.shield) { c.strokeStyle = `rgba(63,224,160,${0.5 + Math.sin(this.t * 8) * 0.3})`; c.lineWidth = 2.5; c.beginPath(); c.arc(p.x, p.y, 28, 0, 7); c.stroke(); }
     }
     for (const f of this.fx) {
       if (f.txt) { c.globalAlpha = Math.min(1, f.t * 2); c.fillStyle = f.c || '#fff'; c.strokeStyle = 'rgba(0,0,0,.7)'; c.lineWidth = 4; c.font = '17px "Black Han Sans", sans-serif'; c.strokeText(f.txt, f.x, f.y - (0.9 - f.t) * 34); c.fillText(f.txt, f.x, f.y - (0.9 - f.t) * 34); }
@@ -282,7 +347,7 @@ const Shooter = {
     c.fillStyle = 'rgba(5,8,20,.7)'; c.beginPath(); c.roundRect(10, SH.H - 40, 200, 30, 8); c.fill();
     c.fillStyle = w.color; c.font = '15px "Black Han Sans", sans-serif'; c.textAlign = 'left'; c.fillText(w.name, 20, SH.H - 24);
     for (let i = 0; i < 5; i++) { c.fillStyle = i < this.power ? w.color : 'rgba(255,255,255,.15)'; c.fillRect(110 + i * 14, SH.H - 31, 10, 14); }
-    if (this.drones) { c.fillStyle = '#b388ff'; c.fillText('D'.repeat(this.drones), 184, SH.H - 24); }
+    for (let i = 0; i < this.drones; i++) { const dx = 186 + i * 13, dy = SH.H - 25; c.fillStyle = '#c39bff'; c.beginPath(); c.moveTo(dx, dy - 7); c.lineTo(dx - 5.5, dy + 5); c.lineTo(dx + 5.5, dy + 5); c.closePath(); c.fill(); }   // 드론 수
     if (this.flashT > 0) { c.fillStyle = `rgba(255,255,255,${this.flashT * 1.5})`; c.fillRect(0, 0, SH.W, SH.H); }
     if (this.banner && this.banner.t > 0) { c.globalAlpha = Math.min(1, this.banner.t * 2); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = '38px "Black Han Sans", sans-serif'; c.fillText(this.banner.txt, SH.W / 2, SH.H * 0.4); c.globalAlpha = 1; }
   },

@@ -22,7 +22,8 @@ const FACE_TIP = {
   edge: '얼굴을 화면 가운데로 옮겨 주세요', blur: '얼굴이 흐려요. 밝은 곳에서 잠깐 멈춰 주세요', side: '정면을 봐 주세요',
   tilt: '고개를 똑바로 해 주세요', dark: '너무 어두워요. 밝은 곳으로 가 주세요',
 };
-const SOLO_SUB = { 'dodge:bullet': '총알 모드', 'dodge:bamboo': '대나무 모드', 'mine:easy': '초급', 'mine:normal': '중급', 'mine:hard': '고급' };
+const SOLO_SUB = { 'dodge:bullet': '총알 모드', 'dodge:bamboo': '대나무 모드', 'mine:easy': '초급', 'mine:normal': '중급', 'mine:hard': '고급',
+  rain: '한글', 'rain:en': '영어', tetris: '보스전', 'tetris:normal': '일반전' };   // 산성비 · 테트리스는 원래 기록(키 그대로)이 한글 · 보스전
 const REC_FMT = {
   race: v => v.toFixed(2) + '초', dodge: v => v.toFixed(2) + '초', mine: v => v + '초', apple: v => v + '개', snake: v => '길이 ' + v,
   stack: v => v + '층', breakout: v => v + '단계', zombie: v => v.toLocaleString('ko-KR') + '점', plat: v => '스테이지 ' + v,
@@ -30,8 +31,8 @@ const REC_FMT = {
 };
 /** 랭킹에서 고를 수 있는 싱글 기록 */
 const REC_GAMES = [['spot', ''], ['memory', ''], ['setgame', ''], ['mahjong', ''], ['tilematch', ''], ['pinball', ''], ['g2048', ''], ['fruit', ''], ['gem', ''], ['apple', ''], ['race', ''], ['mine:easy', ''], ['mine:normal', ''], ['mine:hard', ''],
-  ['dodge:bullet', ''], ['dodge:bamboo', ''], ['snake', ''], ['stack', ''], ['breakout', ''], ['shisen', ''], ['rain', ''], ['mole', ''],
-  ['shooter', ''], ['tetris', ''], ['zombie', ''], ['plat', ''], ['yacht', '']];
+  ['dodge:bullet', ''], ['dodge:bamboo', ''], ['snake', ''], ['stack', ''], ['breakout', ''], ['shisen', ''], ['rain', ''], ['rain:en', ''], ['mole', ''],
+  ['shooter', ''], ['tetris', ''], ['tetris:normal', ''], ['zombie', ''], ['plat', ''], ['yacht', '']];
 
 const DM_WHY = { notfriend: '친구에게만 귓속말을 보낼 수 있어요.', offline: '친구가 지금 접속해 있지 않아요. 접속하면 보낼 수 있어요.',
   limit: '너무 빨리 보내고 있어요. 잠깐 쉬었다가 보내 주세요.', nouser: '그 친구를 찾을 수 없어요.' };
@@ -76,11 +77,12 @@ function titleTag(id, cls = '', attrs = '') {
   const t = id && Titles.byId[id];
   return t ? `<span class="hon r${t.r} ${cls}" title="${esc(t.d)}"${attrs}>${esc(t.n)}</span>` : '';
 }
-function gameLabel(key) {
+/** 게임 이름 (나뉜 기록은 '이름 (종류)') · bare: 종류 없이 이름만 (순위표 제목) */
+function gameLabel(key, bare) {
   const [base] = String(key).split(':');
   const solo = SOLO_GAMES.find(g => g[0] === base);
   const name = GAME_INFO[base] && !solo ? GAME_INFO[base].name : solo ? solo[2] : (GAME_INFO[base] || {}).name || base;
-  return stripEmoji(name) + (SOLO_SUB[key] ? ` (${SOLO_SUB[key]})` : '');
+  return stripEmoji(name) + (!bare && SOLO_SUB[key] ? ` (${SOLO_SUB[key]})` : '');
 }
 const multiLabel = g => stripEmoji((GAME_INFO[g] || {}).name || g);
 function recText(key, v) {
@@ -526,10 +528,10 @@ const Acct = {
     const row = (u, right, sub = '') => `<div class="ac-row fr"><span class="ac-who" data-act="acCard" data-uid="${esc(u.id)}" role="button" tabindex="0" title="프로필 보기">${avatarOf(u)}<span class="grow"><b>${esc(u.name)}</b> ${lvTag(u.lv)}${sub}</span></span><span class="ac-btns">${right}</span></div>`;
     const where = f => {
       if (!f.on) return `<small class="st off">오프라인${f.seen ? ' · ' + ago(f.seen) : ''}</small>`;
-      if (!f.room) return f.solo ? `<small class="st on">${esc(gameLabel(f.solo))} 게임 중 (싱글)</small>` : '<small class="st on">접속 중</small>';
+      if (!f.room) return f.solo ? `<small class="st on">${esc(gameLabel(f.solo, true))} 게임 중 (싱글)</small>` : '<small class="st on">접속 중</small>';
       return `<small class="st on">${esc(stripEmoji(f.game))} ${f.playing ? '게임 중' : '대기실'} · ${f.n}/${f.max}명</small>`;
     };
-    const here = u => `<small class="st on">${u.st === 'home' ? '메뉴에 있어요' : u.st === 'solo' ? `${esc(gameLabel(u.solo || ''))} 게임 중 (싱글)` : `${esc(stripEmoji(u.game))} ${u.st === 'game' ? '게임 중' : '대기실'}`}</small>`;
+    const here = u => `<small class="st on">${u.st === 'home' ? '메뉴에 있어요' : u.st === 'solo' ? `${esc(gameLabel(u.solo || '', true))} 게임 중 (싱글)` : `${esc(stripEmoji(u.game))} ${u.st === 'game' ? '게임 중' : '대기실'}`}</small>`;
     const dmBtn = (f, label) => `<button class="btn sm ${f.unread ? 'good' : ''} ${label ? '' : 'icon-only'}" data-act="acDMOpen" data-uid="${esc(f.id)}" title="귓속말">${icon('message-circle')}${label ? '귓속말' : ''}${f.unread ? `<i class="ac-dot">${f.unread}</i>` : ''}</button>`;
     const onBtn = u => (u.rel === 'friend' ? `<span class="tag frtag">친구</span>${dmBtn(this.fr.friends.find(f => f.id === u.id) || u, false)}`
       : u.rel === 'sent' ? '<span class="tag wait">신청함</span>'
@@ -719,7 +721,7 @@ const Acct = {
     let t, cls = 'on';
     if (d.loading) t = '불러오는 중…';
     else if (!f.on) { t = '오프라인 · 접속하면 보낼 수 있어요'; cls = 'off'; }
-    else if (f.solo || (f.room && f.playing)) { t = `${f.solo ? gameLabel(f.solo) : stripEmoji(f.game)} 게임 중 · 알림 없이 조용히 전달돼요`; cls = 'on game'; }
+    else if (f.solo || (f.room && f.playing)) { t = `${f.solo ? gameLabel(f.solo, true) : stripEmoji(f.game)} 게임 중 · 알림 없이 조용히 전달돼요`; cls = 'on game'; }
     else if (f.room) t = `${stripEmoji(f.game)} 대기실에 있어요`;
     else t = '접속 중';
     el.className = 'st ' + cls; el.textContent = t;
@@ -855,7 +857,7 @@ const Acct = {
     if (!r.ok) { this.body(`<p class="muted center ac-load">${esc(whyText(r))}</p>`); return; }
     const u = r.u, w = r.where || {}, rate = u.plays ? Math.round(100 * u.wins / u.plays) : 0;
     const pct = Math.round(100 * (u.xp - u.cur) / Math.max(1, u.next - u.cur));
-    const st = !w.on ? '' : w.room ? `${stripEmoji(w.game)} ${w.playing ? '게임 중' : '대기실'}` : w.solo ? `${gameLabel(w.solo)} 게임 중` : '접속 중';
+    const st = !w.on ? '' : w.room ? `${stripEmoji(w.game)} ${w.playing ? '게임 중' : '대기실'}` : w.solo ? `${gameLabel(w.solo, true)} 게임 중` : '접속 중';
     const tile = (v, l) => `<div class="ac-tile"><b>${v}</b><small>${l}</small></div>`;
     const fav = u.fav.map(f => `<div class="cd-fav">${iconOf(f.g)}<span><b>${esc(f.m ? multiLabel(f.g) : gameLabel(f.g))}</b><small>${f.m ? '멀티' : '싱글'} ${f.p}판${f.w ? ` · ${f.w}승` : ''}</small></span></div>`).join('');
     const recent = u.recent.map(x => `<div class="ac-row">${iconOf(x.g)}<span class="grow"><b>${esc(x.m ? multiLabel(x.g) : gameLabel(x.g))}</b> ${x.w ? '<span class="res win">승리</span>' : x.m && x.r ? `<span class="res">${x.r}등</span>` : x.b ? '<span class="res best">신기록</span>' : '<span class="res">참가</span>'}</span><small>${ago(x.t)}</small></div>`).join('');

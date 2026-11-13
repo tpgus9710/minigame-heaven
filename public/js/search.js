@@ -18,8 +18,8 @@ const Find = (() => {
   /** 별명 · 영어 이름 · 원작 이름 (찾기만 해요) */
   const ALIAS = {
     seotda: '화투 땡 광땡 seotda 섰다', poker: '카드 포커 poker 스터드 홀덤', apple: '사과 apple 합10', race: '1to50 원투피프티 숫자', catch: '그림퀴즈 그림맞히기 캐치 catchmind',
-    liar: '라이어 liar', tetris: '테트리스 tetris 블록', omok: '오목 바둑 gomoku 5목', pong: '탁구 핑퐁 pong', snake: '뱀 지렁이 snake',
-    rain: '타자 타자연습 한컴 산성비', mine: '지뢰 minesweeper', g2048: '2048 숫자합치기', bingo: '빙고 bingo', dodge: '총피 피하기 탄막',
+    liar: '라이어 liar', tetris: '테트리스 tetris 블록 보스전 일반전 마라톤', omok: '오목 바둑 gomoku 5목', pong: '탁구 핑퐁 pong', snake: '뱀 지렁이 snake',
+    rain: '타자 타자연습 한컴 산성비 영타 영어타자 영어 english typing', mine: '지뢰 minesweeper', g2048: '2048 숫자합치기', bingo: '빙고 bingo', dodge: '총피 피하기 탄막',
     plat: '점프 마리오 런 플랫포머', volley: '배구 피카츄배구 volley', bomb: '폭탄 봄버맨 크레이지아케이드 물풍선 bomb', tank: '포트리스 탱크 대포 포탄',
     onecard: '원카드 우노 uno', halli: '할리갈리 종치기 과일', ox: 'ox 퀴즈 상식', word: '끝말 단어 국어사전', mole: '두더지 망치',
     gem: '애니팡 비주얼드 보석 3매치 match3', fruit: '수박게임 수박 합치기', marble: '부루마블 모두의마블 마블 세계여행', life: '인생게임 인생',

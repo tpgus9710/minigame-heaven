@@ -15,7 +15,8 @@ const Board = {
   curKey(base) {
     const subs = this.subs(base);
     if (subs.length <= 1) return subs[0] || base;
-    const pick = base === 'mine' && typeof Mine !== 'undefined' ? Mine.level : base === 'dodge' && typeof Dodge !== 'undefined' ? Dodge.mode : '';
+    const pick = base === 'mine' && typeof Mine !== 'undefined' ? Mine.level : base === 'dodge' && typeof Dodge !== 'undefined' ? Dodge.mode
+      : base === 'rain' && typeof Rain !== 'undefined' ? Rain.lang : base === 'tetris' && typeof Tetris !== 'undefined' ? Tetris.mode : '';   // 산성비 한글 · 테트리스 보스전은 키 그대로 (subs[0])
     return subs.find(k => k === `${base}:${pick}`) || subs[0];
   },
   ensure() {
@@ -36,7 +37,7 @@ const Board = {
     const base = key.split(':')[0], subs = this.subs(base), m = $('#bd-modal');
     $('#bd-ov').classList.add('show');
     const head = `<button class="man-x" data-act="bdClose" aria-label="닫기">${icon('x')}</button>
-      <div class="bd-head">${gameIcon(base, catOf(base))}<div><h2>${esc(gameLabel(base))} 순위표</h2><p class="muted small">모두의 최고 기록 · 로그인한 사람만 올라가요</p></div></div>
+      <div class="bd-head">${gameIcon(base, catOf(base))}<div><h2>${esc(gameLabel(base, true))} 순위표</h2><p class="muted small">모두의 최고 기록 · 로그인한 사람만 올라가요</p></div></div>
       ${subs.length > 1 ? `<div class="bd-subs">${subs.map(k => `<button class="seg-btn ${k === key ? 'on' : ''}" data-act="bdOpen" data-key="${k}">${esc(SOLO_SUB[k] || k)}</button>`).join('')}</div>` : ''}`;
     m.innerHTML = head + '<p class="muted center">불러오는 중…</p>';
     const r = await ask('acct:rank', { k: 'solo', g: key });

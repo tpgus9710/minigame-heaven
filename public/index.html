@@ -43,6 +43,7 @@
 <link rel="stylesheet" href="/css/memory.css">
 <link rel="stylesheet" href="/css/spot.css">
 <link rel="stylesheet" href="/css/zombie.css">
+<link rel="stylesheet" href="/css/pick.css">
 </head>
 <body>
 
@@ -208,13 +209,21 @@
     <div class="tetris-wrap">
       <canvas id="tetris-cv" width="300" height="600"></canvas>
       <div class="t-side">
+        <div class="t-box hidden" id="tet-mode-box" aria-label="게임 종류"><div class="t-seg t-mode"><button data-act="tetMode" data-m="boss">보스<span class="w">전</span></button><button data-act="tetMode" data-m="normal">일반<span class="w">전</span></button></div></div>
         <div class="t-box hidden" id="boss-box"><small>👿 보스 체력</small><b id="boss-hp-text">20</b><div class="boss-hp"><i id="boss-hp-bar" style="width:100%"></i></div></div>
         <div class="t-box"><small>다음 블록</small><canvas id="tetris-next" width="110" height="80"></canvas></div>
-        <div class="t-box"><small>점수</small><b id="t-score">0</b></div>
+        <div class="t-box" id="t-score-box"><small>점수</small><b id="t-score">0</b><small class="t-best-line hidden" id="t-best-line">최고 <span id="t-best">0</span></small></div>
         <div class="t-box"><small>줄 / 레벨</small><b id="t-lines">0 / 1</b></div>
         <div class="t-box keys"><kbd>←</kbd><kbd>→</kbd> 이동 · <kbd>↑</kbd> 회전<br><kbd>↓</kbd> 빠르게 · <kbd>Space</kbd> 바로 내리기</div>
         <div class="t-box t-ctl"><small>터치 조작</small><div class="t-seg"><button data-act="tetCtl" data-m="swipe">손가락</button><button data-act="tetCtl" data-m="btn">버튼</button></div></div>
       </div>
+      <div class="pick-ov hidden" id="tet-pick"><div class="pick-card" role="dialog" aria-label="테트리스 고르기">
+        <h3>🧱 테트리스</h3><p>어떤 게임을 할까요?</p>
+        <div class="pick-opts">
+          <button class="pick-opt" data-act="tetPick" data-m="boss"><span class="po-ic">👿</span><b>보스전</b><small>2줄 이상 지워 보스 체력 20을 깎아요 · 보스가 방해 줄을 보내요</small><em id="tet-pb-boss"></em></button>
+          <button class="pick-opt" data-act="tetPick" data-m="normal"><span class="po-ic">🧱</span><b>일반전</b><small>10줄마다 레벨 업 · 점점 빨라져요 · 최고 점수 도전</small><em id="tet-pb-normal"></em></button>
+        </div>
+      </div></div>
     </div>
   </section>
 
@@ -296,12 +305,22 @@
       <div class="stats"><div class="stat" ><small >점수</small><b id="rain-score">-</b></div><div class="stat" ><small >단계</small><b id="rain-level">-</b></div><div class="stat" id="rain-time-box"><small >남은 시간</small><b id="rain-time">-</b></div></div>
       <button class="btn ghost" data-act="leaveGame">나가기</button>
     </div>
+    <div class="mode-row hidden" id="rain-modes"><button class="seg-btn" data-act="rainLang" data-l="ko">가 한글</button><button class="seg-btn" data-act="rainLang" data-l="en">A 영어 (영타)</button></div>
     <div class="scorebar" data-scores></div>
     <div class="rain-wrap">
-      <div id="rain-field"><div class="rain-ground"></div></div>
+      <div id="rain-field"><div class="rain-ground"></div>
+        <div class="pick-ov hidden" id="rain-pick"><div class="pick-card" role="dialog" aria-label="타자 고르기">
+          <h3>☔ 산성비 타자</h3><p>어떤 타자로 할까요?</p>
+          <div class="pick-opts">
+            <button class="pick-opt" data-act="rainPick" data-l="ko"><span class="po-ic po-ko">가</span><b>한글</b><small>한글 단어를 쳐요</small><em id="rain-pb-ko"></em></button>
+            <button class="pick-opt" data-act="rainPick" data-l="en"><span class="po-ic po-en">A</span><b>영어 (영타)</b><small>영어 단어를 쳐요 · 짧은 단어부터</small><em id="rain-pb-en"></em></button>
+          </div>
+          <p class="pick-tip">영어는 한/영 키를 깜빡해도 괜찮아요 — 한글 자판으로 친 글자도 영어 키로 바꿔서 확인해요.</p>
+        </div></div>
+      </div>
       <div class="rain-bottom">
         <div class="acid" id="rain-acid-box"><small>산성도</small><div class="acid-track"><div id="rain-acid-bar"></div></div><b id="rain-acid">0%</b></div>
-        <input type="text" id="rain-input" maxlength="20" autocomplete="off" placeholder="단어를 입력하고 Enter!">
+        <input type="text" id="rain-input" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="단어를 입력하고 Enter!">
       </div>
     </div>
   </section>
@@ -364,6 +383,7 @@
 <script src="/js/mine.js"></script>
 <script src="/js/g2048.js"></script>
 <script src="/js/snake.js"></script>
+<script src="/js/shared/rain-en.js"></script>
 <script src="/js/rain.js"></script>
 <script src="/js/bingo.js"></script>
 <script src="/js/shared/table.js"></script>
