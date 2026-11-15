@@ -98,6 +98,8 @@ const H = makeHelpers(io, rooms, moduleOf);
 const ACC = require('./lib/accounts')({ io, rooms, H, registry: () => REGISTRY, ipOf: s => ipOf(s), cloud: CLOUD });
 // 운영자 · 전체 공지 (환경 변수 ADMIN_KEY 로 최고 운영자 인증)
 const ADM = require('./lib/admin')({ io, rooms, acc: ACC, limiter: ACC._int.limiter });
+// ⏳ 키즈 모드 (최고 운영자가 회원마다 하루 게임 시간 · 시간대를 정해요 — 잠기면 아래 방 만들기 · 들어가기 · 시작을 막아요)
+const KID = require('./lib/kid')({ io, rooms, acc: ACC, adm: ADM, leaveRoom: s => leaveRoom(s) });
 // 🍱 학식 메뉴 (폴리텍 로봇캠퍼스 홈페이지 식단을 서버가 읽어 둬요 — 30분에 한 번까지)
 const MEAL = require('./lib/meal')({ ACC });
 app.get('/api/meal', async (req, res) => {
@@ -301,6 +303,7 @@ io.on('connection', socket => {
   }
   ACC.attach(socket, on);                                                          // 계정 · 친구 이벤트 (acct:* · fr:*)
   ADM.attach(socket, on);                                                          // 운영자 · 전체 공지 (admin:* · notice:*)
+  KID.attach(socket, on);                                                          // 키즈 모드 (kid:*)
   REP.attach(socket, on);                                                          // 신고함 (report:* · admin:report*)
   HO.attach(socket, on);                                                           // 새 버전으로 옮겨 온 사람: 같은 방으로 (room:rejoin)
   on('ping:t', (t, cb) => { if (typeof cb === 'function') cb(t); });              // 화면 위 지연 시간(ms) 표시용
@@ -316,6 +319,7 @@ io.on('connection', socket => {
   on('createRoom', d => {
     if (!d || !REGISTRY[d.gameType]) return toast('알 수 없는 게임입니다.');
     if (rooms.size >= LIMITS.rooms) return toast('지금은 열린 방이 너무 많아요. 잠시 후 다시 시도해 주세요.');
+    if (KID.block(socket)) return;                      // 키즈 모드: 오늘 게임 시간이 끝났어요
     if (HO.redirect(socket)) return;                    // 새 버전으로 갈아타는 중이면 새 서버에서
     leaveRoom(socket);
     const room = makeRoom(genCode(), d.gameType);
@@ -330,6 +334,7 @@ io.on('connection', socket => {
   });
 
   on('joinRoom', d => {
+    if (KID.block(socket)) return;
     if (HO.redirect(socket)) return;
     const room = rooms.get(String((d && d.roomCode) || '').toUpperCase().trim());
     if (!room) return toast('존재하지 않는 방 코드입니다.');
@@ -358,6 +363,7 @@ io.on('connection', socket => {
     cb({ open: open.slice(0, 60), more: Math.max(0, open.length - 60), playing });
   });
   on('rooms:quick', (d, cb) => {
+    if (KID.block(socket)) return reply(cb, { ok: false, kid: true });
     if (HO.redirect(socket)) return reply(cb, { ok: false, moving: true });
     const want = d && typeof d.game === 'string' && REGISTRY[d.game] ? d.game : null;
     let best = null;
@@ -475,6 +481,7 @@ io.on('connection', socket => {
     const { room, me } = ctx();
     if (!room || !me) return;
     if (!me.isHost) return toast('방장만 시작할 수 있습니다.');
+    if (KID.block(socket)) return;
     tryStart(room, toast);
   });
 
@@ -482,6 +489,7 @@ io.on('connection', socket => {
   on('rematch', v => {
     const { room, me } = ctx();
     if (!room || !me || !room.game || !room.game.over || !room.rematch || me.role === 'spectator') return;
+    if (v !== false && KID.block(socket)) return;      // 키즈 모드: 시간이 끝났으면 「한 판 더」는 못 해요
     if (v === false) room.rematch.delete(me.id); else room.rematch.add(me.id);
     const parts = participants(room), have = parts.filter(p => room.rematch.has(p.id)).length;
     H.emit(room, 'rematch', { ids: [...room.rematch], have, need: parts.length });
@@ -532,7 +540,7 @@ const shutdown = sig => {                              // 끄기 전에 바뀐 �
   if (closing) return;
   if (sig === 'SIGTERM' && HO.onSigterm()) return;     // 클라우드 재배포: 하던 판이 끝날 때까지 기다렸다가 꺼요 (lib/handoff.js)
   closing = true;
-  ACC.flushSync();
+  ACC.flushSync();                                     // (키즈 모드의 오늘 게임 시간도 같이 — lib/kid.js)
   Promise.race([ACC.flush(), new Promise(r => setTimeout(r, 4000))]).finally(() => process.exit(sig === 'SIGINT' ? 130 : 0));
 };
 ['SIGTERM', 'SIGINT', 'SIGHUP'].forEach(s => process.on(s, () => shutdown(s)));

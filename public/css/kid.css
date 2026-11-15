@@ -1,0 +1,90 @@
+/* ═════════════ ⏳ 키즈 모드 (v13.8 · js/kid.js) ═════════════
+ * 위쪽 칩(남은 시간) · 잠금 창 · 최고 운영자 화면(내 정보 → 운영 → 키즈 모드) */
+
+/* ── 위쪽 칩 ── */
+.kid-chip{display:flex;align-items:center;gap:5px;flex:none;cursor:pointer;border:1px solid color-mix(in srgb,var(--good) 45%,var(--line));
+  background:color-mix(in srgb,var(--good) 12%,var(--panel2));color:var(--text);border-radius:99px;padding:5px 11px 5px 8px;
+  font:700 14px 'Noto Sans KR',sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap;transition:border-color .15s,background .15s}
+.kid-chip.hidden{display:none}
+.kid-chip .ic{width:17px;height:17px;color:var(--good)}
+.kid-chip b{font-weight:800}
+.kid-chip:hover{border-color:var(--good)}
+.kid-chip.warn{border-color:color-mix(in srgb,var(--warn) 65%,var(--line));background:color-mix(in srgb,var(--warn) 18%,var(--panel2))}
+.kid-chip.warn .ic{color:var(--warn);animation:kid-tick 1.4s ease-in-out infinite}
+.kid-chip.lock{border-color:color-mix(in srgb,var(--bad) 60%,var(--line));background:color-mix(in srgb,var(--bad) 16%,var(--panel2))}
+.kid-chip.lock .ic{color:var(--bad)}
+@keyframes kid-tick{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.88)}}
+@media (max-width:520px){
+  .kid-chip{padding:4px 8px 4px 6px;font-size:13px;gap:3px} .kid-chip .ic{width:15px;height:15px}
+  body.kid-on .top-right{gap:8px}
+  body.kid-on .acct-chip .lv{display:none}                         /* 칩 자리: 위쪽 레벨 표시는 내 정보에서 */
+}
+@media (max-width:700px){ body.kid-on .tb-t,body.kid-on .conn span{display:none} }   /* 태블릿 세로 · 폴드: 칩 자리 (테마 버튼 · 연결 표시는 아이콘만) */
+@media (max-width:380px){ body.kid-on.gaming .brand span{display:none} }   /* 좁은 휴대폰 게임 중: 로고만 */
+@media (prefers-reduced-motion:reduce){ .kid-chip.warn .ic{animation:none} }
+
+/* ── 잠금 창 · 내 키즈 모드 ── */
+#kid-ov{z-index:170}
+.modal.kid-modal{width:min(420px,100%);padding:26px 24px 20px}
+.kid-modal .kid-ic{font-size:54px;line-height:1;margin-bottom:6px}
+.kid-modal h2{font-size:26px;line-height:1.3;margin-bottom:8px;word-break:keep-all}
+.kid-modal .kid-left{color:var(--good)}
+.kid-modal .kid-next{display:inline-flex;align-items:center;gap:6px;margin:2px 0 8px;padding:7px 14px;border-radius:99px;
+  background:color-mix(in srgb,var(--accent) 16%,var(--panel2));border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));color:var(--text);font-size:15px}
+.kid-modal .kid-next .ic{width:17px;height:17px;color:var(--accent-2)}
+.kid-meter{display:flex;flex-direction:column;gap:6px;align-items:stretch;margin:12px 0 8px}
+.kid-meter small{color:var(--muted);font-size:13px} .kid-meter small b{color:var(--text)}
+.kid-bonus{color:var(--good);font-weight:700}
+.kid-bar{height:10px;border-radius:99px;background:color-mix(in srgb,var(--line) 70%,transparent);overflow:hidden}
+.kid-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--good),color-mix(in srgb,var(--good) 70%,var(--info)));transition:width .4s}
+.kid-bar.warn i{background:linear-gradient(90deg,var(--warn),#ff9f43)}
+.kid-bar.full i{background:linear-gradient(90deg,#ff9f43,var(--bad))}
+.kid-bar.sm{height:6px;margin-top:5px}
+.kid-rules{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:6px 0 10px}
+.kid-rules span{display:inline-flex;align-items:center;gap:5px;padding:4px 11px 4px 9px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:700}
+.kid-rules .ic{width:15px;height:15px;color:var(--muted)}
+.kid-modal p.small{font-size:13px}
+@media (max-width:420px){ .modal.kid-modal{padding:20px 16px 16px} .kid-modal .kid-ic{font-size:46px} .kid-modal h2{font-size:22px} }
+
+/* ── 최고 운영자: 목록 ── */
+.kid-row{align-items:flex-start}
+.kid-row > .ac-av{margin-top:2px}
+.kid-row .grow small + small{margin-top:1px}
+.kid-row .btn.sm{align-self:center;flex:none}
+.kid-lk{color:var(--bad);font-weight:800}
+
+/* ── 최고 운영자: 한 사람 설정 ── */
+.kid-ed{gap:10px}
+.kid-ed h5{display:flex;align-items:center;gap:6px;margin:6px 0 0;font-size:15px;font-weight:900}
+.kid-ed h5 .ic{width:17px;height:17px;color:var(--accent-2)}
+.kid-ed-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%}
+.kid-ed-head > b{font-size:17px}
+.kid-tag{margin-left:auto;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:900;background:var(--panel);color:var(--muted);border:1px solid var(--line)}
+.kid-tag.on{background:color-mix(in srgb,var(--good) 18%,var(--panel));color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
+.kid-today{display:flex;flex-direction:column;gap:4px;width:100%;padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);font-size:14px}
+.kid-today .kid-bar{margin:0 0 2px}
+.kid-week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;width:100%;height:96px;padding:8px 10px 6px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.kid-day{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;min-width:0}
+.kid-day i{display:block;width:min(22px,100%);min-height:2px;border-radius:6px 6px 3px 3px;background:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.kid-day.we i{background:color-mix(in srgb,var(--info) 55%,var(--line))}
+.kid-day.today i{background:var(--good)}
+.kid-day b{font-size:10.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.kid-day small{font-size:11px;color:var(--muted)} .kid-day.today small{color:var(--good);font-weight:900}
+.kid-ed .op-row{width:100%;align-items:flex-start;flex-direction:column;gap:6px}
+.kid-ed .op-seg .seg-btn{padding:6px 11px;font-size:13.5px}
+.kid-own{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:6px;width:auto!important;font-weight:700;color:var(--muted)}
+.kid-own input{width:96px;font:inherit;font-size:15px;padding:7px 10px;border-radius:10px;border:2px solid var(--line);background:var(--panel);color:var(--text)}
+.kid-win{display:flex;align-items:center;gap:8px;width:100%;max-width:420px}
+.kid-win input{flex:1;min-width:0;font:inherit;font-size:16px;font-variant-numeric:tabular-nums;padding:7px 10px;border-radius:10px;border:2px solid var(--line);background:var(--panel);color:var(--text);color-scheme:dark}
+[data-theme="light"] .kid-win input{color-scheme:light}
+.kid-own input:focus,.kid-win input:focus{outline:none;border-color:var(--accent)}
+.kid-win span{font-weight:900;color:var(--muted)}
+.kid-meta{font-size:12px!important}
+/* 프로필 카드 버튼: 켜져 있으면 초록 */
+.btn.kid-on{border-color:color-mix(in srgb,var(--good) 55%,var(--line))} .btn.kid-on b{color:var(--good);margin-left:2px}
+/* 운영 탭 칸(신고 · 공지 · 키즈 모드): 휴대폰에서는 한 줄에 나란히 */
+@media (max-width:520px){
+  .op-subs{gap:6px;flex-wrap:nowrap}
+  .op-subs .seg-btn{flex:1 1 0;min-width:0;justify-content:center;padding:8px 6px;font-size:13px;gap:4px;white-space:nowrap;overflow:hidden}
+}
+@media (max-width:420px){ .op-subs .seg-btn .ic{display:none} }

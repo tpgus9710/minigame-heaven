@@ -172,7 +172,9 @@ console.log('▶ 멀티 (서버 흐름)');
   mod.events['df:tap'](room, { id: 'a' }, { x: puz.diffs[0].x, y: puz.diffs[0].y, r: 1, tol: 15 });
   const f = ev.filter(([e]) => e === 'df:found').pop();
   ok(f && f[1].i === 0 && f[1].id === 'a', '화면과 같은 판: 가운데를 누르면 서버도 맞았다고 해요');
-  mod.events['df:tap'](room, { id: 'b' }, { x: 1, y: 1, r: 1, tol: 15 });
+  let far = null;                                                          // 어느 다른 곳에서도 먼 자리 (사진 · 고친 곳이 매번 달라서 구석도 정답일 수 있어요)
+  for (let y = 5; y < S.H && !far; y += 7) for (let x = 5; x < S.W && !far; x += 7) if (puz.diffs.every(q => Math.hypot(q.x - x, q.y - y) > q.r + 30)) far = [x, y];
+  mod.events['df:tap'](room, { id: 'b' }, { x: far[0], y: far[1], r: 1, tol: 15 });
   ok(toMe.some(([e]) => e === 'df:miss'), '빈 곳을 누르면 틀림 (1.5초 쉬기)');
   puz.diffs.slice(1).forEach(d => mod.events['df:tap'](room, { id: 'a' }, { x: d.x, y: d.y, r: 1, tol: 15 }));
   const end = ev.filter(([e]) => e === 'df:end').pop();

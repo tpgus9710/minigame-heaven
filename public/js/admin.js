@@ -128,18 +128,24 @@ const Admin = {
   subsHTML() {
     const nNew = typeof Report !== 'undefined' ? Report.opNew : 0;
     const b = (k, ic, t, n) => `<button class="seg-btn ${this.sub === k ? 'on' : ''}" data-act="opSub" data-k="${k}">${icon(ic)}${t}${n ? `<i class="ac-dot">${n}</i>` : ''}</button>`;
-    return `<div class="op-subs">${b('rep', 'inbox', '신고 · 요청', nNew)}${b('main', 'speakerphone', '공지 · 관리', 0)}</div>`;
+    const owner = Acct.me && Acct.me.role === 'owner';
+    return `<div class="op-subs">${b('rep', 'inbox', '신고 · 요청', nNew)}${b('main', 'speakerphone', '공지 · 관리', 0)}${owner && typeof KidAdmin !== 'undefined' ? b('kid', 'hourglass', '키즈 모드', 0) : ''}</div>`;
   },
   async render() {
     const box = $('#ac-body');
     if (!box) return;
     if (!this.sub) this.sub = typeof Report !== 'undefined' && Report.opNew ? 'rep' : 'main';
+    if (this.sub === 'kid' && !(Acct.me && Acct.me.role === 'owner' && typeof KidAdmin !== 'undefined')) this.sub = 'main';
+    if (this.sub === 'kid') {                                            // 키즈 모드 (최고 운영자 — js/kid.js)
+      box.innerHTML = `<div class="op-panel">${this.subsHTML()}<div id="kid-op"><div class="muted center ac-load">불러오는 중…</div></div></div>`;
+      return KidAdmin.render();
+    }
     if (this.sub === 'rep' && typeof Report !== 'undefined') {
       box.innerHTML = `<div class="op-panel">${this.subsHTML()}<div id="rp-op"><div class="muted center ac-load">불러오는 중…</div></div></div>`;
       return Report.opRender();
     }
     const r = await ask('admin:state');
-    if (!$('#ac-body') || Acct.ui.tab !== 'op' || this.sub === 'rep') return;
+    if (!$('#ac-body') || Acct.ui.tab !== 'op' || this.sub !== 'main') return;
     if (!r.ok) { box.innerHTML = `<p class="muted">${esc(whyText(r))}</p>`; return; }
     this.st = r;
     box.innerHTML = `<div class="op-panel">${this.subsHTML()}${this.formHTML()}<div id="op-live">${this.liveHTML()}</div>${this.statsHTML()}${this.opsHTML()}${this.histHTML()}${this.logsHTML()}</div>`;
@@ -195,7 +201,7 @@ const Admin = {
       <small class="muted">${esc(x.by || '')} · ${hhmm(x.at)}${x.live ? ' · <b class="op-on">지금 걸림</b>' : x.ended ? ' · 내림' : ''}</small></div>`).join('')}</div></div>`;
   },
   logsHTML() {
-    const A = { claim: '인증', 'claim-fail': '인증 실패', resign: '그만둠', grant: '지정', revoke: '해제', notice: '공지', end: '내림' };
+    const A = { claim: '인증', 'claim-fail': '인증 실패', resign: '그만둠', grant: '지정', revoke: '해제', notice: '공지', end: '내림', kid: '키즈 모드' };
     const when = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
     return `<div class="ac-set"><h4>${icon('list-details')}활동 기록</h4>${this.st.logs.length ? `<div class="ac-list op-logs">${this.st.logs.map(l => `<div class="ac-row"><small class="muted op-t">${when(l.t)}</small>
       <span class="op-a ${l.a}">${A[l.a] || l.a}</span><span class="grow"><b>${esc(l.by)}</b> ${esc(l.x)}</span></div>`).join('')}</div>` : '<p class="muted small">아직 기록이 없어요.</p>'}</div>`;
@@ -254,7 +260,7 @@ Object.assign(ACT, {
     Admin.refresh();
   },
   opRefresh: () => Admin.refresh(),
-  opSub: el => { Admin.sub = el.dataset.k; Admin.render(); },
+  opSub: el => { Admin.sub = el.dataset.k; if (Admin.sub === 'kid' && typeof KidAdmin !== 'undefined') { KidAdmin.sel = null; KidAdmin.f = null; } Admin.render(); },
   opFind: async () => {
     const q = $('#op-q'); if (!q) return;
     const r = await ask('admin:find', { q: q.value });

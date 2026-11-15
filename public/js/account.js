@@ -112,6 +112,7 @@ const Acct = {
     this.state = 'ready';
     if (r.me) this.setMe(r.me, true);
     else { if (this.token) this.setToken(''); this.setMe(null); }
+    if (typeof Kid !== 'undefined') Kid.hello();                    // 키즈 모드 (로그인한 계정 · 손님이면 이 기기에 기억한 계정 — js/kid.js)
   },
   setMe(me, fresh) {
     const was = this.me && this.me.id;
@@ -125,11 +126,13 @@ const Acct = {
   onLogin(r) {
     this.setToken(r.token);
     this.setMe(r.me, true);
+    if (typeof Kid !== 'undefined') Kid.hello();
     toast(r.joined ? `🎉 가입 완료! 반가워요, ${r.me.name}님` : `👋 ${r.me.name}님 반가워요!`, 'good');
   },
   async logout() {
     await ask('acct:logout');
     this.setToken(''); this.setMe(null); this.close();
+    if (typeof Kid !== 'undefined') Kid.hello();
     toast('로그아웃했어요.');
   },
   async loadFriends() {
@@ -574,10 +577,11 @@ const Acct = {
     if (S.solo) return true;
     return !!(S.room && S.room.isStarted && S.screen && !MENU_SCREENS.has(S.screen));
   },
-  /** 1초마다: 싱글 게임 중인지 서버에 알려 주고(친구에게 '게임 중'으로 보여요), 게임이 끝나면 모아 둔 알림을 보여 줘요 */
+  /** 1초마다: 싱글 게임 중인지 · 화면이 보이는지 서버에 알려 주고(친구에게 '게임 중'으로 보여요 · 키즈 모드는 보일 때만 시간을 세요),
+   *  게임이 끝나면 모아 둔 알림을 보여 줘요 */
   tickBusy() {
-    const b = this.busy(), g = b && S.solo ? String(S.solo) : null;
-    if (socket.connected && g !== this.busyG) { this.busyG = g; socket.emit('acct:busy', { g }); }
+    const b = this.busy(), g = b && S.solo ? String(S.solo) : null, v = !document.hidden, k = `${g}|${v}`;
+    if (socket.connected && k !== this.busyG) { this.busyG = k; socket.emit('acct:busy', { g, v }); }
     if (b === this.wasBusy) return;
     this.wasBusy = b;
     if (b) { this.stashCards(); if (Flair.cur) Flair.close(); }           // 게임이 시작되면 축하 화면도 닫아요
@@ -874,9 +878,11 @@ const Acct = {
       else if (r.canAdd) btns.push(`<button class="btn sm good" data-act="acAddUid" data-uid="${esc(u.id)}">${icon('user-plus')}친구 신청</button>`);
       else btns.push('<span class="small muted">친구 코드로 신청할 수 있어요</span>');
     } else btns.push(`<button class="btn sm" data-act="acLogin">${icon('face-id')}로그인하고 친구 신청</button>`);
-    if (this.me && this.me.role === 'owner' && r.rel !== 'me' && u.op !== 'owner')
+    if (this.me && this.me.role === 'owner' && r.rel !== 'me' && u.op !== 'owner') {
       btns.push(u.op ? `<button class="btn sm ghost" data-act="opRevoke" data-uid="${esc(u.id)}" data-name="${esc(u.name)}">${icon('user-minus')}운영자 해제</button>`
         : `<button class="btn sm ghost" data-act="opGrant" data-uid="${esc(u.id)}" data-name="${esc(u.name)}">${icon('user-shield')}운영자로 지정</button>`);
+      btns.push(`<button class="btn sm ghost${r.kid ? ' kid-on' : ''}" data-act="kidCard" data-uid="${esc(u.id)}">${icon('hourglass')}키즈 모드${r.kid ? ' <b>켜짐</b>' : ''}</button>`);   // js/kid.js
+    }
     const ttls = (u.ttl || []).slice(0, 12).map(id => titleTag(id)).join('');
     this.body(`<div class="cd-head">${avatarOf(u, 'xl')}<div class="cd-t"><h2>${esc(u.name)} ${lvTag(u.lv)} ${opBadge(u.op)}</h2>
         ${u.tt ? `<div class="cd-hon">${titleTag(u.tt)}<small>${esc(Titles.TIERS[Titles.tierOf(u.lv)].n)} 테두리</small></div>` : `<div class="cd-hon"><small>${esc(Titles.TIERS[Titles.tierOf(u.lv)].n)} 테두리</small></div>`}
@@ -1086,6 +1092,7 @@ socket.on('acct:ready', () => Acct.hello());
 socket.on('acct:me', me => { if (Acct.me && me && me.id === Acct.me.id) Acct.setMe({ ...me, reqs: Acct.fr ? Acct.fr.reqIn.length : me.reqs }); });
 socket.on('acct:out', d => {
   Acct.setToken(''); Acct.setMe(null);
+  if (typeof Kid !== 'undefined') Kid.hello();
   if (Acct.ui.view === 'me') Acct.close();
   toast(d && d.why === 'deleted' ? '계정이 삭제되어 로그아웃했어요.' : '로그아웃됐어요.');
 });

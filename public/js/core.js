@@ -642,13 +642,14 @@ socket.on('chat', addChat);
 socket.on('gameOver', d => { S.rematch = null; after(900, () => showResult(d)); });
 socket.on('rematch', d => { S.rematch = d; if (ovDraw) ovDraw(); });
 socket.on('rematch:go', () => { if (typeof Sound !== 'undefined') Sound.play('invite'); });
-/** 방장이 나를 내보냈어요 */
-socket.on('kicked', () => {
+/** 서버가 나를 방에서 뺐어요 (방장이 내보냄 · 키즈 모드 시간이 끝남 js/kid.js) */
+function outOfRoom(msg, type = 'error', to = 'multi') {
   RC = null; rcRetry = false; clearTimeout(rcWait); rcWait = null; Reconn.hide();
   try { sessionStorage.removeItem('mgRecover'); } catch { /* 무시 */ }
-  S.code = null; S.room = null; stopLocal(); hideOverlay(); show('multi'); renderInvite();
-  toast('방장이 방에서 내보냈어요.', 'error');
-});
+  S.code = null; S.room = null; stopLocal(); hideOverlay(); show(to); renderInvite();
+  if (msg) toast(msg, type);
+}
+socket.on('kicked', () => outOfRoom('방장이 방에서 내보냈어요.'));
 
 function me() { return S.room ? S.room.players.find(p => p.id === S.myId) : null; }
 
@@ -680,7 +681,7 @@ var RoomList = {         // var: 화면 전환(show)이 이 파일을 다 읽기
   },
   async quick() {
     const r = await emitAck('rooms:quick', { playerName: nick() });
-    if (!r || !r.ok) toast('지금 바로 들어갈 수 있는 방이 없어요. 방을 만들어 보세요!');
+    if (!r || (!r.ok && !r.kid)) toast('지금 바로 들어갈 수 있는 방이 없어요. 방을 만들어 보세요!');   // kid: 키즈 모드로 잠김 (잠금 창이 떠요 — js/kid.js)
   },
 };
 
