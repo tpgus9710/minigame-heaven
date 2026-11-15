@@ -1,34 +1,48 @@
 /* =====================================================================
  *  🍉 과일 합치기 (싱글: 기록 도전 / 멀티: 2분 점수 대결) — 같은 과일이 닿으면 한 단계 큰 과일로!
+ *  v13.9: 높이 떨어뜨릴수록 세게 부딪혀 옆으로 퍼지고 굴러가요 · 잘 미끄러지고 · 같은 과일은 살짝 끌어당겨요(더 잘 합쳐져요)
+ *         합쳐질 때 옆 과일을 밀어내요(연쇄!) · 콤보 점수 · 과즙 · 점수 글자 · 흔들림 · 소리 · 다음 과일은 과일 그림으로
  * ===================================================================== */
 const FR = {
   W: 400, H: 620, L: 18, R: 382, FLOOR: 604, LINE: 118, DROP_Y: 70,
-  RAD: [15, 20, 26, 32, 39, 46, 54, 63, 73, 85, 98],
+  RAD: [14, 19, 24, 30, 36, 43, 50, 59, 68, 79, 91],          // v13.9: 7% 작게 (상자에 자리가 더 많아요)
   NAME: ['체리', '딸기', '포도', '귤', '레몬', '사과', '배', '복숭아', '파인애플', '멜론', '수박'],
   // [밝은색, 기본색, 어두운색]
   COLOR: [['#ff7a8a', '#d0102f', '#6e0016'], ['#ff8f9e', '#ec2d4f', '#8c0d24'], ['#c99cff', '#7b3fc4', '#3a1470'], ['#ffd08a', '#ff8a1c', '#b04d00'], ['#fff7a6', '#f5d322', '#a88a00'],
     ['#ff8f7a', '#e0261d', '#7d0c08'], ['#f2ffb0', '#c4d94a', '#6f7f12'], ['#ffe0cf', '#ffa58a', '#d0584a'], ['#ffe9a0', '#e6b23a', '#8a5f10'], ['#e6ffd0', '#9ccf6e', '#4f7f2a'], ['#8fe08a', '#2f9a43', '#145a22']],
 };
 makeScreen('fruit', {
-  title: '🍉 과일 합치기', status: '마우스로 위치를 정하고 눌러서 · 화면을 끌어서 조준하고 떼면 떨어져요. 선 위에 과일이 쌓여 2초 넘게 머물면 끝!',
+  title: '🍉 과일 합치기',
+  status: (TOUCH ? '끌어서 조준하고 떼면 떨어져요' : '마우스로 조준하고 클릭 (← → · 스페이스도 돼요)') + ' · 빠르게 두 번 연속도 돼요! 선 위에 3초 넘게 머물면 끝',
   stats: [['score', '점수'], ['next', '다음'], ['time', '최고 점수']],
   body: `<div class="center"><canvas id="fr-cv" class="game-cv" width="${FR.W}" height="${FR.H}"></canvas></div>`,
 });
+$('#fruit-next').innerHTML = '<canvas id="fr-next" width="72" height="72" role="img" aria-label="다음 과일"></canvas>';   // 다음 과일: 글자 대신 그림
 
 /* ── 물리: 원(과일)끼리 부딪히는 강체 물리 (실제 수박 게임 느낌으로) ──
- *  · 속도 · 회전을 가진 과일: 충격량으로 튕기고(조금만) · 마찰로 굴러가요 (미끄러지기만 하지 않게)
+ *  · 속도 · 회전을 가진 과일: 충격량으로 튕기고 · 마찰로 굴러가요 (잘 미끄러지게 마찰은 낮게)
  *  · 무게 = 크기(넓이)에 비례 → 큰 과일이 작은 과일을 밀어내요
  *  · 겹친 만큼은 '위치'만 조금씩 밀어서 풀어요 (속도로 바꾸지 않아요) → 합쳐질 때 과일이 천장까지 튀지 않아요
- *  · 넘침: 선 위에 과일이 '멈춘 채로' 2초 넘게 있으면 끝 (합쳐지며 잠깐 뜬 과일 · 떨어지는 과일은 세지 않아요) */
+ *  · 손맛(v13.9): 떨어진 과일이 처음 부딪히면 그 속도만큼 둘 다 옆으로 퍼져요(높이 떨어뜨릴수록 세게) ·
+ *    같은 과일이 아주 가까우면 살짝 끌어당기고 · 합쳐질 때 옆 과일을 밀어내요(연쇄)
+ *  · 넘침: 선 위에 과일이 '멈춘 채로' 3초 넘게 있으면 끝 (합쳐지며 잠깐 뜬 과일 · 떨어지는 과일은 세지 않아요) */
 const FPHYS = {
-  G: 1700,          // 중력 (px/s²) — 빈 상자 바닥까지 약 0.75초
+  G: 1900,          // 중력 (px/s²)
   SUB: 8, IT: 6,    // 한 프레임을 8번 나눠 계산 · 접촉마다 6번씩 다듬기 (지난 걸음의 힘에서 시작: 쌓인 과일이 안정적으로)
-  E: 0.14, EW: 0.1, // 튕김 (과일끼리 · 벽)
-  BOUNCE_V: 70,     // 이보다 느리게 부딪히면 튕기지 않고 멈춰요 (쌓인 과일이 덜덜 떨지 않게)
-  MU: 0.32, MUW: 0.24,   // 마찰 (과일끼리 · 벽과 바닥)
+  E: 0.3, EW: 0.22, // 튕김 (과일끼리 · 벽)
+  BOUNCE_V: 45,     // 이보다 느리게 부딪히면 튕기지 않고 멈춰요 (쌓인 과일이 덜덜 떨지 않게)
+  MU: 0.12, MUW: 0.14,   // 마찰 (과일끼리 · 벽과 바닥) — 낮을수록 잘 미끄러져 틈으로 들어가요
   SLOP: 0.35, BETA: 0.22, MAXC: 1.6,   // 겹침 풀기: 조금 남겨 두고 · 한 번에 22% · 최대 1.6px
-  LD: 0.9997, AD: 0.996,               // 공기 저항 · 구름 저항
+  LD: 0.9998, AD: 0.9993,              // 공기 저항 · 구름 저항 (구르는 게 오래가요)
   REST: 6,                             // 이보다 느리면 조금씩 더 멈춰요 (쌓인 과일의 미세한 떨림 없애기)
+  HIT: 0.5, HIT_MIN: 140, HIT_MAX: 320,    // 떨어진 과일의 첫 충돌: 부딪힌 속도 × 0.5 만큼 옆으로 (140px/s 아래는 그냥 · 최대 320)
+  MAG: 2800, MAG_R: 0.6,               // 같은 과일끼리 자석처럼 끌어당기기 (사이가 작은 쪽 반지름의 60% + 3px 안쪽이면)
+  MTOL: 1.5,                           // 이만큼 떨어져 있어도 닿은 걸로 쳐서 합쳐요
+  POP: 170,                            // 합쳐질 때 옆 과일을 밀어내는 힘
+  OVER: 3,                             // 선 위에 멈춰서 이만큼(초) 있으면 끝
+  QUICK: 0.12, CD: 0.5, QUICK_WIN: 600,   // 떨어뜨린 뒤 0.12초면 한 번 더(빠르게 두 번 연속) · 그다음은 0.5초 쉬기 · 0.6초 넘게 쉬면 다시 두 번
+  QUEUE: 0.15,                         // 기다림이 이만큼만 남았을 때 누르면 기억했다가 바로 떨어뜨려요 (빠른 두 번 탭이 씹히지 않게)
+  COMBO_T: 1300, COMBO_K: 0.25, COMBO_MAX: 3,   // 한 번 떨어뜨린 뒤 1.3초 안에 또 합쳐지면 콤보 (연쇄) · 콤보마다 점수 +25% · 최대 3배
 };
 let FRUIT_ID = 0;
 const Fruit = {
@@ -36,8 +50,10 @@ const Fruit = {
     stopLocal();
     this.multi = !!opt.seed;
     S.solo = this.multi ? null : 'fruit';
-    this.rnd = this.multi ? seeded(opt.seed) : Math.random;
-    Object.assign(this, { fruits: [], score: 0, x: FR.W / 2, cool: 0, over: false, danger: 0, fx: [], lastSent: -1, warm: new Map() });
+    this.rnd = Math.random;                                           // 모양 · 효과 (사람마다 달라도 돼요)
+    this.prnd = this.multi ? seeded(opt.seed) : Math.random;         // 나올 과일 순서 (멀티: 모두 같은 순서)
+    Object.assign(this, { fruits: [], score: 0, x: FR.W / 2, cool: 0, over: false, danger: 0, fx: [], parts: [], texts: [], shake: 0,
+      picks: 0, combo: 0, lastMerge: -1e9, bestCombo: 0, blipAt: 0, lastSent: -1, warm: new Map(), lastDrop: -1e9, streak: 0, queued: false, qx: 0 });
     this.cur = this.pick(); this.next = this.pick();
     this.endAt = opt.seconds ? performance.now() + opt.seconds * 1000 : 0;
     $('#fruit-time-label').textContent = this.multi ? '남은 시간' : '최고 점수';
@@ -45,9 +61,21 @@ const Fruit = {
     show('fruit'); renderScores(); this.hud();
     gameLoop((dt, now) => { if (!this.over) this.update(dt, now); this.draw(now); });
   },
-  pick() { const r = this.rnd(); return r < 0.3 ? 0 : r < 0.55 ? 1 : r < 0.75 ? 2 : r < 0.9 ? 3 : 4; },
+  /** 다음 과일: 처음 6개는 작은 것만 (체리 · 딸기 · 포도) · 그다음은 작을수록 자주 */
+  pick() {
+    const r = this.prnd(), n = this.picks++;
+    if (n < 6) return r < 0.4 ? 0 : r < 0.75 ? 1 : 2;
+    return r < 0.3 ? 0 : r < 0.56 ? 1 : r < 0.78 ? 2 : r < 0.93 ? 3 : 4;
+  },
   hud() {
-    setStat('fruit', 'score', this.score); setStat('fruit', 'next', FR.NAME[this.next]);
+    setStat('fruit', 'score', this.score);
+    const cv = $('#fr-next');
+    if (cv && cv.dataset.lv !== String(this.next)) {                  // 다음 과일 그림 (바뀔 때만 다시 그려요)
+      const c = cv.getContext('2d'), lv = this.next;
+      c.clearRect(0, 0, 72, 72);
+      paintFruit(c, lv, 36, 40, lv === 8 ? 23 : 26);
+      cv.dataset.lv = String(lv); cv.title = `다음: ${FR.NAME[lv]}`; cv.setAttribute('aria-label', `다음 과일: ${FR.NAME[lv]}`);
+    }
     if (this.multi && this.score !== this.lastSent) { this.lastSent = this.score; socket.emit('sr:score', this.score); }
   },
   /** 과일 하나 (무게 · 회전 관성은 크기로) */
@@ -55,21 +83,38 @@ const Fruit = {
     const r = FR.RAD[lv], m = r * r, I = 0.5 * m * r * r;
     return { id: ++FRUIT_ID, lv, r, x, y, vx, vy, a: (this.rnd() - 0.5) * 0.6, w: 0, im: 1 / m, ii: 1 / I, born: now, ot: 0, pop: 0 };
   },
+  /** 떨어뜨리기: 한 번 떨어뜨리면 곧바로(0.12초) 한 번 더 떨어뜨릴 수 있어요 → 두 번째 뒤에는 0.5초 쉬어요 */
   drop() {
-    if (this.over || this.cool > 0) return;
+    if (this.over) return;
+    const P = FPHYS;
+    if (this.cool > 0) { if (this.cool <= P.QUEUE) { this.queued = true; this.qx = this.x; } return; }   // 거의 다 기다렸으면 기억해 둬요
+    const t = performance.now();
+    this.queued = false;
+    this.streak = t - this.lastDrop < P.QUICK_WIN ? this.streak + 1 : 1;
+    this.lastDrop = t;
     const r = FR.RAD[this.cur], x = clamp(this.x, FR.L + r, FR.R - r);
-    this.fruits.push(this.body(this.cur, x, FR.DROP_Y));
-    this.cur = this.next; this.next = this.pick(); this.cool = 0.5; this.hud();
+    const f = this.body(this.cur, x, FR.DROP_Y);
+    f.fresh = true;                                                   // 처음 부딪힐 때 옆으로 퍼져요
+    this.fruits.push(f);
+    this.combo = 0;                                                   // 콤보는 한 번 떨어뜨린 뒤 이어지는 연쇄만
+    this.cur = this.next; this.next = this.pick(); this.cool = this.streak >= 2 ? P.CD : P.QUICK; this.hud();
   },
   update(dt, now) {
     this.cool -= dt;
+    if (this.queued && this.cool <= 0) { const x = this.x; this.x = this.qx; this.drop(); this.x = x; }   // 눌러 둔 자리에 떨어뜨려요
     if (held('ArrowLeft', 'KeyA')) this.x -= 300 * dt;
     if (held('ArrowRight', 'KeyD')) this.x += 300 * dt;
     this.x = clamp(this.x, FR.L, FR.R);
     const P = FPHYS, h = Math.min(dt, 1 / 30) / P.SUB;
     for (let s = 0; s < P.SUB; s++) this.step(h, now);
-    for (const f of this.fruits) if (f.pop > 0) f.pop -= dt;
+    for (const f of this.fruits) { if (f.pop > 0) f.pop -= dt; if (f.fresh && now - f.born > 2500) f.fresh = false; }
     this.fx = this.fx.filter(f => (f.t -= dt) > 0);
+    for (const p of this.parts) { p.vy += 900 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.t -= dt; }
+    this.parts = this.parts.filter(p => p.t > 0 && p.y < FR.H + 20);
+    for (const t of this.texts) { t.y -= 38 * dt; t.t -= dt; }
+    this.texts = this.texts.filter(t => t.t > 0);
+    this.shake = Math.max(0, this.shake - dt);
+    if (this.combo && now - this.lastMerge > P.COMBO_T) this.combo = 0;
     // 넘침: 선 위에서 멈춰 있는 과일만 시간을 세요 (떨어지는 중 · 합쳐지며 잠깐 뜬 과일은 빼고)
     let worst = 0;
     for (const f of this.fruits) {
@@ -78,10 +123,10 @@ const Fruit = {
       worst = Math.max(worst, f.ot);
     }
     this.danger = worst;
-    if (worst > 2) this.end('넘쳤어요!');
+    if (worst > P.OVER) this.end('넘쳤어요!');
     if (this.endAt) { setStat('fruit', 'time', leftSec(this.endAt)); if (now >= this.endAt) this.end('⏰ 시간 종료'); }
   },
-  /** 아주 짧은 시간(h초) 한 걸음: 속도 → 부딪힘(충격량 · 마찰) → 위치 → 겹침 풀기 → 합치기 */
+  /** 아주 짧은 시간(h초) 한 걸음: 속도(+끌어당기기) → 부딪힘(충격량 · 마찰 · 첫 충돌 퍼짐) → 위치 → 겹침 풀기 → 합치기 */
   step(h, now) {
     const P = FPHYS, F = this.fruits;
     for (const f of F) { f.vy += P.G * h; f.vx *= P.LD; f.vy *= P.LD; f.w *= P.AD; }
@@ -90,10 +135,16 @@ const Fruit = {
       const a = F[i];
       for (let j = i + 1; j < F.length; j++) {
         const b = F[j], dx = b.x - a.x, dy = b.y - a.y, min = a.r + b.r;
-        if (Math.abs(dx) >= min || Math.abs(dy) >= min) continue;
-        const d2 = dx * dx + dy * dy; if (d2 >= min * min) continue;
-        if (a.lv === b.lv && !a.m && !b.m) { a.m = b.m = true; merges.push([a, b]); continue; }
+        const same = a.lv === b.lv && !a.m && !b.m, reach = same ? min + P.MAG_R * Math.min(a.r, b.r) + 3 : min;
+        if (Math.abs(dx) >= reach || Math.abs(dy) >= reach) continue;
+        const d2 = dx * dx + dy * dy; if (d2 >= reach * reach) continue;
         const d = Math.sqrt(d2) || 0.01;
+        if (same && d < min + P.MTOL) { a.m = b.m = true; merges.push([a, b]); continue; }
+        if (same && d >= min) {                                      // 같은 과일이 아주 가까워요 → 살짝 끌어당겨요
+          const k = P.MAG * (1 - (d - min) / (reach - min)) * h, nx = dx / d, ny = dy / d, sa = b.im / (a.im + b.im), sb = 1 - sa;
+          a.vx += nx * k * 2 * sa; a.vy += ny * k * 2 * sa; b.vx -= nx * k * 2 * sb; b.vy -= ny * k * 2 * sb;
+          continue;
+        }
         C.push({ k: a.id + ':' + b.id, a, b, nx: dx / d, ny: dy / d, pen: min - d, mu: P.MU, e: P.E, jn: 0, jt: 0 });
       }
       // 벽 · 바닥 (움직이지 않는 상대: a = null, 법선은 벽에서 과일 쪽)
@@ -105,6 +156,7 @@ const Fruit = {
     const warm = new Map();
     for (const c of C) {
       const vn = this.relV(c).n; c.bounce = vn < -P.BOUNCE_V ? -c.e * vn : 0;
+      if (c.b.fresh || (c.a && c.a.fresh)) this.hit(c, -vn);
       const w = this.warm.get(c.k);
       if (w && !c.bounce) { c.jn = w[0] * 0.85; c.jt = w[1] * 0.85; this.kick(c, c.jn, c.jt); }
     }
@@ -130,6 +182,19 @@ const Fruit = {
       if (f.y > FR.FLOOR - f.r + 2) f.y = FR.FLOOR - f.r + 2;
     }
     if (merges.length) this.merge(merges, now);
+  },
+  /** 떨어진 과일의 첫 충돌: 부딪힌 속도(높이 떨어뜨릴수록 빨라요)만큼 두 과일이 옆으로 퍼지고 굴러요 */
+  hit(c, speed) {
+    if (speed <= 0) return;                                           // 서로 멀어지는 중 (빠르게 두 번: 공중에서 잠깐 겹쳐요) → 아직 첫 충돌 아님
+    const P = FPHYS, { a, b } = c, fresh = b.fresh ? b : a, other = fresh === b ? a : b;
+    fresh.fresh = false;
+    if (!other || speed < P.HIT_MIN) return;                         // 바닥 · 벽이거나 살살 내려놓았으면 그냥
+    const dirx = other === b ? c.nx : -c.nx;                          // 맞은 과일이 밀려나는 쪽 (가로)
+    const s = Math.abs(dirx) < 0.12 ? (this.rnd() < 0.5 ? -1 : 1) : Math.sign(dirx), lean = Math.max(0.55, Math.abs(dirx));
+    const mf = 1 / fresh.im, mo = 1 / other.im, share = mf / (mf + mo);
+    const ko = Math.min(P.HIT_MAX, speed * P.HIT * share * 1.6) * lean, kf = Math.min(P.HIT_MAX * 0.7, speed * P.HIT * (1 - share)) * lean;
+    other.vx += s * ko; other.w += s * ko / other.r;
+    fresh.vx -= s * kf; fresh.w -= s * kf / fresh.r;
   },
   /** 접촉점에서 상대 속도 (법선 n · 접선 t 방향) */
   relV(c) {
@@ -161,32 +226,75 @@ const Fruit = {
     if (a) { a.vx -= tx * jt * ima; a.vy -= ty * jt * ima; a.w -= jt * a.r * iia; }
     b.vx += tx * jt * b.im; b.vy += ty * jt * b.im; b.w -= jt * b.r * b.ii;
   },
-  /** 같은 과일이 닿으면: 두 과일 가운데에 한 단계 큰 과일 (속도는 두 과일의 평균) */
+  /** 같은 과일이 닿으면: 두 과일 가운데에 한 단계 큰 과일 (속도는 두 과일의 평균) · 옆 과일은 밀려나요 · 콤보 · 과즙 */
   merge(merges, now) {
+    const P = FPHYS;
     for (const [a, b] of merges) {
       const lv = a.lv, x = (a.x + b.x) / 2, y = (a.y + b.y) / 2;
       a.dead = b.dead = true;
-      this.score += (lv + 1) * (lv + 2);
-      this.fx.push({ x, y, t: 0.35, r: FR.RAD[Math.min(10, lv + 1)] });
+      this.combo = now - this.lastMerge < P.COMBO_T ? this.combo + 1 : 1;
+      this.lastMerge = now; this.bestCombo = Math.max(this.bestCombo, this.combo);
+      const mul = Math.min(P.COMBO_MAX, 1 + (this.combo - 1) * P.COMBO_K), pts = Math.round((lv + 1) * (lv + 2) * mul) + (lv === 10 ? 200 : 0);
+      this.score += pts;
+      const nl = Math.min(10, lv + 1), nr = FR.RAD[nl];
+      this.fx.push({ x, y, t: 0.35, r: nr });
+      this.juice(x, y, lv, nr);
+      this.texts.push({ x, y: y - nr * 0.3, t: 0.9, txt: `+${pts}`, big: lv >= 7, combo: this.combo >= 2 ? this.combo : 0 });
+      if (lv >= 6) this.shake = Math.max(this.shake, lv >= 9 ? 0.45 : lv >= 8 ? 0.32 : 0.2);
+      if (lv === 9) this.texts.push({ x: FR.W / 2, y: FR.H * 0.42, t: 1.8, txt: '🍉 수박 완성!', hero: true });
+      if (lv === 10) this.texts.push({ x: FR.W / 2, y: FR.H * 0.42, t: 1.8, txt: '🍉🍉 수박 펑! +200', hero: true });
+      this.sound(lv);
       if (lv < 10) {
-        const r = FR.RAD[lv + 1], nf = this.body(lv + 1, clamp(x, FR.L + r, FR.R - r), Math.min(y, FR.FLOOR - r), (a.vx + b.vx) / 2, (a.vy + b.vy) / 2, now);
+        const nf = this.body(nl, clamp(x, FR.L + nr, FR.R - nr), Math.min(y, FR.FLOOR - nr), (a.vx + b.vx) / 2, (a.vy + b.vy) / 2, now);
         nf.a = (a.a + b.a) / 2; nf.pop = 0.16;
+        nf.fresh = !!(a.fresh && b.fresh);                            // 빠르게 두 번 떨어뜨려 공중에서 합쳐지면 → 떨어질 때 퍼져요
+        // 커진 과일이 옆 과일을 밀어내요 → 굴러가서 또 합쳐질 수 있어요 (연쇄) · 같은 과일(바로 또 합쳐질 짝)은 밀지 않아요
+        for (const f of this.fruits) {
+          if (f.dead || f.lv === nl) continue;
+          const dx = f.x - nf.x, dy = f.y - nf.y, d = Math.hypot(dx, dy) || 0.01, gap = d - nr - f.r;
+          if (gap > 10) continue;
+          const sp = P.POP * (1 + lv * 0.08) * nr / (nr + f.r) * (gap < 0 ? 1 : 1 - gap / 10);
+          f.vx += dx / d * sp; f.vy += Math.max(-0.5, dy / d) * sp * 0.7; f.w += (dx / d) * sp / f.r * 0.5;
+        }
         this.fruits.push(nf);
-      } else this.score += 200;
+      }
     }
     this.fruits = this.fruits.filter(f => !f.dead);
     this.hud();
+  },
+  /** 과즙이 톡톡 (과일 색) */
+  juice(x, y, lv, r) {
+    const n = Math.min(26, 8 + lv * 2), col = FR.COLOR[lv];
+    for (let i = 0; i < n; i++) {
+      const a = this.rnd() * Math.PI * 2, sp = 120 + this.rnd() * (160 + lv * 18);
+      this.parts.push({ x: x + Math.cos(a) * r * 0.5, y: y + Math.sin(a) * r * 0.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 140, r: 2 + this.rnd() * (2 + lv * 0.35), c: col[this.rnd() < 0.5 ? 0 : 1], t: 0.45 + this.rnd() * 0.4 });
+    }
+    if (lv >= 9) for (let i = 0; i < 40; i++) {                      // 수박: 색종이
+      const a = this.rnd() * Math.PI * 2, sp = 200 + this.rnd() * 340;
+      this.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 260, r: 3 + this.rnd() * 3, c: ['#ffd23f', '#ff6b9a', '#5ce1ff', '#7dff9a', '#fff'][i % 5], t: 1 + this.rnd() * 0.6, sq: true });
+    }
+  },
+  /** 합칠 때 '뽁' (큰 과일일수록 낮게 · 콤보일수록 높게) */
+  sound(lv) {
+    if (typeof Sound === 'undefined') return;
+    const t = performance.now(); if (t - this.blipAt < 45) return;
+    this.blipAt = t;
+    Sound.blip(Math.min(1800, 760 * Math.pow(0.93, lv) * (1 + Math.min(8, this.combo - 1) * 0.09)), 0.05 + lv * 0.006, 0.8 + Math.min(0.6, lv * 0.06));
+    if (lv >= 9) Sound.play('mission');
   },
   end(why) {
     if (this.over) return;
     this.over = true;
     if (this.multi) { socket.emit('sr:score', this.score); socket.emit('sr:over'); setStatus('fruit', `${why} ${this.score}점 — 결과를 기다리는 중…`); return; }
     const best = Math.max(+store.get('best-fruit', 0), this.score); store.set('best-fruit', best);
-    after(600, () => showResult({ title: '🍉 ' + why, subtitle: `점수 ${this.score} · 최고 점수 ${best}`, solo: 'fruit', rec: { v: this.score } }));
+    const top = this.fruits.reduce((m, f) => Math.max(m, f.lv), 0);
+    after(600, () => showResult({ title: '🍉 ' + why, subtitle: `점수 ${this.score} · 최고 콤보 ${this.bestCombo} · 가장 큰 과일 ${FR.NAME[top]} · 최고 점수 ${best}`, solo: 'fruit', rec: { v: this.score } }));
   },
   draw(now) {
     const c = $('#fr-cv').getContext('2d');
-    const bg = c.createLinearGradient(0, 0, 0, FR.H); bg.addColorStop(0, '#2a2236'); bg.addColorStop(1, '#3a2a2a'); c.fillStyle = bg; c.fillRect(0, 0, FR.W, FR.H);
+    c.save();
+    if (this.shake > 0) c.translate((this.rnd() - 0.5) * this.shake * 22, (this.rnd() - 0.5) * this.shake * 22);   // 큰 과일이 합쳐지면 흔들
+    const bg = c.createLinearGradient(0, 0, 0, FR.H); bg.addColorStop(0, '#2a2236'); bg.addColorStop(1, '#3a2a2a'); c.fillStyle = bg; c.fillRect(-12, -12, FR.W + 24, FR.H + 24);
     c.fillStyle = 'rgba(255,255,255,.04)'; c.fillRect(FR.L, FR.LINE, FR.R - FR.L, FR.FLOOR - FR.LINE);
     c.fillStyle = '#7a5434'; c.fillRect(FR.L - 8, FR.LINE, 8, FR.FLOOR - FR.LINE + 8); c.fillRect(FR.R, FR.LINE, 8, FR.FLOOR - FR.LINE + 8); c.fillRect(FR.L - 8, FR.FLOOR, FR.R - FR.L + 16, 10);
     const warn = this.danger > 0.15;
@@ -200,12 +308,34 @@ const Fruit = {
     }
     for (const f of this.fruits) drawFruit(f.lv, f.x, f.y, 1, f.a, f.pop > 0 ? 1 - f.pop * 1.1 : 1);
     for (const f of this.fx) { c.globalAlpha = f.t * 2; c.fillStyle = '#fff'; c.beginPath(); c.arc(f.x, f.y, f.r * (1.5 - f.t), 0, 7); c.fill(); c.globalAlpha = 1; }
+    for (const p of this.parts) {                                      // 과즙 · 색종이
+      c.globalAlpha = Math.min(1, p.t * 2.2); c.fillStyle = p.c;
+      if (p.sq) c.fillRect(p.x - p.r, p.y - p.r * 0.6, p.r * 2, p.r * 1.2); else { c.beginPath(); c.arc(p.x, p.y, p.r, 0, 7); c.fill(); }
+    }
+    c.globalAlpha = 1;
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+    for (const t of this.texts) {                                      // +점수 · 콤보 · 수박!
+      const k = t.hero ? Math.min(1, (1.8 - t.t) * 6) : 1;
+      c.globalAlpha = Math.min(1, t.t * 2.5);
+      c.font = t.hero ? `${Math.round(34 * (0.6 + 0.4 * k))}px "Black Han Sans", sans-serif` : `${t.big ? 26 : 19}px "Black Han Sans", sans-serif`;
+      c.lineWidth = t.hero ? 7 : 5; c.strokeStyle = 'rgba(30,14,24,.85)'; c.strokeText(t.txt, t.x, t.y); c.fillStyle = t.hero ? '#7dff9a' : '#fff'; c.fillText(t.txt, t.x, t.y);
+      if (t.combo) {
+        c.font = '17px "Black Han Sans", sans-serif'; const s = `콤보 ×${t.combo}`;
+        c.lineWidth = 4; c.strokeText(s, t.x, t.y - 22); c.fillStyle = '#ffd23f'; c.fillText(s, t.x, t.y - 22);
+      }
+    }
+    c.globalAlpha = 1;
     if (warn && !this.over) {                                       // 넘치기 직전: 남은 시간
       c.fillStyle = 'rgba(255,60,60,.9)'; c.font = 'bold 15px "Noto Sans KR", sans-serif'; c.textAlign = 'right'; c.textBaseline = 'bottom';
-      c.fillText(`넘치기 ${Math.max(0, 2 - this.danger).toFixed(1)}초 전!`, FR.R, FR.LINE - 4);
+      c.fillText(`넘치기 ${Math.max(0, FPHYS.OVER - this.danger).toFixed(1)}초 전!`, FR.R, FR.LINE - 4);
+    }
+    if (this.combo >= 2 && !this.over) {                               // 지금 콤보 (오른쪽 위)
+      c.font = '16px "Black Han Sans", sans-serif'; c.textAlign = 'right'; c.textBaseline = 'middle';
+      c.lineWidth = 4; c.strokeStyle = 'rgba(30,14,24,.85)'; c.strokeText(`🔥 ${this.combo} 콤보`, FR.R, 46); c.fillStyle = '#ffd23f'; c.fillText(`🔥 ${this.combo} 콤보`, FR.R, 46);
     }
     c.font = '12px "Noto Sans KR", sans-serif'; c.fillStyle = '#a58a6a'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText('진화', 10, 20);
     for (let i = 0; i < 11; i++) paintFruit(c, i, 46 + i * 21, 20, 8);
+    c.restore();
   },
 };
 /* 조작: 마우스는 판 위에서 움직이면 조준 · 누르면 떨구기. 터치는 화면 어디든(판 밖 빈 곳도) 끌어서 조준 · 떼면 떨구기 */

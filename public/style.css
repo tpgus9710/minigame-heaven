@@ -820,3 +820,7 @@ body.gaming #scr-card .card.hwatu.hwa .hn{left:calc(var(--w) * .06);top:calc(var
 .seat.mine .card.hwatu.hwa,.seat.mine .card.back.hw{width:49px}
 body.gaming #scr-card .cards .card.hwatu.hwa,body.gaming #scr-card .cards .card.back.hw{--cmax:calc(var(--cd-oc) * .9);height:calc(var(--w) * 1.6);border-radius:calc(var(--w) * .08)}
 body.gaming #scr-card .seat.mine .cards .card.hwatu.hwa,body.gaming #scr-card .seat.mine .cards .card.back.hw{--cmax:calc(var(--cd-mc) * .9)}
+/* 과일 합치기: 「다음」 칸은 글자 대신 과일 그림 (v13.9 · js/fruit.js) */
+#fruit-next{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
+#fr-next{width:1.35em;height:1.35em;display:block}
+body.gaming .game-head #fruit-next-box{align-items:center}
