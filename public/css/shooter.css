@@ -1,0 +1,22 @@
+/* ═════════════ 🚀 우주 슈팅 (#scr-shooter, v14.0) — 판은 캔버스 (js/shooter.js), 아래 줄: 🎵 · 안내 · 💣 폭탄 ═════════════ */
+#scr-shooter .sh-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+body.gaming #scr-shooter #sh-cv{max-width:100%!important}   /* 자리가 남아 키워도 옆으로는 넘치지 않게 (아래 줄 너비는 js 가 판에 맞춰요) */
+#sh-cv{background:#05070f;touch-action:none;-webkit-user-select:none;user-select:none;border-color:#2a2f52;box-shadow:0 0 0 1px rgba(124,108,255,.18),0 10px 40px rgba(60,40,140,.35)}   /* 오락기 화면처럼 은은한 빛 */
+.sh-bar{display:flex;align-items:center;gap:8px;width:100%;max-width:100%;min-width:0}
+.sh-hint{flex:1;min-width:0;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.sh-bgm{flex:none;width:42px;height:42px;padding:0;border-radius:12px;font-size:18px;display:grid;place-items:center}
+.sh-bgm.off{opacity:.45;filter:grayscale(1)}
+.sh-bomb{flex:none;display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border:none;border-radius:14px;font-weight:900;font-size:15px;color:#fff;
+  background:linear-gradient(180deg,#ff6b7e,#d8263f);box-shadow:0 3px 0 #7d1430,0 6px 16px rgba(216,38,63,.35);cursor:pointer;touch-action:manipulation;transition:transform .08s,opacity .2s}
+.sh-bomb b{min-width:18px;padding:0 6px;border-radius:99px;background:rgba(0,0,0,.25);font-size:14px}
+.sh-bomb.hit{transform:translateY(2px) scale(.96);box-shadow:0 1px 0 #7d1430}
+.sh-bomb.empty{opacity:.45;filter:grayscale(.6)}
+@media (pointer:coarse){.sh-bomb{padding:11px 20px;font-size:16px}.sh-bgm{width:46px;height:46px}}
+@media (max-height:560px){#scr-shooter .sh-wrap{gap:5px}.sh-bomb{padding:6px 12px;font-size:14px}.sh-bgm{width:36px;height:36px}.sh-hint{font-size:11.5px}}
+/* 판 옆에 자리가 넉넉하면 (js: Shooter.layout) — 🎵 · 💣 를 판 오른쪽 아래에 세로로 */
+#scr-shooter .sh-wrap.sh-side{flex-direction:row;align-items:flex-end;justify-content:center;gap:12px}
+#scr-shooter .sh-wrap.sh-side .sh-bar{flex-direction:column;align-items:stretch;width:auto;max-width:none;flex:none;gap:10px}
+#scr-shooter .sh-wrap.sh-side .sh-hint{display:none}
+#scr-shooter .sh-wrap.sh-side .sh-bgm{align-self:center}
+#scr-shooter .sh-wrap.sh-side .sh-bomb{flex-direction:column;gap:2px;padding:14px 14px 10px;line-height:1.15}
+#scr-shooter .sh-wrap.sh-side .sh-bomb b{margin-top:2px}

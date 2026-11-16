@@ -31,7 +31,7 @@ const Find = (() => {
     sudoku: '스도쿠 sudoku 숫자퍼즐', nonogram: '네모로직 노노그램 picross 그림퍼즐', chess: '체스 chess', gostop: '맞고 고스톱 화투 고도리',
     rummi: '루미큐브 러미 rummikub 숫자타일', bang: '뱅 bang 총잡이 서부', coup: '쿠 coup 블러핑', dalmuti: '달무티 계급 신분',
     relay: '텔레스트레이션 그림릴레이 그림', kart: '카트라이더 카트 레이싱 드리프트 자동차 마리오카트', breakout: '벽돌깨기 공', zombie: '좀비 부대 웨이브 슈팅 무기 레이저 로켓 화염방사기 보스 생존',
-    shooter: '슈팅 비행기 갤러그 우주', stack: '탑쌓기 쌓기 블록',
+    shooter: '슈팅 비행기 갤러그 우주 오락실 보스 탄막 전투기', stack: '탑쌓기 쌓기 블록',
   };
 
   /** 싱글 · 멀티를 합친 게임 목록 (key 하나에 한 줄) */
