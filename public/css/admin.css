@@ -103,3 +103,31 @@ body.gaming .nb-line{font-size:13px;padding:3px 4px 3px 10px}
   body.gaming .nb-line .btn.sm{padding:3px 9px;font-size:12px}
   body.gaming .nb-x{width:24px;height:24px}
 }
+/* ═════════ 🛡️ 회원 관리 · 운영자 알림 (v14.1 · js/mod.js · js/account.js penShow) ═════════ */
+.bd-del{flex:none;display:grid;place-items:center;width:30px;height:30px;margin-left:6px;padding:0;border:1px solid var(--line);border-radius:9px;background:transparent;color:var(--muted);cursor:pointer}
+.bd-del:hover{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 55%,var(--line));background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.bd-del .ic{width:16px;height:16px}
+.mod-tag{font-style:normal;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;margin-left:4px;white-space:nowrap}
+.mod-tag.ban{background:color-mix(in srgb,var(--bad) 22%,transparent);color:var(--bad)}
+.mod-tag.rec{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn)}
+.mod-user h4{display:flex;align-items:center;gap:8px;flex-wrap:wrap} .mod-user h4 .grow{flex:1;min-width:0}
+.mod-user h5{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 6px;font-size:14px;color:var(--muted)}
+.mod-pen{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:9px 11px;margin:6px 0;border-radius:12px;border:1px solid var(--line)}
+.mod-pen > span{display:inline-flex;align-items:center;gap:6px;font-size:14px} .mod-pen > small{flex:1;min-width:140px} .mod-pen .ic{width:16px;height:16px}
+.mod-pen.ban{background:color-mix(in srgb,var(--bad) 12%,transparent);border-color:color-mix(in srgb,var(--bad) 45%,var(--line))} .mod-pen.ban > span{color:var(--bad)}
+.mod-pen.rec{background:color-mix(in srgb,var(--warn) 12%,transparent);border-color:color-mix(in srgb,var(--warn) 45%,var(--line))} .mod-pen.rec > span{color:var(--warn)}
+.mod-recs .ac-row b{white-space:nowrap}
+.mod-why{display:block;margin:10px 0 4px} .mod-why input{width:100%;margin-top:4px}
+.bad-t{color:var(--bad)}
+.pen-modal{text-align:left;width:min(440px,100%)}
+.pen-head{display:flex;align-items:center;gap:10px;margin-bottom:12px} .pen-head h2{margin:0;font-size:20px} .pen-head .ic{width:26px;height:26px;color:var(--accent,#7c6cff)}
+.pen-head.bad .ic{color:var(--bad)}
+.pen-why{display:flex;flex-direction:column;gap:2px;margin:0 0 10px;padding:10px 12px;border-radius:12px;background:var(--panel2,rgba(127,127,127,.08))} .pen-why small{color:var(--muted)}
+.pen-list{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto;margin-bottom:10px}
+.pen-msg{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:12px;border:1px solid var(--line)}
+.pen-msg .pen-k{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--muted)} .pen-msg .ic{width:15px;height:15px}
+.pen-msg.warn .pen-k,.pen-msg.rec .pen-k{color:var(--warn)} .pen-msg.ban .pen-k,.pen-msg.recdel .pen-k{color:var(--bad)} .pen-msg.lift .pen-k{color:var(--good)}
+.pen-note{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--warn);margin:4px 0 8px} .pen-note .ic{width:15px;height:15px;flex:none}
+.ov-xp .pen{display:inline-flex;align-items:center;gap:5px;color:var(--warn);font-weight:700} .ov-xp .pen .ic{width:15px;height:15px}
+.mod-recs .ac-row .grow{min-width:0;display:flex;flex-direction:column;gap:1px} .mod-recs .ac-row .grow b{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.25}
+.mod-recs .ac-row > b{flex:none;margin-left:6px}

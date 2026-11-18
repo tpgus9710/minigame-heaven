@@ -63,6 +63,7 @@ ok(acc._test.award(u2, true).length === 0, '이미 받은 칭호는 다시 안 �
   users0[0] = doc('1', { st: { big: 12 }, ttl: { big10: 1 }, tt: 'big10', solo: { zombie: { p: 3, w: 0, b: 42 }, spot: { p: 1, w: 1, b: 900 }, g2048: { p: 2, w: 0, b: 2048 } } });   // 예전에 AI랑 해서 받은 사람
   users0[1] = doc('2', { st: { big: 3 }, mig: 1, solo: { spot: { p: 4, w: 2, b: 5000 }, zombie: { p: 2, w: 0, b: 777 } } });   // v13.5 에 이미 고친 계정
   users0[2] = doc('3', { mig: 2, solo: { spot: { p: 1, w: 0, b: 1200 } } });         // v13.6 에 이미 고친 계정은 그대로
+  users0[3] = doc('4', { mig: 2, solo: { shooter: { p: 5, w: 1, b: 1234567 }, spot: { p: 2, w: 0, b: 3300 } } });   // v14.0 우주 슈팅 기록이 있는 계정
   fs.writeFileSync(path.join(dir, 'accounts.json'), JSON.stringify({ v: 1, users: users0 }));
   const H2 = { endToLobby() {}, finishGame() {}, participants: room => room.players.filter(p => p.role !== 'spectator') };
   const A = make2({ io: { emit() {}, to: () => ({ emit() {} }) }, rooms: new Map(), H: H2, registry: () => ({}), ipOf: () => '', cloud: false });
@@ -70,7 +71,8 @@ ok(acc._test.award(u2, true).length === 0, '이미 받은 칭호는 다시 안 �
   const U = A._test.users;
   ok(U.get('1').st.big === 0 && !U.get('1').ttl.big10 && U.get('1').tt === '' && U.get('1').mig >= 1, '예전 숫자(AI 포함)는 지우고, 받았던 「골목대장」도 거둬요 (달고 있었으면 내려요)');
   ok(U.get('2').st.big === 3, '이미 새 규칙으로 센 계정은 그대로');
-  ok(U.get('2').solo.spot.b === undefined && U.get('2').solo.spot.p === 4 && U.get('2').solo.zombie.b === 777 && U.get('2').mig === 2, 'v13.6: 틀린그림찾기(진짜 사진)는 예전 최고 기록만 한 번 더 지워요 (좀비 기록 · 판 수는 그대로)');
+  ok(U.get('2').solo.spot.b === undefined && U.get('2').solo.spot.p === 4 && U.get('2').solo.zombie.b === 777 && U.get('2').mig === 3, 'v13.6: 틀린그림찾기(진짜 사진)는 예전 최고 기록만 한 번 더 지워요 (좀비 기록 · 판 수는 그대로)');
+  ok(U.get('4').solo.shooter.b === undefined && U.get('4').solo.shooter.p === 5 && U.get('4').solo.spot.b === 3300 && U.get('4').mig === 3, 'v14.1: 우주 슈팅을 다시 만들어서 예전 우주 슈팅 최고 기록만 지워요 (판 수 · 다른 게임 기록은 그대로)');
   ok(U.get('3').solo.spot.b === 1200, '이미 v13.6 으로 고친 계정의 새 기록은 그대로');
   const so = U.get('1').solo;
   ok(so.zombie.b === undefined && so.zombie.p === 3 && so.spot.b === undefined && so.g2048.b === 2048, '좀비 웨이브 · 틀린그림찾기는 기록 방식이 바뀌어 예전 최고 기록만 지워요 (판 수 · 다른 게임 기록은 그대로)');

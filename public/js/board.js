@@ -3,6 +3,7 @@
  *  · 게임 화면 위쪽 막대의 「순위」 버튼 → 이 게임의 모두의 최고 기록 (TOP 50 · 내 순위)
  *  · 결과창: 판이 끝나면 TOP 5 와 내 순위를 바로 보여 줘요 (방금 세운 신기록도 바로 반영)
  *  기록은 로그인한 사람만 남아요 (서버: lib/accounts.js ranking('solo') · 기록 목록: account.js REC_GAMES)
+ *  운영자에게는 순위표 줄마다 🗑 (비정상 기록 지우기 — 서버 lib/mod.js · 회원 관리는 js/mod.js)
  * ===================================================================== */
 const Board = {
   cur: null,
@@ -16,8 +17,10 @@ const Board = {
     const subs = this.subs(base);
     if (subs.length <= 1) return subs[0] || base;
     const pick = base === 'mine' && typeof Mine !== 'undefined' ? Mine.level : base === 'dodge' && typeof Dodge !== 'undefined' ? Dodge.mode
-      : base === 'rain' && typeof Rain !== 'undefined' ? Rain.lang : base === 'tetris' && typeof Tetris !== 'undefined' ? Tetris.mode : '';   // 산성비 한글 · 테트리스 보스전은 키 그대로 (subs[0])
-    return subs.find(k => k === `${base}:${pick}`) || subs[0];
+      : base === 'rain' && typeof Rain !== 'undefined' ? Rain.lang : base === 'tetris' && typeof Tetris !== 'undefined' ? Tetris.mode
+      : base === 'shooter' && typeof Shooter !== 'undefined' ? ['easy', '', 'hard'][Shooter.diff] || ''
+      : base === 'kart' && typeof Kart !== 'undefined' && typeof KART_TRACKS !== 'undefined' ? `${(KART_TRACKS[Kart.cfg.track] || KART_TRACKS[0]).id}-${Kart.cfg.mode === 'item' ? 'item' : 'speed'}` : '';   // 산성비 한글 · 테트리스 보스전은 키 그대로 (subs[0])
+    return subs.find(k => k === `${base}:${pick}`) || (pick === '' && base === 'shooter' && subs.includes(base) ? base : subs[0]);
   },
   ensure() {
     if ($('#bd-ov')) return;
@@ -26,10 +29,12 @@ const Board = {
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#bd-ov').classList.contains('show')) this.close(); });
   },
   close() { const o = $('#bd-ov'); if (o) o.classList.remove('show'); this.cur = null; },
-  row(x, i, mine) {
+  row(x, i, mine, opDel) {
     return `<div class="ac-row ${mine ? 'mine' : ''}"><span class="rk">${['🥇', '🥈', '🥉'][i] || i + 1}</span>
-      <span class="ac-who" ${typeof Acct !== 'undefined' && Acct.me ? `data-act="bdCard" data-uid="${esc(x.id)}" role="button" tabindex="0"` : ''}>${avatarOf(x, 'sm')}<span class="grow"><b>${esc(x.name)}</b> ${lvTag(x.lv)} ${titleTag(x.tt, 'sm')}</span></span><b>${esc(recText(this.cur || '', x.v))}</b></div>`;
+      <span class="ac-who" ${typeof Acct !== 'undefined' && Acct.me ? `data-act="bdCard" data-uid="${esc(x.id)}" role="button" tabindex="0"` : ''}>${avatarOf(x, 'sm')}<span class="grow"><b>${esc(x.name)}</b> ${lvTag(x.lv)} ${titleTag(x.tt, 'sm')}</span></span><b>${esc(recText(this.cur || '', x.v))}</b>${opDel
+        ? `<button class="bd-del" data-act="bdDel" data-uid="${esc(x.id)}" data-name="${esc(x.name)}" data-v="${esc(recText(this.cur || '', x.v))}" title="이 기록 지우기 (운영자)" aria-label="${esc(x.name)} 기록 지우기">${icon('trash')}</button>` : ''}</div>`;
   },
+  isOp() { return typeof Acct !== 'undefined' && !!Acct.me && (Acct.me.role === 'owner' || Acct.me.role === 'admin'); },
   /** 순위표 창 (게임 화면의 「순위」 버튼) */
   async open(key) {
     this.ensure();
@@ -38,12 +43,14 @@ const Board = {
     $('#bd-ov').classList.add('show');
     const head = `<button class="man-x" data-act="bdClose" aria-label="닫기">${icon('x')}</button>
       <div class="bd-head">${gameIcon(base, catOf(base))}<div><h2>${esc(gameLabel(base, true))} 순위표</h2><p class="muted small">모두의 최고 기록 · 로그인한 사람만 올라가요</p></div></div>
-      ${subs.length > 1 ? `<div class="bd-subs">${subs.map(k => `<button class="seg-btn ${k === key ? 'on' : ''}" data-act="bdOpen" data-key="${k}">${esc(SOLO_SUB[k] || k)}</button>`).join('')}</div>` : ''}`;
+      ${subs.length > 1 ? `<div class="bd-subs${subs.length > 4 ? ' many' : ''}">${subs.map(k => `<button class="seg-btn ${k === key ? 'on' : ''}" data-act="bdOpen" data-key="${k}">${esc(SOLO_SUB[k] || k)}</button>`).join('')}</div>` : ''}`;
     m.innerHTML = head + '<p class="muted center">불러오는 중…</p>';
     const r = await ask('acct:rank', { k: 'solo', g: key });
     if (this.cur !== key) return;
     const meId = typeof Acct !== 'undefined' && Acct.me ? Acct.me.id : null, list = r.ok ? r.list : [];
-    m.innerHTML = head + (list.length ? `<div class="ac-list bdr bd-list">${list.map((x, i) => this.row(x, i, x.id === meId)).join('')}</div>` : `<p class="muted center">${r.ok ? '아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!' : esc(whyText(r))}</p>`)
+    const op = this.isOp();
+    m.innerHTML = head + (list.length ? `<div class="ac-list bdr bd-list">${list.map((x, i) => this.row(x, i, x.id === meId, op)).join('')}</div>` : `<p class="muted center">${r.ok ? '아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!' : esc(whyText(r))}</p>`)
+      + (op && list.length ? `<p class="bd-me muted small">${icon('user-shield')}운영자: 🗑 를 누르면 그 기록을 지워요 (판 수는 그대로 · 당사자에게 알림이 가요)</p>` : '')
       + (r.me && r.me.rank > list.length ? `<p class="bd-me">내 순위 <b>${r.me.rank}등</b> · ${esc(recText(key, r.me.v))}</p>` : '')
       + (!meId ? `<p class="bd-me muted">${icon('face-id')}로그인하면 내 기록도 순위표에 올라가요</p>` : '');
   },
@@ -70,6 +77,18 @@ Object.assign(ACT, {
   bdOpen: el => Board.open(el.dataset.key),
   bdClose: () => Board.close(),
   bdCard: el => { Board.close(); Acct.card(el.dataset.uid); },           // 결과창은 그대로 두고 그 위에 프로필
+  /** 운영자: 순위표에서 비정상 기록 지우기 */
+  bdDel: async el => {
+    const key = Board.cur; if (!key) return;
+    const label = gameLabel(key), name = el.dataset.name;
+    const why = prompt(`${name} 님의 ${label} 기록(${el.dataset.v})을 지울까요?\n지우는 까닭을 적어 주세요. (당사자에게 알림으로 보여요)`, '비정상적인 기록');
+    if (why == null) return;
+    if (!why.trim()) return toast(ACC_WHY.why, 'error');
+    const r = await ask('mod:recDel', { uid: el.dataset.uid, k: key, why: why.trim(), label });
+    if (!r.ok) return toast(whyText(r), 'error');
+    toast(`🗑 ${name} 님의 ${label} 기록을 지웠어요. 패널티는 프로필 → 회원 관리에서 줄 수 있어요.`, 'good');
+    Board.open(key);
+  },
 });
 /* 결과창에 순위 자리 · 기록 게임 화면 위쪽 막대에 「순위」 버튼 (싱글로 할 때만 보여요) */
 (() => {

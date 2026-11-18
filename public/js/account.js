@@ -16,23 +16,31 @@ const ACC_WHY = {
   here: '이미 같은 방에 있어요.', timeout: '서버가 응답하지 않아요. 연결을 확인해 주세요.', sure: '탈퇴를 확인해 주세요.',
   unknown: '지금 접속 중이거나, 같은 방에 있거나, 같이 게임한 사람에게만 바로 신청할 수 있어요. 친구 코드로 신청해 주세요.',
   empty: '보낼 내용을 입력해 주세요.', locked: '아직 열리지 않았어요.',
+  banned: '이용이 정지된 계정이에요.', opuser: '운영자에게는 패널티를 줄 수 없어요.', why: '사유를 적어 주세요.', days: '기간을 골라 주세요.',
+  norec: '지울 기록이 없어요.', nopen: '지금 걸려 있는 정지가 없어요.',
 };
+/** 정지 기간 글자: 0 = 영구 */
+const penUntil = t => (!t ? '영구' : `${new Date(t).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}까지`);
+const PEN_KIND = { warn: ['경고', 'alert-triangle'], rec: ['기록 정지', 'lock'], ban: ['이용 정지', 'user-x'], recdel: ['기록 삭제', 'trash'], lift: ['정지 풀림', 'lock-open'] };
 const FACE_TIP = {
   none: '얼굴이 보이지 않아요. 화면 가운데를 봐 주세요', many: '한 사람만 화면에 나오게 해 주세요', small: '조금 더 가까이 와 주세요',
   edge: '얼굴을 화면 가운데로 옮겨 주세요', blur: '얼굴이 흐려요. 밝은 곳에서 잠깐 멈춰 주세요', side: '정면을 봐 주세요',
   tilt: '고개를 똑바로 해 주세요', dark: '너무 어두워요. 밝은 곳으로 가 주세요',
 };
 const SOLO_SUB = { 'dodge:bullet': '총알 모드', 'dodge:bamboo': '대나무 모드', 'mine:easy': '초급', 'mine:normal': '중급', 'mine:hard': '고급',
-  rain: '한글', 'rain:en': '영어', tetris: '보스전', 'tetris:normal': '일반전' };   // 산성비 · 테트리스는 원래 기록(키 그대로)이 한글 · 보스전
+  rain: '한글', 'rain:en': '영어', tetris: '보스전', 'tetris:normal': '일반전', shooter: '보통', 'shooter:easy': '쉬움', 'shooter:hard': '어려움',
+  'kart:sunny-speed': '햇살 서킷 · 스피드전', 'kart:sunny-item': '햇살 서킷 · 아이템전', 'kart:ice-speed': '얼음 계곡 · 스피드전',
+  'kart:ice-item': '얼음 계곡 · 아이템전', 'kart:desert-speed': '사막 하이웨이 · 스피드전', 'kart:desert-item': '사막 하이웨이 · 아이템전' };   // 산성비 · 테트리스는 원래 기록(키 그대로)이 한글 · 보스전
 const REC_FMT = {
-  race: v => v.toFixed(2) + '초', dodge: v => v.toFixed(2) + '초', mine: v => v + '초', apple: v => v + '개', snake: v => '길이 ' + v,
+  race: v => v.toFixed(2) + '초', dodge: v => v.toFixed(2) + '초', kart: v => `${Math.floor(v / 60)}:${(v % 60).toFixed(2).padStart(5, '0')}`, mine: v => v + '초', apple: v => v + '개', snake: v => '길이 ' + v,
   stack: v => v + '층', breakout: v => v + '단계', zombie: v => v.toLocaleString('ko-KR') + '점', plat: v => '스테이지 ' + v,
   setgame: v => v + '세트', memory: v => v.toLocaleString('ko-KR') + '점', spot: v => v.toLocaleString('ko-KR') + '점', mahjong: v => (v >= 60 ? `${Math.floor(v / 60)}분 ` : '') + `${Math.round(v % 60)}초`, tilematch: v => '레벨 ' + v,
 };
 /** 랭킹에서 고를 수 있는 싱글 기록 */
 const REC_GAMES = [['spot', ''], ['memory', ''], ['setgame', ''], ['mahjong', ''], ['tilematch', ''], ['pinball', ''], ['g2048', ''], ['fruit', ''], ['gem', ''], ['apple', ''], ['race', ''], ['mine:easy', ''], ['mine:normal', ''], ['mine:hard', ''],
   ['dodge:bullet', ''], ['dodge:bamboo', ''], ['snake', ''], ['stack', ''], ['breakout', ''], ['shisen', ''], ['rain', ''], ['rain:en', ''], ['mole', ''],
-  ['shooter', ''], ['tetris', ''], ['tetris:normal', ''], ['zombie', ''], ['plat', ''], ['yacht', '']];
+  ['shooter:easy', ''], ['shooter', ''], ['shooter:hard', ''], ['tetris', ''], ['tetris:normal', ''], ['zombie', ''], ['plat', ''], ['yacht', ''],
+  ['kart:sunny-speed', ''], ['kart:sunny-item', ''], ['kart:ice-speed', ''], ['kart:ice-item', ''], ['kart:desert-speed', ''], ['kart:desert-item', '']];
 
 const DM_WHY = { notfriend: '친구에게만 귓속말을 보낼 수 있어요.', offline: '친구가 지금 접속해 있지 않아요. 접속하면 보낼 수 있어요.',
   limit: '너무 빨리 보내고 있어요. 잠깐 쉬었다가 보내 주세요.', nouser: '그 친구를 찾을 수 없어요.' };
@@ -111,7 +119,7 @@ const Acct = {
     if (!r.ok) { this.state = r.why || 'loading'; this.renderAll(); return; }
     this.state = 'ready';
     if (r.me) this.setMe(r.me, true);
-    else { if (this.token) this.setToken(''); this.setMe(null); }
+    else { if (this.token) this.setToken(''); this.setMe(null); if (r.banned) this.banShow(r.banned); }
     if (typeof Kid !== 'undefined') Kid.hello();                    // 키즈 모드 (로그인한 계정 · 손님이면 이 기기에 기억한 계정 — js/kid.js)
   },
   setMe(me, fresh) {
@@ -122,6 +130,35 @@ const Acct = {
     this.renderAll();
     if (typeof Home !== 'undefined') Home.render();               // 홈 추천 게임: 내 계정 기록으로 (core.js)
     if (me) Flair.check(me);                                     // 새 테두리 · 새 칭호 축하 (js/flair.js)
+    if (me && me.pen && me.pen.msgs && me.pen.msgs.length) this.penShow(me.pen);   // 운영자 알림 (경고 · 기록 삭제 · 정지)
+  },
+  /* ───────── 운영자 알림 · 이용 정지 (서버: lib/mod.js) ───────── */
+  penBox(html) {
+    if (!$('#pen-ov')) {
+      document.body.insertAdjacentHTML('beforeend', '<div class="overlay" id="pen-ov"><div class="modal pen-modal" id="pen-modal" role="dialog" aria-modal="true" aria-label="운영자 알림"></div></div>');
+    }
+    $('#pen-modal').innerHTML = html;
+    $('#pen-ov').classList.add('show');
+  },
+  /** 이용 정지된 계정으로 들어오려고 할 때 · 접속 중에 정지됐을 때 */
+  banShow(b) {
+    this.penBox(`<div class="pen-head bad">${icon('user-x')}<h2>이용이 정지된 계정이에요</h2></div>
+      <p class="pen-why"><small>사유</small><b>${esc((b && b.why) || '-')}</b></p>
+      <p class="pen-why"><small>기간</small><b>${esc(penUntil(b && b.until))}</b></p>
+      <p class="muted small">정지 기간에는 로그인할 수 없어요. 잘못된 정지라고 생각하면 운영자에게 말해 주세요.</p>
+      <div class="ov-actions"><button class="btn good" data-act="penClose">알겠어요</button></div>`);
+  },
+  /** 운영자 알림 (안 본 것만 · 한 번 보면 서버에 '봤어요') */
+  penShow(pen) {
+    const top = Math.max(...pen.msgs.map(m => m.at));
+    if (this.penAt >= top) return;
+    this.penAt = top;
+    const row = m => { const [t, ic] = PEN_KIND[m.kind] || PEN_KIND.warn;
+      return `<div class="pen-msg ${m.kind}"><span class="pen-k">${icon(ic)}${t}${m.x ? ` · ${esc(m.x)}` : ''}</span>${m.why ? `<b>${esc(m.why)}</b>` : ''}<small class="muted">${new Date(m.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</small></div>`; };
+    this.penBox(`<div class="pen-head">${icon('shield-check')}<h2>운영자 알림</h2></div>
+      <div class="pen-list">${pen.msgs.map(row).join('')}</div>
+      ${pen.rec ? `<p class="pen-note">${icon('lock')}기록 정지 중이에요 (${esc(penUntil(pen.rec.until))}) · 그동안은 새 기록이 남지 않고 순위표에서 빠져요.</p>` : ''}
+      <div class="ov-actions"><button class="btn good" data-act="penSeen">확인했어요</button></div>`);
   },
   onLogin(r) {
     this.setToken(r.token);
@@ -357,6 +394,7 @@ const Acct = {
         if (this.ui.sess === sess) this.close();
         return;
       }
+      if (r.why === 'banned') { this.stopCam(); this.close(); return this.banShow(r.ban); }
       if (['limit', 'loading', 'down', 'timeout', 'bad'].includes(r.why)) return this.fail(whyText(r));
       if (++fails >= 3) return this.fail(r.why === 'unsure' ? '닮은 얼굴이 있어서 확실하게 알아보지 못했어요. 밝은 곳에서 정면을 보고 다시 해 주세요.' : '등록된 얼굴을 찾지 못했어요. 처음이라면 회원가입을 해 주세요.', 'join');
       this.msg(r.why === 'unsure' ? '닮은 얼굴이 있어요. 정면을 보고 잠깐만…' : '한 번 더 확인해 볼게요…', 'warn');
@@ -452,6 +490,7 @@ const Acct = {
     const c = ($('#ac-code') ? $('#ac-code').value : '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (c.length !== 8) return toast('코드 8글자를 입력해 주세요.', 'error');
     const r = await ask('acct:code', { code: c });
+    if (!r.ok && r.why === 'banned') { this.close(); return this.banShow(r.ban); }
     if (!r.ok) return toast(whyText(r), 'error');
     this.onLogin(r); this.close();
   },
@@ -878,6 +917,7 @@ const Acct = {
       else if (r.canAdd) btns.push(`<button class="btn sm good" data-act="acAddUid" data-uid="${esc(u.id)}">${icon('user-plus')}친구 신청</button>`);
       else btns.push('<span class="small muted">친구 코드로 신청할 수 있어요</span>');
     } else btns.push(`<button class="btn sm" data-act="acLogin">${icon('face-id')}로그인하고 친구 신청</button>`);
+    if (this.me && (this.me.role === 'owner' || this.me.role === 'admin') && r.rel !== 'me') btns.push(`<button class="btn sm ghost" data-act="modOpen" data-uid="${esc(u.id)}">${icon('user-shield')}회원 관리</button>`);
     if (this.me && this.me.role === 'owner' && r.rel !== 'me' && u.op !== 'owner') {
       btns.push(u.op ? `<button class="btn sm ghost" data-act="opRevoke" data-uid="${esc(u.id)}" data-name="${esc(u.name)}">${icon('user-minus')}운영자 해제</button>`
         : `<button class="btn sm ghost" data-act="opGrant" data-uid="${esc(u.id)}" data-name="${esc(u.name)}">${icon('user-shield')}운영자로 지정</button>`);
@@ -921,6 +961,7 @@ const Acct = {
     else if (!g.xp && g.short) bits.push('<span>짧은 판이라 경험치는 없어요</span>');
     if (g.best) bits.push('<span class="best">🏅 최고 기록 갱신!</span>');
     if (g.first) bits.push('<span>📌 첫 기록 저장!</span>');
+    if (g.noRec) bits.push(`<span class="pen">${icon('lock')}기록 정지 중이라 기록이 남지 않아요 (${esc(penUntil(g.noRec.until))})</span>`);
     if (g.ws >= 2) bits.push(`<span class="ws">${icon('flame')}${g.ws}연승 중</span>`);
     if (g.up && !ring) bits.push(`<span class="up">🎉 레벨 업! Lv.${g.lv}</span>`);
     if (ring) return Flair.gain(box, g, bits.join(''));
@@ -1093,8 +1134,13 @@ socket.on('acct:me', me => { if (Acct.me && me && me.id === Acct.me.id) Acct.set
 socket.on('acct:out', d => {
   Acct.setToken(''); Acct.setMe(null);
   if (typeof Kid !== 'undefined') Kid.hello();
-  if (Acct.ui.view === 'me') Acct.close();
+  if (Acct.ui.view) Acct.close();
+  if (d && d.why === 'banned') return Acct.banShow(d.ban);
   toast(d && d.why === 'deleted' ? '계정이 삭제되어 로그아웃했어요.' : '로그아웃됐어요.');
+});
+Object.assign(ACT, {
+  penClose: () => { const o = $('#pen-ov'); if (o) o.classList.remove('show'); },
+  penSeen: async () => { const o = $('#pen-ov'); if (o) o.classList.remove('show'); const r = await ask('acct:penSeen'); if (r.ok && Acct.me) Acct.setMe(r.me); },
 });
 socket.on('acct:gain', g => {
   Acct.gain = { ...g, at: Date.now() };

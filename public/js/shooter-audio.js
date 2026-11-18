@@ -1,8 +1,8 @@
 /* =====================================================================
- *  🎵 우주 슈팅 소리 (v14.0) — 소리 파일 없이 Web Audio 로 직접 만들어요 (옛날 오락기 느낌: 펄스파 · 삼각파 · 잡음)
+ *  🎵 우주 슈팅 소리 (v14.1) — 소리 파일 없이 Web Audio 로 직접 만들어요 (옛날 오락기 느낌: 펄스파 · 삼각파 · 잡음)
  *   · 배경음악: 이 게임을 위해 새로 지은 곡 2개 — 스테이지(마단조 · 150 BPM · 16마디) · 보스(170 BPM · 8마디)
  *     판 아래 🎵 버튼으로 켜고 꺼요 (기억해요). 메뉴에서 소리를 끄면 음악도 꺼져요. 일시정지 · 위장 화면이면 같이 멈춰요.
- *   · 효과음: 사격 · 명중 · 쇠 튕김 · 크기별 폭발 · 보스 폭발 · 폭탄 · 경고 사이렌 · 레이저 · 아이템 · 메달 · 1UP · 스테이지 시작/끝 · 게임 오버
+ *   · 효과음: 사격 · 명중 · 쇠 튕김 · 크기별 폭발 · 보스 폭발 · 폭탄 · 경고 사이렌 · 레이저 · 아이템 · 스테이지 별 · 1UP · 스테이지 시작/끝 · 게임 오버
  * ===================================================================== */
 const ShAudio = (() => {
   let noiseBuf = null, bus = null, comp = null, busCtx = null, pulse25 = null, pulse12 = null;
@@ -107,23 +107,22 @@ const ShAudio = (() => {
       [60, 64, 67].forEach(m => tone(c, o, mtof(m), t + seq[seq.length - 1][1], 0.6, { type: 'triangle', gain: 0.1, release: 0.3 }));
     }, 1.7); },
     pick(k) { go((c, o, t) => {
-      const seq = k === 'P' ? [72, 76, 79, 84] : k === 'B' ? [60, 67, 72] : k === 'S' ? [84, 88, 91, 96] : k === 'D' ? [79, 83, 86] : [76, 81, 85, 88];
+      const seq = k === 'P' ? [72, 76, 79, 84] : k === 'B' ? [60, 67, 72] : k === 'L' ? [79, 84, 88, 91] : k === 'M' ? [74, 79, 83, 86] : [76, 81, 85, 88];
       seq.forEach((m, i) => tone(c, o, mtof(m), t + i * 0.045, 0.04, { type: 'p25', gain: 0.07, release: 0.06 }));
     }, 3.5); },
-    medal(mi) { go((c, o, t) => { const f = 1300 * Math.pow(2, Math.min(mi, 9) / 12 * 1.4); tone(c, o, f, t, 0.03, { type: 'sine', gain: 0.09, release: 0.18 }); tone(c, o, f * 1.5, t + 0.03, 0.03, { type: 'sine', gain: 0.05, release: 0.15 }); }, 3); },
     formation() { go((c, o, t) => { [84, 91, 96].forEach((m, i) => tone(c, o, mtof(m), t + i * 0.06, 0.05, { type: 'p12', gain: 0.07, release: 0.12 })); }, 4.4); },
     bomb() { go((c, o, t) => {
       noise(c, o, t, 1.4, { type: 'lowpass', freq: 5000, to: 80, gain: 0.55, attack: 0.02 });
       tone(c, o, 160, t, 1.2, { type: 'sine', to: 30, glide: 1.3, gain: 0.45, release: 0.3 });
       noise(c, o, t, 0.5, { type: 'highpass', freq: 3000, to: 8000, gain: 0.12, attack: 0.15 });
     }); },
-    stars() { go((c, o, t) => { for (let i = 0; i < 8; i++) tone(c, o, mtof(88 + (i % 4) * 3), t + i * 0.035, 0.02, { type: 'sine', gain: 0.04, release: 0.08 }); }, 2.8); },
+    /** 스테이지 별 하나 (i: 0 · 1 · 2 → 점점 높게) */
+    star(i) { go((c, o, t) => { const m = [84, 88, 91][i] || 91; tone(c, o, mtof(m), t, 0.08, { type: 'p25', gain: 0.08, release: 0.2 }); tone(c, o, mtof(m + 12), t + 0.05, 0.1, { type: 'sine', gain: 0.05, release: 0.3 }); }, 3); },
     die() { go((c, o, t) => {
       tone(c, o, 700, t, 0.6, { type: 'square', to: 60, glide: 0.7, gain: 0.12, lp: 2200 });
       noise(c, o, t, 0.8, { type: 'lowpass', freq: 3000, to: 100, gain: 0.45 });
       tone(c, o, 100, t, 0.5, { type: 'sine', to: 30, gain: 0.35 });
     }); },
-    shield() { go((c, o, t) => { tone(c, o, 1800, t, 0.2, { type: 'sine', to: 600, gain: 0.12, release: 0.2 }); noise(c, o, t, 0.15, { freq: 6000, q: 3, gain: 0.08 }); }, 1.6); },
     respawn() { go((c, o, t) => { [64, 71, 76].forEach((m, i) => tone(c, o, mtof(m), t + i * 0.06, 0.05, { type: 'p12', gain: 0.05 })); }, 3); },
     extend() { go((c, o, t) => { [84, 88, 91, 96, 91, 96].forEach((m, i) => tone(c, o, mtof(m), t + i * 0.07, 0.06, { type: 'p25', gain: 0.08, release: 0.1 })); }, 3.3); },
     eshot() { go((c, o, t) => { tone(c, o, 640, t, 0.03, { type: 'p25', to: 380, gain: 0.025, lp: 2000 }); }, 7); },

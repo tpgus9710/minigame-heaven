@@ -1,6 +1,7 @@
-// 🚀 우주 슈팅 v14.0 규칙 검사 (js/shared/shooter-core.js · 화면 없이)
-//   같은 씨앗 = 같은 판 · 무기 3종 × 파워 · 아이템 · 메달 · 편대 보너스 · 폭탄 · 맞기 · 이어하기 · 목숨 +1 · 보스(부위 · 단계 · 도망) · 레이저 예고
-//   · 봇으로 1스테이지를 끝까지 (중간 보스 · 보스 · 점수표 · 2스테이지) · 오래 돌려도 숫자가 깨지지 않아요
+// 🚀 우주 슈팅 v14.1 규칙 검사 (js/shared/shooter-core.js · 화면 없이)
+//   같은 씨앗 = 같은 판 · 무기 3종 × 파워 6 · 미사일 버그(무기를 바꾸면 쏟아지던 것) · 아이템(P · 무기 · B — 메달 없음) · 파워가 다 차면 P 안 나와요
+//   · 수송선은 지금과 다른 무기를 차례로 · 편대 보너스 · 폭탄(탄 지우기) · 맞기(파워 −2) · 이어하기 · 목숨 +1 · 난이도 · 연습 시작 · 별 3개
+//   · 보스(부위 · 단계 · 도망) · 레이저 예고 · 봇으로 1스테이지를 끝까지 · 오래 돌려도 숫자가 깨지지 않아요
 const SC = require('../public/js/shared/shooter-core.js');
 let fails = 0;
 const ok = (c, m, x = '') => { console.log((c ? '  ✅ ' : '  ❌ ') + m, c ? '' : x); if (!c) fails++; };
@@ -41,40 +42,51 @@ console.log('▶ 같은 씨앗 · 같은 조작이면 같은 판');
   ok(a.score !== c.score || a.p.x !== c.p.x, '씨앗이 다르면 판이 달라요');
 }
 
-console.log('▶ 무기 3종 × 파워');
+console.log('▶ 무기 3종 × 파워 1~6');
 {
   const vol = (w, lv) => { const g = SC.create(1); Object.assign(g.p, { enter: 0, y: 280, weapon: w, power: lv }); g.shots = []; g.msl = []; SC.step(g, {}); return g; };
-  for (let lv = 1; lv <= 5; lv++) { const g = vol('V', lv); ok(g.shots.length === SC.VPAT[lv - 1].length, `발칸 ${lv}단계: ${g.shots.length}갈래`); }
-  const L1 = vol('L', 1), L5 = vol('L', 5);
-  ok(L1.shots.length === 1 && L1.shots[0].k === 'L' && L5.shots[0].r > L1.shots[0].r && L5.shots[0].dmg > L1.shots[0].dmg, '레이저: 단계가 오르면 굵고 세져요');
-  const M1 = vol('M', 1), M5 = vol('M', 5);
-  ok(M1.msl.length === 2 && M5.msl.length === 6, `미사일: 1단계 ${M1.msl.length}발 · 5단계 ${M5.msl.length}발`);
-  // 미사일은 적을 쫓아가요
+  ok(SC.PMAX === 6 && SC.VPAT.length === 6, '파워는 6단계');
+  for (let lv = 1; lv <= 6; lv++) { const g = vol('V', lv); ok(g.shots.length === SC.VPAT[lv - 1].length, `퍼짐탄 ${lv}단계: ${g.shots.length}갈래`); }
+  const L1 = vol('L', 1), L6 = vol('L', 6);
+  ok(L1.shots.length === 1 && L1.shots[0].k === 'L' && L6.shots[0].r > L1.shots[0].r && L6.shots[0].dmg > L1.shots[0].dmg, '레이저: 단계가 오르면 굵고 세져요');
+  const M1 = vol('M', 1), M6 = vol('M', 6);
+  ok(M1.msl.length === 2 && M6.msl.length === 6, `유도탄: 1단계 ${M1.msl.length}발 · 6단계 ${M6.msl.length}발`);
   const g = SC.create(2); Object.assign(g.p, { enter: 0, x: 40, y: 280, weapon: 'M', power: 1 });
   const e = g.en[g.en.push({ id: 99, type: 'heavy', x: 200, y: 120, vx: 0, vy: 0, hp: 999, max: 999, r: 17, age: 1, mv: 'none', hit: 0, ang: 0, ft: 99 }) - 1];
   run(g, 1.6);
   ok(e.hp < 999, `유도 미사일이 옆에 있는 적을 맞혀요 (체력 ${Math.round(e.hp)})`);
-  // 드론
-  const d = SC.create(3); Object.assign(d.p, { enter: 0, y: 280, weapon: 'V', power: 1, drones: 2, dft: 0 }); d.shots = []; SC.step(d, {});
-  ok(d.shots.length === 4 && SC.dronePos(d).length === 2, '드론 2기도 같이 쏴요');
-  d.p.focus = true; const near = SC.dronePos(d); d.p.focus = false; const far = SC.dronePos(d);
-  ok(Math.abs(near[0].x - d.p.x) < Math.abs(far[0].x - d.p.x), '천천히(Shift) 움직이면 드론이 가까이 모여요');
 }
 
-console.log('▶ 아이템 · 메달');
+console.log('▶ 미사일 버그 (v14.0): 다른 무기를 오래 쓰다가 유도탄으로 바꿔도 미사일이 쏟아지지 않아요');
+{
+  // 퍼짐탄으로 60초 → 유도탄 아이템 → 3초 동안 쏜 미사일 수 (6발씩 0.36초마다 → 50발쯤)
+  let n = 0;
+  const h = SC.create(3); Object.assign(h.p, { enter: 0, x: 120, y: 280, power: 6, weapon: 'V' }); h.phase = 'play';
+  run(h, 60, gg => { gg.p.inv = 99; gg.p.lives = 9; return {}; });
+  h.items.push({ k: 'M', x: h.p.x, y: h.p.y, vx: 0, vy: 0, t: 0, ph: 0 });
+  for (let i = 0; i < 180; i++) { const b = h.msl.length; SC.step(h, {}); h.p.inv = 99; n += Math.max(0, h.msl.length - b); }
+  ok(h.p.weapon === 'M' && n > 30 && n <= 54, `바꾼 뒤 3초 동안 미사일 ${n}발 (v14.0 은 400발 넘게 쏟아졌어요)`);
+}
+
+console.log('▶ 아이템 (P 파워 · 무기 · B 폭탄 — 메달 · 점수 별 없음)');
 {
   const g = SC.create(4); Object.assign(g.p, { enter: 0, x: 120, y: 280 });
   const give = (k, extra = {}) => { g.items.push(Object.assign({ k, x: g.p.x, y: g.p.y, vx: 0, vy: 0, t: 0, ph: 0 }, extra)); SC.step(g, {}); };
   give('P'); ok(g.p.power === 2, '파워 +1');
-  give('W', { t: 1.6 }); ok(g.p.weapon === 'L' && g.p.power === 2, '무기 수정은 1.5초마다 색이 바뀌어요: 지금 색(레이저)으로');
-  give('W', { t: 1.6 }); ok(g.p.weapon === 'L' && g.p.power === 3, '같은 무기를 또 먹으면 파워 +1');
+  give('L'); ok(g.p.weapon === 'L' && g.p.power === 2, '무기 아이템: 그 무기로 (파워는 그대로)');
+  const s0 = g.score; give('L'); ok(g.p.weapon === 'L' && g.score - s0 === 1000, '같은 무기를 또 먹으면 +1,000점');
   give('B'); ok(g.p.bombs === 4, '폭탄 +1');
-  give('S'); ok(g.p.shield, '실드');
-  give('D'); give('D'); give('D'); ok(g.p.drones === 2, '드론은 2기까지');
-  const s0 = g.score; give('m'); give('m'); give('m');
-  ok(g.score - s0 === 100 + 200 + 300 && g.mi === 3, `메달: 모을수록 100 → 200 → 300 (다음 ${SC.MEDAL_V[g.mi]})`);
-  g.items.push({ k: 'm', x: 10, y: g.H + 8, vx: 0, vy: 50, t: 0, ph: 0 }); Object.assign(g.p, { x: 220 }); run(g, 0.3, () => ({ tx: 220, ty: 200 }));
-  ok(g.mi === 0 && evs(g, 'medalLost').length, '메달을 놓치면 값이 처음(100)으로');
+  g.p.power = 6; const s1 = g.score; give('P'); ok(g.p.power === 6 && g.score - s1 === 1000, '파워가 다 찼을 때 P 는 +1,000점');
+  ok(!Object.keys(SC.ITEMS).some(k => !['P', 'B', 'V', 'L', 'M'].includes(k)) && !('MEDAL_V' in SC), '아이템은 5가지뿐 (메달 · 실드 · 드론 없음)');
+  // 떨어뜨릴 것: 파워가 다 차면 P 대신 (폭탄이 모자랄 때만) 폭탄 · 아니면 아무것도
+  const d = SC.create(5);
+  d.p.power = 3; ok(SC.powerDrop(d) === 'P', '파워가 덜 찼으면 P');
+  d.p.power = 6; d.p.bombs = 1; ok(SC.powerDrop(d) === 'B', '파워가 다 찼고 폭탄이 모자라면 B');
+  d.p.bombs = 3; ok(SC.powerDrop(d) === null, '파워가 다 찼으면 아무것도 안 떨어져요');
+  // 수송선: 지금 무기와 다른 무기를 차례로
+  const w = SC.create(6); w.p.weapon = 'V';
+  const got = [SC.weaponDrop(w), SC.weaponDrop(w), SC.weaponDrop(w), SC.weaponDrop(w)];
+  ok(got.every(x => x !== 'V') && got.includes('L') && got.includes('M'), `수송선 무기: ${got.join(' → ')} (지금 쓰는 퍼짐탄은 안 나와요)`);
 }
 
 console.log('▶ 편대 전멸 보너스');
@@ -87,6 +99,13 @@ console.log('▶ 편대 전멸 보너스');
   run(g, 4, gg => { for (const e of gg.ev) if (e.k === 'formation' && !got) { got = e; dropped = gg.items.some(i => i.k === 'B'); } gg.ev.length = 0; return { tx: 120, ty: 280 }; });
   SC.STAGES[0].tl = orig;
   ok(got && got.pts > 0 && dropped, `5대를 모두 잡으면 보너스 +${got && got.pts} · 편대가 들고 있던 아이템(폭탄)이 떨어져요`);
+  // 파워가 다 찬 비행기에게는 편대의 P 가 안 떨어져요
+  const h = SC.create(5); h.phase = 'play'; Object.assign(h.p, { enter: 0, power: 6, x: 120, y: 280 });
+  const orig2 = SC.STAGES[0].tl; SC.STAGES[0].tl = [[0, 'vform', { type: 'zako', n: 5, x: 120, drop: 'P' }]]; h.wi = 0; h.st = 0;
+  let fm = false;
+  run(h, 4, gg => { if (gg.ev.some(e => e.k === 'formation')) fm = true; gg.ev.length = 0; return { tx: 120, ty: 280 }; });
+  SC.STAGES[0].tl = orig2;
+  ok(fm && !h.items.some(i => i.k === 'P'), '파워가 다 찼으면 편대 보너스만 · P 는 안 나와요');
 }
 
 console.log('▶ 폭탄');
@@ -96,9 +115,10 @@ console.log('▶ 폭탄');
   g.en.push({ id: 500, type: 'gun', x: 120, y: 80, vx: 0, vy: 0, hp: 60, max: 60, r: 10, age: 1, mv: 'none', hit: 0, ang: 0, ft: 99 });
   const b0 = g.p.bombs;
   SC.step(g, { bomb: true });
-  ok(g.p.bombs === b0 - 1 && g.eb.length === 0 && g.items.filter(i => i.k === 'star').length >= 25, `적 탄 ${30}개 → 점수 별 · 폭탄 ${b0} → ${g.p.bombs}`);
-  const s0 = g.score; run(g, 1.5);
-  ok(g.score > s0 && !g.en.some(e => e.id === 500), `별을 빨아들여 점수 +${g.score - s0} · 포격선도 터졌어요`);
+  const cancel = evs(g, 'cancel')[0];
+  ok(g.p.bombs === b0 - 1 && g.eb.length === 0 && g.items.length === 0 && cancel && cancel.list.length === 30, `적 탄 30개를 지워요 (점수 별 없음) · 폭탄 ${b0} → ${g.p.bombs}`);
+  run(g, 1.5);
+  ok(!g.en.some(e => e.id === 500), '화면의 포격선도 터졌어요');
   g.eb.push({ x: g.p.x, y: g.p.y, vx: 0, vy: 0, r: 3, kind: 'o', age: 1 }); SC.step(g, {});
   ok(g.p.alive && g.p.lives === 3, '폭탄이 터지는 동안은 무적');
 }
@@ -109,13 +129,9 @@ console.log('▶ 맞기 · 다시 나오기 · 게임 오버 · 이어하기');
   for (let i = 0; i < 10; i++) g.eb.push({ x: 40 + i * 10, y: 100, vx: 0, vy: 10, r: 2.2, kind: 'o', age: 1 });
   g.eb.push({ x: 120.5, y: 280.5, vx: 0, vy: 0, r: 2.2, kind: 'o', age: 1 });
   SC.step(g, {});
-  ok(!g.p.alive && g.p.lives === 2 && g.p.power === 2 && g.eb.length === 0 && g.items.some(i => i.k === 'P'), '맞으면 목숨 −1 · 파워 −1 (파워 아이템이 떨어져요) · 화면의 적 탄이 사라져요');
+  ok(!g.p.alive && g.p.lives === 2 && g.p.power === 1 && g.eb.length === 0 && g.items.filter(i => i.k === 'P').length === 1, '맞으면 목숨 −1 · 파워 −2 (P 하나가 떨어져요 → 주우면 1 되찾아요) · 화면의 적 탄이 사라져요');
   run(g, 1.6);
   ok(g.p.alive && g.p.inv > 1 && g.p.bombs >= 3, '1.5초 뒤 다시 나와요 (깜빡이는 동안 무적 · 폭탄은 3개로)');
-  // 실드
-  const s = SC.create(10); Object.assign(s.p, { enter: 0, x: 120, y: 280, inv: 0, shield: true });
-  s.eb.push({ x: 120, y: 280, vx: 0, vy: 0, r: 2.2, kind: 'o', age: 1 }); SC.step(s, {});
-  ok(s.p.alive && !s.p.shield && s.p.lives === 3, '실드가 있으면 실드만 깨져요');
   // 맞는 곳은 가운데 작은 점: 날개를 스치는 탄은 괜찮아요
   const w = SC.create(11); Object.assign(w.p, { enter: 0, x: 120, y: 280, inv: 0 });
   w.eb.push({ x: 126, y: 284, vx: 0, vy: 0, r: 2.2, kind: 'o', age: 1 }); SC.step(w, {});
@@ -127,12 +143,38 @@ console.log('▶ 맞기 · 다시 나오기 · 게임 오버 · 이어하기');
   ok(SC.cont(o) && o.score === 0 && o.best === 12345 && o.p.lives === 3 && o.credits === 2 && o.phase !== 'over', '이어하기: 점수 0부터 · 목숨 3 · 기록은 한 번에 낸 최고 점수(12,345)');
 }
 
-console.log('▶ 목숨 +1 (15만점)');
+console.log('▶ 목숨 +1 (난이도마다)');
 {
-  const g = SC.create(13); g.score = 149990; g.p.lives = 2; Object.assign(g.p, { enter: 0, x: 120, y: 280 });
-  g.items.push({ k: 'm', x: 120, y: 280, vx: 0, vy: 0, t: 0, ph: 0 });
+  const g = SC.create(13); g.score = 99990; g.p.lives = 2; Object.assign(g.p, { enter: 0, x: 120, y: 280, power: 6 });
+  g.items.push({ k: 'P', x: 120, y: 280, vx: 0, vy: 0, t: 0, ph: 0 });
   SC.step(g, {});
-  ok(g.p.lives === 3 && evs(g, 'extend').length === 1, '15만 점을 넘으면 목숨 +1');
+  ok(g.p.lives === 3 && evs(g, 'extend').length === 1, '보통: 10만 점을 넘으면 목숨 +1');
+  const e = SC.create(13, { diff: 0 }), h = SC.create(13, { diff: 2 });
+  ok(SC.nextExtend(e, 0) < SC.nextExtend(g, 0) && SC.nextExtend(g, 0) < SC.nextExtend(h, 0) && SC.nextExtend(g, 3) === 600000 + 500000, '쉬움은 더 일찍 · 어려움은 더 늦게 · 표가 끝나면 일정한 간격');
+}
+
+console.log('▶ 난이도 · 연습 시작 · 별 3개');
+{
+  const e = SC.create(20, { diff: 0 }), n = SC.create(20), h = SC.create(20, { diff: 2 });
+  ok(e.D.key === 'easy' && n.D.key === 'normal' && h.D.key === 'hard' && e.p.lives === 4 && n.p.lives === 3 && h.p.lives === 3, '쉬움은 목숨 4개 · 보통 · 어려움 3개');
+  ok(e.bsp < n.bsp && n.bsp < h.bsp && e.frate < n.frate && n.frate < h.frate && e.hpm < n.hpm && n.hpm < h.hpm, '탄 빠르기 · 쏘는 빈도 · 체력: 쉬움 < 보통 < 어려움');
+  const p3 = SC.create(21, { stage: 3 });
+  ok(p3.stage === 3 && p3.start === 3 && p3.p.power === SC.START_POWER[2], `연습: 3스테이지부터 · 파워 ${p3.p.power}로 시작`);
+  // 별: 클리어 · 노 미스 · 격추율 85%
+  const g = SC.create(22); g.phase = 'play';
+  const tl = SC.STAGES[0].tl, bi = tl.findIndex(r => r[1] === 'boss'); g.wi = bi; g.st = tl[bi][0];
+  run(g, 3.6);
+  const b = g.boss; b.enter = 0; b.core.armor = false; for (const p of b.parts) { if (!p.core) { p.dead = true; p.hp = 0; } }
+  g.sstat = { kills: 90, spawned: 100, miss: 0, t0: 0 };
+  b.core.hp = 0.1; g.shots.push({ x: b.core.x, y: b.core.y, vx: 0, vy: 0, dmg: 5, r: 3, k: 'V', src: 0 });
+  let clr = null;
+  run(g, 3, gg => { for (const x of gg.ev) if (x.k === 'clear') clr = x; gg.ev.length = 0; return {}; });
+  ok(clr && clr.killed && clr.stars.join() === 'true,true,true' && g.stars[1] === 7, `보스를 잡고 · 안 맞고 · 격추율 90% → 별 3개 (${clr && clr.stars})`);
+  const m = SC.create(23); m.sstat = { kills: 50, spawned: 100, miss: 1, t0: 0 }; m.phase = 'play';
+  m.wi = bi; m.st = tl[bi][0]; run(m, 3.6); const mb = m.boss; mb.enter = 0; for (const p of mb.parts) if (!p.core) { p.dead = true; p.hp = 0; }
+  m.sstat = { kills: 50, spawned: 100, miss: 1, t0: 0 }; mb.core.armor = false; mb.core.hp = 0.1; m.shots.push({ x: mb.core.x, y: mb.core.y, vx: 0, vy: 0, dmg: 5, r: 3, k: 'V', src: 0 });
+  let c2 = null; run(m, 3, gg => { for (const x of gg.ev) if (x.k === 'clear') c2 = x; gg.ev.length = 0; return {}; });
+  ok(c2 && c2.stars.join() === 'true,false,false' && m.stars[1] === 1, `한 번 맞고 · 격추율 50% → 별 1개 (${c2 && c2.stars})`);
 }
 
 console.log('▶ 보스: 부위를 부숴야 코어가 열려요 · 단계 · 도망');
@@ -195,7 +237,7 @@ console.log('▶ 봇으로 1스테이지 끝까지');
   }
   const ms = Date.now() - t0;
   ok(g.stage === 2, `1스테이지 클리어 → 2스테이지 (${Math.round(g.t)}초 · 점수 ${g.score} · 격추 ${g.stat.kills} · 놓친 목숨 ${g.stat.miss})`);
-  ok(['midIn', 'midEnd', 'warn', 'bossIn', 'bossDie', 'bossEnd', 'clear', 'stage', 'kill', 'medal', 'formation'].every(k => seen.has(k)), '중간 보스 · WARNING · 보스 · 점수표 · 메달 · 편대 보너스가 다 나와요', [...seen].join(','));
+  ok(['midIn', 'midEnd', 'warn', 'bossIn', 'bossDie', 'bossEnd', 'clear', 'stage', 'kill', 'pick', 'formation'].every(k => seen.has(k)), '중간 보스 · WARNING · 보스 · 점수표 · 아이템 · 편대 보너스가 다 나와요', [...seen].join(','));
   ok(!bad, `숫자 깨짐 ${bad}`);
   ok(ms < 8000, `1스테이지 계산 ${ms}ms (휴대폰에서도 가벼워요)`);
 }

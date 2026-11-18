@@ -129,7 +129,7 @@ const Admin = {
     const nNew = typeof Report !== 'undefined' ? Report.opNew : 0;
     const b = (k, ic, t, n) => `<button class="seg-btn ${this.sub === k ? 'on' : ''}" data-act="opSub" data-k="${k}">${icon(ic)}${t}${n ? `<i class="ac-dot">${n}</i>` : ''}</button>`;
     const owner = Acct.me && Acct.me.role === 'owner';
-    return `<div class="op-subs">${b('rep', 'inbox', '신고 · 요청', nNew)}${b('main', 'speakerphone', '공지 · 관리', 0)}${owner && typeof KidAdmin !== 'undefined' ? b('kid', 'hourglass', '키즈 모드', 0) : ''}</div>`;
+    return `<div class="op-subs">${b('rep', 'inbox', '신고 · 요청', nNew)}${b('main', 'speakerphone', '공지 · 관리', 0)}${typeof ModAdmin !== 'undefined' ? b('mod', 'user-shield', '회원 관리', 0) : ''}${owner && typeof KidAdmin !== 'undefined' ? b('kid', 'hourglass', '키즈 모드', 0) : ''}</div>`;
   },
   async render() {
     const box = $('#ac-body');
@@ -139,6 +139,10 @@ const Admin = {
     if (this.sub === 'kid') {                                            // 키즈 모드 (최고 운영자 — js/kid.js)
       box.innerHTML = `<div class="op-panel">${this.subsHTML()}<div id="kid-op"><div class="muted center ac-load">불러오는 중…</div></div></div>`;
       return KidAdmin.render();
+    }
+    if (this.sub === 'mod' && typeof ModAdmin !== 'undefined') {             // 회원 관리: 기록 삭제 · 패널티 (js/mod.js)
+      box.innerHTML = `<div class="op-panel">${this.subsHTML()}<div id="mod-op"></div></div>`;
+      return ModAdmin.render();
     }
     if (this.sub === 'rep' && typeof Report !== 'undefined') {
       box.innerHTML = `<div class="op-panel">${this.subsHTML()}<div id="rp-op"><div class="muted center ac-load">불러오는 중…</div></div></div>`;
@@ -192,7 +196,7 @@ const Admin = {
       ${owner ? `<div class="op-find"><input type="text" id="op-q" maxlength="10" placeholder="운영자로 지정할 회원 이름" autocomplete="off"><button class="btn sm" data-act="opFind">${icon('search')}찾기</button></div>
         <div id="op-found">${res ? (res.length ? `<div class="ac-list">${res.map(u => `<div class="ac-row">${avatarOf(u, 'sm')}<span class="grow ac-who" data-act="acCard" data-uid="${esc(u.id)}" role="button" tabindex="0"><b>${esc(u.name)}</b> ${lvTag(u.lv)} ${opBadge(u.role)}</span>
           <small class="muted">${u.on ? '● 접속 중' : agoText(Date.now() - u.seen)} · ${u.plays}판</small>${u.role ? '' : `<button class="btn sm good" data-act="opGrant" data-uid="${esc(u.id)}" data-name="${esc(u.name)}">${icon('user-plus')}지정</button>`}</div>`).join('')}</div>` : '<p class="muted small">찾는 이름의 회원이 없어요.</p>') : ''}</div>
-        <p class="small muted">운영자는 전체 공지 · 서버 현황 · 활동 기록을 쓸 수 있어요. 운영자 지정 · 해제는 최고 운영자만 할 수 있어요. 프로필 카드에서도 지정할 수 있어요.</p>` : '<p class="small muted">운영자 지정 · 해제는 최고 운영자만 할 수 있어요.</p>'}</div>`;
+        <p class="small muted">운영자는 전체 공지 · 서버 현황 · 활동 기록 · 회원 관리(기록 삭제 · 경고 · 정지)를 쓸 수 있어요. 운영자 지정 · 해제는 최고 운영자만 할 수 있어요. 프로필 카드에서도 지정할 수 있어요.</p>` : '<p class="small muted">운영자 지정 · 해제는 최고 운영자만 할 수 있어요.</p>'}</div>`;
   },
   histHTML() {
     const h = this.st.hist;
@@ -201,7 +205,7 @@ const Admin = {
       <small class="muted">${esc(x.by || '')} · ${hhmm(x.at)}${x.live ? ' · <b class="op-on">지금 걸림</b>' : x.ended ? ' · 내림' : ''}</small></div>`).join('')}</div></div>`;
   },
   logsHTML() {
-    const A = { claim: '인증', 'claim-fail': '인증 실패', resign: '그만둠', grant: '지정', revoke: '해제', notice: '공지', end: '내림', kid: '키즈 모드' };
+    const A = { claim: '인증', 'claim-fail': '인증 실패', resign: '그만둠', grant: '지정', revoke: '해제', notice: '공지', end: '내림', kid: '키즈 모드', recdel: '기록 삭제', pen: '패널티', lift: '정지 풀기' };
     const when = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
     return `<div class="ac-set"><h4>${icon('list-details')}활동 기록</h4>${this.st.logs.length ? `<div class="ac-list op-logs">${this.st.logs.map(l => `<div class="ac-row"><small class="muted op-t">${when(l.t)}</small>
       <span class="op-a ${l.a}">${A[l.a] || l.a}</span><span class="grow"><b>${esc(l.by)}</b> ${esc(l.x)}</span></div>`).join('')}</div>` : '<p class="muted small">아직 기록이 없어요.</p>'}</div>`;

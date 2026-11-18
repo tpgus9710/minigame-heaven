@@ -100,6 +100,8 @@ const ACC = require('./lib/accounts')({ io, rooms, H, registry: () => REGISTRY, 
 const ADM = require('./lib/admin')({ io, rooms, acc: ACC, limiter: ACC._int.limiter });
 // ⏳ 키즈 모드 (최고 운영자가 회원마다 하루 게임 시간 · 시간대를 정해요 — 잠기면 아래 방 만들기 · 들어가기 · 시작을 막아요)
 const KID = require('./lib/kid')({ io, rooms, acc: ACC, adm: ADM, leaveRoom: s => leaveRoom(s) });
+// 🛡️ 회원 관리: 기록 삭제 · 경고 · 기록 정지 · 이용 정지 (운영자 모두)
+const MOD = require('./lib/mod')({ acc: ACC, adm: ADM });
 // 🍱 학식 메뉴 (폴리텍 로봇캠퍼스 홈페이지 식단을 서버가 읽어 둬요 — 30분에 한 번까지)
 const MEAL = require('./lib/meal')({ ACC });
 app.get('/api/meal', async (req, res) => {
@@ -304,6 +306,7 @@ io.on('connection', socket => {
   ACC.attach(socket, on);                                                          // 계정 · 친구 이벤트 (acct:* · fr:*)
   ADM.attach(socket, on);                                                          // 운영자 · 전체 공지 (admin:* · notice:*)
   KID.attach(socket, on);                                                          // 키즈 모드 (kid:*)
+  MOD.attach(socket, on);                                                          // 회원 관리 (mod:*)
   REP.attach(socket, on);                                                          // 신고함 (report:* · admin:report*)
   HO.attach(socket, on);                                                           // 새 버전으로 옮겨 온 사람: 같은 방으로 (room:rejoin)
   on('ping:t', (t, cb) => { if (typeof cb === 'function') cb(t); });              // 화면 위 지연 시간(ms) 표시용

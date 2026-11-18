@@ -447,7 +447,7 @@ const SOLO_GAMES = [   // [키, 아이콘, 이름, 설명, NEW 표시, 분류]
   ['volley', '🏐', '점프 배구 vs AI', '15점을 먼저 내면 승리', false, '액션'],
   ['bomb', '💥', '폭탄 배틀 vs 봇', '봇 3마리와 서바이벌', false, '액션'],
   ['tank', '🛡️', '탱크 대포 vs AI', '바람을 읽고 명중!', false, '액션'],
-  ['shooter', '🚀', '우주 슈팅', '오락실 세로 슈팅 · 5스테이지 보스전', false, '액션'],
+  ['shooter', '🚀', '우주 슈팅', '세로 슈팅 · 난이도 3단계 · 5스테이지 보스전 · 별 모으기', false, '액션'],
   ['gem', '💎', '보석 맞추기', '1분 동안 최고 점수', false, '퍼즐'],
   ['fruit', '🍉', '과일 합치기', '같은 과일끼리 합쳐 수박까지', false, '퍼즐'],
   ['stack', '🏗️', '탑 쌓기', '딱 맞게 쌓아 올리기', false, '퍼즐'],
@@ -472,7 +472,7 @@ const avColor = id => AV_COLORS[[...String(id)].reduce((a, c) => a + c.charCodeA
 const EMOJIS = ['👍', '😂', '😱', '🔥', '👏', '💰', '😭', '🤔', '😎', '🙏'];
 
 /* 메뉴 카드 + 분류 칩 */
-const UPDATED = new Set(['shooter', 'fruit']);   // 이번에 크게 바뀐 게임
+const UPDATED = new Set(['shooter', 'kart']);   // 이번에 크게 바뀐 게임
 function fillGrid(sel, list) {
   const grid = $(sel);
   list = list.slice().sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));   // 새 게임을 앞쪽에

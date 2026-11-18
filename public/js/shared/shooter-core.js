@@ -1,13 +1,15 @@
 /* =====================================================================
- *  🚀 우주 슈팅 규칙 (v14.0 새로 만듦) — 그리기 · 조작은 js/shooter.js · js/shooter-art.js, 소리는 js/shooter-audio.js, 검사는 tests/shooter.test.js
- *  옛날 오락실 세로 슈팅:
+ *  🚀 우주 슈팅 규칙 (v14.1 다시 만듦) — 그리기 · 조작은 js/shooter.js · js/shooter-art.js, 소리는 js/shooter-audio.js, 검사는 tests/shooter.test.js
+ *  오락실 세로 슈팅:
  *  · 5스테이지 (성운 지대 · 소행성대 · 우주 정거장 · 붉은 행성 · 모선) — 스테이지마다 편대 · 중간 보스 · 보스(부위를 부숴야 코어가 열려요)
  *    다 깨면 2주차: 적 탄이 빨라지고, 쓰러진 적이 마지막 탄을 쏴요.
- *  · 총은 자동. 무기 3가지(발칸 · 레이저 · 미사일) × 파워 1~5, 보조 드론 2기, 실드, 폭탄(처음 3개 · 터뜨리는 동안 무적 · 적 탄을 점수 별로 바꿔요)
- *  · 점수: 격추 + 연속 격추(CHAIN) + 편대 전멸 보너스 + 메달(놓치지 않고 모을수록 값이 올라요) + 스테이지 보너스 · 15만 · 50만 · 100만 … 점에 목숨 +1
- *  · 맞으면 목숨 −1 · 파워 −1 (떨어진 파워 아이템은 다시 주울 수 있어요) · 목숨을 다 잃으면 이어하기(점수는 0부터, 기록은 한 번에 낸 최고 점수)
+ *  · 총은 자동. 무기 3가지(퍼짐탄 · 레이저 · 유도탄) × 파워 1~6, 폭탄(처음 3개 · 터뜨리는 동안 무적 · 적 탄을 지워요)
+ *  · 아이템은 4가지뿐: P 파워(다 차면 더 안 나와요) · 무기(정해진 색 — 수송선이 지금과 다른 무기를 차례로 줘요) · B 폭탄
+ *    (메달 · 점수 별처럼 탄과 헷갈리는 건 없어요)
+ *  · 점수: 격추 + 편대 전멸 보너스 + 보스(빨리 잡을수록 더) + 스테이지 보너스 · 5만 · 15만 · 30만 · 50만 … 점에 목숨 +1
+ *  · 맞으면 목숨 −1 · 파워 −1 (떨어진 P 는 다시 주울 수 있어요) · 목숨을 다 잃으면 이어하기(점수는 0부터, 기록은 한 번에 낸 최고 점수)
  *  · 같은 씨앗(seed)과 같은 조작이면 같은 판이에요 (Math.random 을 쓰지 않아요). 1/60초씩 step 으로 움직여요.
- *  · 판 크기 가로 240 × 세로 320 (도트 한 칸 = 1) — 길쭉한 휴대폰 화면은 세로를 440 까지 늘려요 (create 의 opt.H)
+ *  · 판 크기 가로 240 × 세로 320 — 길쭉한 휴대폰 화면은 세로를 440 까지 늘려요 (create 의 opt.H)
  * ===================================================================== */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -17,49 +19,62 @@
   const W = 240, H = 320, STEP = 1 / 60, TAU = Math.PI * 2;
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const d2 = (ax, ay, bx, by) => (ax - bx) * (ax - bx) + (ay - by) * (ay - by);
+  /** 배열에서 조건에 맞는 것만 남겨요 (그 자리에서 — 매 걸음 새 배열을 만들지 않아서 가벼워요) */
+  function keep(a, f) { let j = 0; for (let i = 0; i < a.length; i++) { const v = a[i]; if (f(v)) a[j++] = v; } a.length = j; return a; }
   function rng(seed) {
     let a = (seed >>> 0) || 1;
     return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   }
 
   /* ───────── 무기 · 아이템 ───────── */
+  const PMAX = 6, BMAX = 5;
   const WEAPONS = {
-    V: { name: '발칸', en: 'VULCAN', color: '#ffd23f', desc: '넓게 퍼지는 연사' },
-    L: { name: '레이저', en: 'LASER', color: '#59d8ff', desc: '앞을 꿰뚫듯 강한 광선' },
-    M: { name: '미사일', en: 'MISSILE', color: '#ff6b5b', desc: '알아서 쫓아가는 유도 미사일' },
+    V: { name: '퍼짐탄', en: 'SPREAD', color: '#4aa3ff', desc: '넓게 퍼지는 연사 — 적이 많을 때' },
+    L: { name: '레이저', en: 'LASER', color: '#35d98a', desc: '앞으로 곧게 나가는 센 광선 — 보스에게' },
+    M: { name: '유도탄', en: 'HOMING', color: '#a77bff', desc: '알아서 쫓아가는 미사일 — 조준 없이' },
   };
   const WCYCLE = ['V', 'L', 'M'];
   const ITEMS = {
-    P: { name: '파워', color: '#ff8a3d' }, W: { name: '무기', color: '#ffffff' }, B: { name: '폭탄', color: '#ff5d73' },
-    S: { name: '실드', color: '#3fe0a0' }, D: { name: '드론', color: '#c39bff' }, m: { name: '메달', color: '#ffd23f' }, star: { name: '별', color: '#fff3a0' },
+    P: { name: '파워', color: '#ff6b6b' }, B: { name: '폭탄', color: '#ffb020' },
+    V: { name: '퍼짐탄', color: '#4aa3ff' }, L: { name: '레이저', color: '#35d98a' }, M: { name: '유도탄', color: '#a77bff' },
   };
-  // 발칸 갈래: [옆 위치, 각도(도)]
+  // 퍼짐탄 갈래: [옆 위치, 각도(도)] — 파워 1~6
   const VPAT = [
     [[-3, 0], [3, 0]],
-    [[-3, 0], [3, 0], [-6, -9], [6, 9]],
-    [[-5, 0], [0, 0], [5, 0], [-6, -9], [6, 9]],
-    [[-5, 0], [0, 0], [5, 0], [-6, -8], [6, 8], [-8, -18], [8, 18]],
-    [[-7, 0], [-2.5, 0], [2.5, 0], [7, 0], [-6, -8], [6, 8], [-8, -17], [8, 17], [-10, -28], [10, 28]],
+    [[-3, 0], [3, 0], [-5, -10], [5, 10]],
+    [[-5, 0], [0, 0], [5, 0], [-6, -10], [6, 10]],
+    [[-5, 0], [0, 0], [5, 0], [-6, -9], [6, 9], [-8, -19], [8, 19]],
+    [[-6, 0], [-2, 0], [2, 0], [6, 0], [-6, -9], [6, 9], [-8, -19], [8, 19]],
+    [[-6, 0], [-2, 0], [2, 0], [6, 0], [-6, -8], [6, 8], [-8, -17], [8, 17], [-10, -27], [10, 27]],
   ];
-  const LASER_DPS = [44, 54, 64, 74, 86], LASER_W = [2.5, 3.5, 4.5, 5.5, 6.5];
-  const MSL_N = [2, 2, 4, 4, 6], MSL_EVERY = [0.5, 0.44, 0.44, 0.38, 0.36], MSL_DMG = 2.6;
-  const MEDAL_V = [100, 200, 300, 500, 800, 1000, 1500, 2000, 3000, 5000];
-  const EXTEND = [150000, 500000, 1000000, 2000000];
+  const LASER_DPS = [40, 48, 56, 64, 74, 86], LASER_W = [2.5, 3.2, 4, 4.8, 5.6, 6.5];
+  const MSL_N = [2, 2, 4, 4, 6, 6], MSL_EVERY = [0.5, 0.42, 0.46, 0.4, 0.44, 0.36], MSL_DMG = 2.6;
+  /** 난이도 (0 쉬움 · 1 보통 · 2 어려움): 적 탄 빠르기 · 쏘는 빈도 · 체력 · 졸개가 쏠 확률 · 목숨 · 보스 시간 · 목숨 +1 점수 */
+  const DIFF = [
+    { key: 'easy', name: '쉬움', bsp: 0.84, frate: 0.7, hpm: 0.85, zako: 0.6, lives: 4, bossT: 150, ext: [50000, 150000, 300000, 500000], extStep: 300000 },
+    { key: 'normal', name: '보통', bsp: 1, frate: 1, hpm: 1, zako: 1, lives: 3, bossT: 120, ext: [100000, 300000, 600000], extStep: 500000 },
+    { key: 'hard', name: '어려움', bsp: 1.12, frate: 1.28, hpm: 1.15, zako: 1.4, lives: 3, bossT: 120, ext: [150000, 500000], extStep: 800000 },
+  ];
+  const EXTEND = DIFF[1].ext;
+  /** 연습: 2스테이지 이상에서 시작하면 그 스테이지에 맞는 파워로 */
+  const START_POWER = [1, 3, 5, 6, 6];
+  /** 스테이지 별 3개: 클리어 · 노 미스 · 격추율 85% 이상 */
+  const STAR_RATE = 0.85;
 
   /* ───────── 적 ───────── */
-  // hp 는 1스테이지 기준 (스테이지마다 늘어요) · r 맞는 판정 · pts 점수 · sz 폭발 크기 1~3 · body 몸에 부딪히면 다쳐요 · medals 떨어뜨리는 메달
+  // hp 는 1스테이지 기준 (스테이지마다 늘어요) · r 맞는 판정 · pts 점수 · sz 폭발 크기 1~3 · body 몸에 부딪히면 다쳐요
   const EN = {
-    pop: { hp: 1, r: 5, pts: 50, sz: 1, body: true },              // 주황 구슬 드론 (떼로 와요)
+    pop: { hp: 1, r: 5, pts: 50, sz: 1, body: true },              // 작은 마름모 드론 (떼로 와요)
     zako: { hp: 2, r: 5.5, pts: 100, sz: 1, body: true },          // 작은 전투기
-    swoop: { hp: 3, r: 6, pts: 150, sz: 1, body: true },           // 파란 화살 전투기 (편대 비행)
+    swoop: { hp: 3, r: 6, pts: 150, sz: 1, body: true },           // 화살 전투기 (편대 비행)
     kami: { hp: 6, r: 6, pts: 300, sz: 1, body: true },            // 멈칫했다가 들이받는 가시 기체
-    mine: { hp: 8, r: 6.5, pts: 300, sz: 1, body: true },          // 우주 기뢰 (터지면 탄을 뿌려요)
-    pebble: { hp: 4, r: 6, pts: 80, sz: 1, body: true },           // 작은 돌
-    rock: { hp: 26, r: 13, pts: 400, sz: 2, body: true },          // 큰 소행성 → 작은 돌 2개
-    gun: { hp: 28, r: 10, pts: 800, sz: 2, body: true, medals: 1 },   // 포격선 (멈춰서 3갈래)
-    turret: { hp: 16, r: 7, pts: 500, sz: 2, body: false, medals: 1 }, // 정거장 포탑
-    carrier: { hp: 20, r: 9, pts: 1000, sz: 2, body: false },      // 수송선 (아이템)
-    heavy: { hp: 120, r: 17, pts: 3000, sz: 3, body: true, medals: 3 }, // 중순양함
+    mine: { hp: 8, r: 6.5, pts: 200, sz: 1, body: true },          // 우주 기뢰 (터지면 탄을 뿌려요)
+    pebble: { hp: 4, r: 6, pts: 50, sz: 1, body: true },           // 작은 돌
+    rock: { hp: 26, r: 13, pts: 300, sz: 2, body: true },          // 큰 돌 → 작은 돌 2개
+    gun: { hp: 28, r: 10, pts: 600, sz: 2, body: true },           // 포격선 (멈춰서 3갈래)
+    turret: { hp: 16, r: 7, pts: 400, sz: 2, body: false },        // 정거장 포탑
+    carrier: { hp: 20, r: 9, pts: 500, sz: 2, body: false },       // 수송선 (부수면 무기 아이템)
+    heavy: { hp: 120, r: 17, pts: 2000, sz: 3, body: true },       // 중순양함
     part: { hp: 1, r: 10, pts: 0, sz: 3, body: false },            // 보스 부위 (값은 보스마다)
   };
 
@@ -101,92 +116,91 @@
   //   pat: aim(노려 n갈래) · ring(둥글게) · spiral(돌아가며) · sweep(부채질) · burst(노려 연속) · split(터지는 큰 탄) · laser(예고 뒤 세로 광선) · mines · summon · rain(위에서)
   //   kind: o 분홍 구슬 · O 큰 주황 구슬 · n 하늘색 바늘 · s 보라 별 · B 터지는 큰 탄
   const MIDS = {
-    stinger: { name: '스팅어', en: 'STINGER', w: 60, h: 46, y: 64, sway: 70, swayW: 0.7, pts: 10000, medals: 8,
-      parts: [{ id: 'core', dx: 0, dy: 2, r: 15, hp: 360, core: true }],
+    stinger: { name: '스팅어', en: 'STINGER', w: 60, h: 46, y: 64, sway: 70, swayW: 0.7, pts: 8000,
+      parts: [{ id: 'core', dx: 0, dy: 2, r: 15, hp: 340, core: true }],
       phases: [
-        { pats: [{ src: 'core', pat: 'aim', n: 5, spread: 0.2, sp: 80, every: 1.7, delay: 0.8, kind: 'n' },
-          { src: 'core', pat: 'ring', n: 14, sp: 54, rot: 0.11, every: 3.3, delay: 2.2, kind: 'o' }] },
-        { when: 0.45, pats: [{ src: 'core', pat: 'spiral', arms: 1, sp: 66, spin: 0.42, every: 0.13, kind: 'o' },
-          { src: 'core', pat: 'aim', n: 3, spread: 0.26, sp: 86, every: 1.9, delay: 0.6, kind: 'n' }] },
+        { pats: [{ src: 'core', pat: 'aim', n: 5, spread: 0.2, sp: 78, every: 1.8, delay: 0.8, kind: 'n' },
+          { src: 'core', pat: 'ring', n: 12, sp: 52, rot: 0.11, every: 3.4, delay: 2.2, kind: 'o' }] },
+        { when: 0.45, pats: [{ src: 'core', pat: 'spiral', arms: 1, sp: 64, spin: 0.42, every: 0.14, kind: 'o' },
+          { src: 'core', pat: 'aim', n: 3, spread: 0.26, sp: 84, every: 2, delay: 0.6, kind: 'n' }] },
       ] },
-    orb: { name: '오브 십', en: 'ORB SHIP', w: 64, h: 56, y: 66, sway: 60, swayW: 0.9, pts: 12000, medals: 8,
-      parts: [{ id: 'core', dx: 0, dy: 0, r: 15, hp: 360, core: true, armor: 'guns' }, { id: 'podL', dx: -26, dy: 8, r: 9, hp: 110 }, { id: 'podR', dx: 26, dy: 8, r: 9, hp: 110 }],
+    orb: { name: '오브 십', en: 'ORB SHIP', w: 64, h: 56, y: 66, sway: 60, swayW: 0.9, pts: 9000,
+      parts: [{ id: 'core', dx: 0, dy: 0, r: 15, hp: 340, core: true, armor: 'guns' }, { id: 'podL', dx: -26, dy: 8, r: 9, hp: 100 }, { id: 'podR', dx: 26, dy: 8, r: 9, hp: 100 }],
       phases: [
-        { pats: [{ src: 'podL', pat: 'aim', n: 2, spread: 0.18, sp: 84, every: 1.5, delay: 0.6, kind: 'n' },
-          { src: 'podR', pat: 'aim', n: 2, spread: 0.18, sp: 84, every: 1.5, delay: 1.35, kind: 'n' },
-          { src: 'core', pat: 'ring', n: 10, sp: 50, rot: 0.2, every: 3.6, delay: 2.4, kind: 'O' }] },
-        { when: 'guns', pats: [{ src: 'core', pat: 'sweep', n: 2, sp: 78, a0: 0.5, a1: 2.64, sw: 1.6, every: 0.11, kind: 'o' },
-          { src: 'core', pat: 'aim', n: 5, spread: 0.16, sp: 90, every: 2.3, delay: 1, kind: 'n' }] },
+        { pats: [{ src: 'podL', pat: 'aim', n: 2, spread: 0.18, sp: 82, every: 1.6, delay: 0.6, kind: 'n' },
+          { src: 'podR', pat: 'aim', n: 2, spread: 0.18, sp: 82, every: 1.6, delay: 1.4, kind: 'n' },
+          { src: 'core', pat: 'ring', n: 10, sp: 50, rot: 0.2, every: 3.8, delay: 2.4, kind: 'O' }] },
+        { when: 'guns', pats: [{ src: 'core', pat: 'sweep', n: 1, sp: 70, a0: 0.5, a1: 2.64, sw: 1.6, every: 0.12, kind: 'o' },
+          { src: 'core', pat: 'aim', n: 3, spread: 0.2, sp: 82, every: 2.6, delay: 1, kind: 'n' }] },
       ] },
   };
   const BOSSES = [
-    { name: '강철 게', en: 'IRON CRAB', w: 124, h: 74, y: 70, sway: 56, swayW: 0.55, pts: 30000, medals: 16,
-      parts: [{ id: 'core', dx: 0, dy: -2, r: 14, hp: 560, core: true, armor: 'guns' },
-        { id: 'clawL', dx: -46, dy: 16, r: 12, hp: 160 }, { id: 'clawR', dx: 46, dy: 16, r: 12, hp: 160 }],
+    { name: '강철 게', en: 'IRON CRAB', w: 124, h: 74, y: 70, sway: 56, swayW: 0.55, pts: 20000,
+      parts: [{ id: 'core', dx: 0, dy: -2, r: 14, hp: 520, core: true, armor: 'guns' },
+        { id: 'clawL', dx: -46, dy: 16, r: 12, hp: 150 }, { id: 'clawR', dx: 46, dy: 16, r: 12, hp: 150 }],
       phases: [
-        { pats: [{ src: 'clawL', pat: 'aim', n: 3, spread: 0.26, sp: 80, every: 2.1, delay: 0.6, kind: 'n' },
-          { src: 'clawR', pat: 'aim', n: 3, spread: 0.26, sp: 80, every: 2.1, delay: 1.65, kind: 'n' },
-          { src: 'core', pat: 'ring', n: 12, sp: 50, rot: 0.13, every: 3.6, delay: 2.2, kind: 'O' }] },
-        { when: 'guns', pats: [{ src: 'core', pat: 'spiral', arms: 2, sp: 60, spin: 0.26, every: 0.16, kind: 'o' },
-          { src: 'core', pat: 'aim', n: 3, spread: 0.22, sp: 88, every: 2.5, delay: 1.2, kind: 'n' }] },
-        { when: 0.35, pats: [{ src: 'core', pat: 'spiral', arms: 3, sp: 62, spin: 0.22, every: 0.15, kind: 'o' },
-          { src: 'core', pat: 'ring', n: 12, sp: 46, rot: 0.1, every: 3.2, delay: 1, kind: 'O' }] },
+        { pats: [{ src: 'clawL', pat: 'aim', n: 3, spread: 0.26, sp: 78, every: 2.1, delay: 0.6, kind: 'n' },
+          { src: 'clawR', pat: 'aim', n: 3, spread: 0.26, sp: 78, every: 2.1, delay: 1.65, kind: 'n' },
+          { src: 'core', pat: 'ring', n: 12, sp: 48, rot: 0.13, every: 3.6, delay: 2.2, kind: 'O' }] },
+        { when: 'guns', pats: [{ src: 'core', pat: 'spiral', arms: 2, sp: 58, spin: 0.26, every: 0.17, kind: 'o' },
+          { src: 'core', pat: 'aim', n: 3, spread: 0.22, sp: 84, every: 2.6, delay: 1.2, kind: 'n' }] },
+        { when: 0.35, pats: [{ src: 'core', pat: 'spiral', arms: 3, sp: 60, spin: 0.22, every: 0.16, kind: 'o' },
+          { src: 'core', pat: 'ring', n: 12, sp: 46, rot: 0.1, every: 3.4, delay: 1, kind: 'O' }] },
       ] },
-    { name: '바위 요새', en: 'ROCK FORTRESS', w: 112, h: 104, y: 74, sway: 46, swayW: 0.5, pts: 40000, medals: 16,
-      parts: [{ id: 'core', dx: 0, dy: 0, r: 16, hp: 820, core: true, armor: 'guns' },
-        ...[0, 1, 2, 3].map(i => ({ id: 'gun' + i, dx: 0, dy: 0, r: 9, hp: 130, orbit: { r: 42, a0: i * Math.PI / 2 + Math.PI / 4, w: 0.55 } }))],
+    { name: '바위 요새', en: 'ROCK FORTRESS', w: 112, h: 104, y: 74, sway: 46, swayW: 0.5, pts: 25000,
+      parts: [{ id: 'core', dx: 0, dy: 0, r: 16, hp: 760, core: true, armor: 'guns' },
+        ...[0, 1, 2, 3].map(i => ({ id: 'gun' + i, dx: 0, dy: 0, r: 9, hp: 120, orbit: { r: 42, a0: i * Math.PI / 2 + Math.PI / 4, w: 0.55 } }))],
       phases: [
-        { pats: [0, 1, 2, 3].map(i => ({ src: 'gun' + i, pat: 'aim', n: 1, spread: 0, sp: 86, every: 2.2, delay: 0.5 + i * 0.55, kind: 'n' }))
-          .concat([{ src: 'core', pat: 'mines', n: 2, every: 5.5, delay: 3 }, { src: 'core', pat: 'ring', n: 10, sp: 46, rot: 0.3, every: 4.4, delay: 2, kind: 'O' }]) },
-        { when: 'guns', pats: [{ src: 'core', pat: 'ring', n: 22, gap: 4, sp: 54, rot: 0.37, every: 1.7, kind: 'o' },
-          { src: 'core', pat: 'rain', n: 3, sp: 70, every: 1.3, delay: 0.8, kind: 'O' }] },
-        { when: 0.35, pats: [{ src: 'core', pat: 'spiral', arms: 4, sp: 60, spin: 0.17, every: 0.16, kind: 'o' },
-          { src: 'core', pat: 'aim', n: 3, spread: 0.3, sp: 92, every: 1.8, kind: 'n' }] },
+        { pats: [0, 1, 2, 3].map(i => ({ src: 'gun' + i, pat: 'aim', n: 1, spread: 0, sp: 84, every: 2.3, delay: 0.5 + i * 0.57, kind: 'n' }))
+          .concat([{ src: 'core', pat: 'mines', n: 2, every: 6, delay: 3 }, { src: 'core', pat: 'ring', n: 10, sp: 46, rot: 0.3, every: 4.4, delay: 2, kind: 'O' }]) },
+        { when: 'guns', pats: [{ src: 'core', pat: 'ring', n: 18, gap: 4, sp: 50, rot: 0.37, every: 2, kind: 'o' },
+          { src: 'core', pat: 'rain', n: 2, sp: 62, every: 1.8, delay: 0.8, kind: 'O' }] },
+        { when: 0.35, pats: [{ src: 'core', pat: 'spiral', arms: 2, sp: 58, spin: 0.21, every: 0.15, kind: 'o' },
+          { src: 'core', pat: 'aim', n: 3, spread: 0.3, sp: 86, every: 2.2, kind: 'n' }] },
       ] },
-    { name: '방어 코어', en: 'GUARD CORE', w: 152, h: 60, y: 62, sway: 40, swayW: 0.45, pts: 50000, medals: 16,
-      parts: [{ id: 'core', dx: 0, dy: 0, r: 14, hp: 900, core: true, armor: 'guns' },
-        { id: 'emL', dx: -58, dy: 6, r: 11, hp: 260 }, { id: 'emR', dx: 58, dy: 6, r: 11, hp: 260 }],
+    { name: '방어 코어', en: 'GUARD CORE', w: 152, h: 60, y: 62, sway: 40, swayW: 0.45, pts: 30000,
+      parts: [{ id: 'core', dx: 0, dy: 0, r: 14, hp: 820, core: true, armor: 'guns' },
+        { id: 'emL', dx: -58, dy: 6, r: 11, hp: 230 }, { id: 'emR', dx: 58, dy: 6, r: 11, hp: 230 }],
       phases: [
-        { pats: [{ src: 'emL', pat: 'laser', every: 3.8, delay: 1, w: 13 }, { src: 'emR', pat: 'laser', every: 3.8, delay: 2.9, w: 13 },
-          { src: 'core', pat: 'aim', n: 3, spread: 0.22, sp: 78, every: 2, delay: 0.5, kind: 'O' },
-          { src: 'emL', pat: 'aim', n: 1, sp: 90, every: 1.7, delay: 0.2, kind: 'n' }, { src: 'emR', pat: 'aim', n: 1, sp: 90, every: 1.7, delay: 1.05, kind: 'n' }] },
-        { when: 'guns', pats: [{ src: 'core', pat: 'sweep', n: 1, sp: 82, a0: 0.4, a1: 2.74, sw: 2.2, every: 0.07, kind: 'o' },
-          { src: 'core', pat: 'laser', every: 4.6, delay: 2, w: 15 }] },
-        { when: 0.35, pats: [{ src: 'core', pat: 'spiral', arms: 2, sp: 62, spin: 0.24, every: 0.14, kind: 'o' },
-          { src: 'core', pat: 'spiral', arms: 2, sp: 62, spin: -0.24, every: 0.14, kind: 's', delay: 0.07 },
-          { src: 'core', pat: 'burst', n: 5, sp: 104, every: 2.4, delay: 1, kind: 'n' }] },
+        { pats: [{ src: 'emL', pat: 'laser', every: 3.9, delay: 1, w: 13 }, { src: 'emR', pat: 'laser', every: 3.9, delay: 2.95, w: 13 },
+          { src: 'core', pat: 'aim', n: 3, spread: 0.22, sp: 76, every: 2.1, delay: 0.5, kind: 'O' },
+          { src: 'emL', pat: 'aim', n: 1, sp: 86, every: 1.8, delay: 0.2, kind: 'n' }, { src: 'emR', pat: 'aim', n: 1, sp: 86, every: 1.8, delay: 1.1, kind: 'n' }] },
+        { when: 'guns', pats: [{ src: 'core', pat: 'sweep', n: 1, sp: 78, a0: 0.4, a1: 2.74, sw: 2.2, every: 0.09, kind: 'o' },
+          { src: 'core', pat: 'laser', every: 4.8, delay: 2, w: 15 }] },
+        { when: 0.35, pats: [{ src: 'core', pat: 'spiral', arms: 3, sp: 60, spin: 0.24, every: 0.16, kind: 'o' },
+          { src: 'core', pat: 'burst', n: 5, sp: 98, every: 2.5, delay: 1, kind: 'n' }] },
       ] },
-    { name: '붉은 포격함', en: 'CRIMSON BOMBER', w: 136, h: 82, y: 72, sway: 52, swayW: 0.6, pts: 60000, medals: 16,
-      parts: [{ id: 'core', dx: 0, dy: 10, r: 15, hp: 1000, core: true, armor: 'guns' },
-        { id: 'gunL', dx: -50, dy: 4, r: 11, hp: 280 }, { id: 'gunR', dx: 50, dy: 4, r: 11, hp: 280 }],
+    { name: '붉은 포격함', en: 'CRIMSON BOMBER', w: 136, h: 82, y: 72, sway: 52, swayW: 0.6, pts: 35000,
+      parts: [{ id: 'core', dx: 0, dy: 10, r: 15, hp: 900, core: true, armor: 'guns' },
+        { id: 'gunL', dx: -50, dy: 4, r: 11, hp: 250 }, { id: 'gunR', dx: 50, dy: 4, r: 11, hp: 250 }],
       phases: [
-        { pats: [{ src: 'gunL', pat: 'sweep', n: 1, sp: 76, a0: 0.9, a1: 2.3, sw: 1.4, every: 0.16, kind: 'o' },
-          { src: 'gunR', pat: 'sweep', n: 1, sp: 76, a0: 0.9, a1: 2.3, sw: -1.4, every: 0.16, kind: 'o' },
-          { src: 'core', pat: 'split', sp: 50, every: 3.1, delay: 1.6, split: { after: 1.1, n: 8, sp: 64, kind: 'o' } }] },
-        { when: 'guns', pats: [{ src: 'core', pat: 'burst', n: 7, sp: 108, every: 1.9, delay: 0.6, kind: 'n' },
-          { src: 'core', pat: 'split', sp: 54, every: 2.6, delay: 1.4, split: { after: 1, n: 10, sp: 66, kind: 'o' } }] },
-        { when: 0.35, pats: [{ src: 'core', pat: 'split', sp: 58, every: 1.7, split: { after: 0.9, n: 12, sp: 70, kind: 's' } },
-          { src: 'core', pat: 'ring', n: 20, sp: 50, rot: 0.16, every: 2.2, delay: 1, kind: 'o' }] },
+        { pats: [{ src: 'gunL', pat: 'sweep', n: 1, sp: 72, a0: 0.9, a1: 2.3, sw: 1.4, every: 0.18, kind: 'o' },
+          { src: 'gunR', pat: 'sweep', n: 1, sp: 72, a0: 0.9, a1: 2.3, sw: -1.4, every: 0.18, kind: 'o' },
+          { src: 'core', pat: 'split', sp: 50, every: 3.2, delay: 1.6, split: { after: 1.1, n: 8, sp: 62, kind: 'o' } }] },
+        { when: 'guns', pats: [{ src: 'core', pat: 'burst', n: 6, sp: 100, every: 2, delay: 0.6, kind: 'n' },
+          { src: 'core', pat: 'split', sp: 54, every: 2.7, delay: 1.4, split: { after: 1, n: 10, sp: 64, kind: 'o' } }] },
+        { when: 0.35, pats: [{ src: 'core', pat: 'split', sp: 56, every: 1.9, split: { after: 0.9, n: 10, sp: 66, kind: 's' } },
+          { src: 'core', pat: 'ring', n: 16, sp: 48, rot: 0.16, every: 2.3, delay: 1, kind: 'o' }] },
       ] },
-    { name: '모선 코어', en: 'MOTHER CORE', w: 156, h: 112, y: 80, sway: 36, swayW: 0.4, pts: 80000, medals: 24,
-      parts: [{ id: 'core', dx: 0, dy: 4, r: 17, hp: 1500, core: true, armor: 'guns' },
-        { id: 'pod0', dx: -52, dy: -22, r: 10, hp: 240 }, { id: 'pod1', dx: 52, dy: -22, r: 10, hp: 240 },
-        { id: 'pod2', dx: -40, dy: 34, r: 10, hp: 240 }, { id: 'pod3', dx: 40, dy: 34, r: 10, hp: 240 }],
+    { name: '모선 코어', en: 'MOTHER CORE', w: 156, h: 112, y: 80, sway: 36, swayW: 0.4, pts: 50000,
+      parts: [{ id: 'core', dx: 0, dy: 4, r: 17, hp: 1300, core: true, armor: 'guns' },
+        { id: 'pod0', dx: -52, dy: -22, r: 10, hp: 210 }, { id: 'pod1', dx: 52, dy: -22, r: 10, hp: 210 },
+        { id: 'pod2', dx: -40, dy: 34, r: 10, hp: 210 }, { id: 'pod3', dx: 40, dy: 34, r: 10, hp: 210 }],
       phases: [
-        { pats: [0, 1, 2, 3].map(i => ({ src: 'pod' + i, pat: 'aim', n: 3, spread: 0.22, sp: 84, every: 2.3, delay: 0.5 + i * 0.55, kind: 'n' }))
-          .concat([{ src: 'core', pat: 'ring', n: 18, sp: 50, rot: 0.12, every: 3, delay: 2, kind: 'O' }]) },
-        { when: 'guns', pats: [{ src: 'core', pat: 'spiral', arms: 3, sp: 60, spin: 0.2, every: 0.15, kind: 'o' },
-          { src: 'core', pat: 'spiral', arms: 3, sp: 60, spin: -0.2, every: 0.15, delay: 0.07, kind: 's' },
-          { src: 'core', pat: 'summon', every: 7, delay: 3 }] },
-        { when: 0.4, pats: [{ src: 'core', pat: 'ring', n: 24, sp: 48, rot: 0.13, every: 1, kind: 'o' },
-          { src: 'core', pat: 'ring', n: 24, sp: 68, rot: -0.13, every: 1, delay: 0.5, kind: 's' },
-          { src: 'core', pat: 'burst', n: 6, sp: 110, every: 2.2, delay: 1.1, kind: 'n' }] },
+        { pats: [0, 1, 2, 3].map(i => ({ src: 'pod' + i, pat: 'aim', n: 3, spread: 0.22, sp: 80, every: 2.4, delay: 0.5 + i * 0.6, kind: 'n' }))
+          .concat([{ src: 'core', pat: 'ring', n: 16, sp: 48, rot: 0.12, every: 3.2, delay: 2, kind: 'O' }]) },
+        { when: 'guns', pats: [{ src: 'core', pat: 'spiral', arms: 3, sp: 58, spin: 0.2, every: 0.16, kind: 'o' },
+          { src: 'core', pat: 'summon', every: 7.5, delay: 3 }] },
+        { when: 0.4, pats: [{ src: 'core', pat: 'ring', n: 16, sp: 48, rot: 0.13, every: 1.15, kind: 'o' },
+          { src: 'core', pat: 'ring', n: 16, sp: 62, rot: -0.13, every: 1.15, delay: 0.57, kind: 's' },
+          { src: 'core', pat: 'burst', n: 5, sp: 100, every: 2.6, delay: 1.1, kind: 'n' }] },
       ] },
   ];
   const BULLET_R = { o: 2.2, O: 3.6, n: 1.8, s: 2.6, B: 4.6 };
 
   /* ───────── 스테이지 ───────── */
   // [시각(초), 할 일, 값] — 중간 보스 · 보스가 있는 동안은 시간이 멈춰요
+  // drop: 'P' 파워(다 찼으면 안 나와요) · 'B' 폭탄 — 수송선(carrier)은 언제나 무기 아이템 (지금과 다른 색을 차례로)
   const STAGES = [
     { name: '성운 지대', en: 'NEBULA', mid: 'stinger', tl: [
       [1.5, 'snake', { type: 'pop', n: 8, side: 'L', y: 58 }],
@@ -194,15 +208,15 @@
       [7.5, 'vform', { type: 'zako', n: 5, x: 120, drop: 'P' }],
       [11, 'path', { type: 'swoop', n: 5, path: 'swoopA' }],
       [13, 'path', { type: 'swoop', n: 5, path: 'swoopA', mir: true }],
-      [16, 'carrier', { side: 'L', y: 70, item: 'W' }],
+      [16, 'carrier', { side: 'L', y: 70 }],
       [18, 'line', { type: 'zako', n: 4, x: 50 }], [18.2, 'line', { type: 'zako', n: 4, x: 190 }],
       [21.5, 'gun', { xs: [70, 170], y: 64 }],
       [27, 'rain', { type: 'pop', n: 14, dur: 4 }],
-      [30, 'path', { type: 'zako', n: 6, path: 'diveA', drop: 'P' }], [31, 'path', { type: 'zako', n: 6, path: 'diveA', mir: true }],
-      [35, 'heavy', { x: 120, drop: 'P' }],
+      [30, 'path', { type: 'zako', n: 6, path: 'diveA' }], [31, 'path', { type: 'zako', n: 6, path: 'diveA', mir: true }],
+      [35, 'heavy', { x: 120 }],
       [41, 'vform', { type: 'zako', n: 7, x: 120, drop: 'B' }],
       [45, 'mid'],
-      [46, 'carrier', { side: 'R', y: 80, item: 'D' }],
+      [46, 'carrier', { side: 'R', y: 80 }],
       [48, 'snake', { type: 'pop', n: 10, side: 'L', y: 50 }], [49, 'snake', { type: 'pop', n: 10, side: 'R', y: 100 }],
       [53, 'gun', { xs: [50, 120, 190], y: 70 }],
       [58, 'path', { type: 'swoop', n: 6, path: 'loopA', drop: 'P' }], [61, 'path', { type: 'swoop', n: 6, path: 'loopA', mir: true }],
@@ -216,14 +230,14 @@
       [4, 'snake', { type: 'pop', n: 8, side: 'L', y: 70 }],
       [8, 'path', { type: 'swoop', n: 5, path: 'crossA' }], [9, 'path', { type: 'swoop', n: 5, path: 'crossA', mir: true }],
       [12, 'mines', { n: 5, dur: 5 }],
-      [15, 'carrier', { side: 'R', y: 60, item: 'W' }],
+      [15, 'carrier', { side: 'R', y: 60 }],
       [17, 'gun', { xs: [60, 180], y: 60 }],
       [22, 'rocks', { n: 7, dur: 7 }],
       [24, 'vform', { type: 'zako', n: 7, x: 120, drop: 'P' }],
       [29, 'path', { type: 'zako', n: 7, path: 'uturnA' }], [30, 'path', { type: 'zako', n: 7, path: 'uturnA', mir: true }],
-      [34, 'heavy', { x: 80, drop: 'P' }], [36, 'heavy', { x: 160 }],
+      [34, 'heavy', { x: 80 }], [36, 'heavy', { x: 160 }],
       [42, 'mid'],
-      [43, 'carrier', { side: 'L', y: 80, item: 'S' }],
+      [43, 'carrier', { side: 'L', y: 80 }],
       [45, 'mines', { n: 8, dur: 6 }], [45.5, 'rocks', { n: 6, dur: 6 }],
       [52, 'snake', { type: 'swoop', n: 8, side: 'R', y: 60 }],
       [56, 'gun', { xs: [50, 120, 190], y: 64 }],
@@ -238,14 +252,14 @@
       [6, 'snake', { type: 'pop', n: 10, side: 'L', y: 64 }],
       [9, 'path', { type: 'swoop', n: 6, path: 'diveA' }], [10, 'path', { type: 'swoop', n: 6, path: 'diveA', mir: true }],
       [12, 'deck', { x: 120, w: 150, turrets: [-50, 0, 50] }],
-      [15, 'carrier', { side: 'L', y: 70, item: 'W' }],
+      [15, 'carrier', { side: 'L', y: 70 }],
       [18, 'kami', { xs: [50, 190] }], [19.5, 'kami', { xs: [90, 150] }],
       [22, 'gun', { xs: [60, 120, 180], y: 58 }],
       [27, 'deck', { x: 68, w: 110, turrets: [-32, 0, 32] }], [29, 'deck', { x: 172, w: 110, turrets: [-32, 0, 32] }],
       [31, 'vform', { type: 'zako', n: 7, x: 120, drop: 'P' }],
-      [36, 'heavy', { x: 120, drop: 'P' }],
+      [36, 'heavy', { x: 120 }],
       [42, 'mid'],
-      [43, 'carrier', { side: 'R', y: 70, item: 'D' }],
+      [43, 'carrier', { side: 'R', y: 70 }],
       [46, 'deck', { x: 120, w: 200, turrets: [-70, -24, 24, 70] }],
       [49, 'path', { type: 'zako', n: 8, path: 'loopA' }], [50, 'path', { type: 'zako', n: 8, path: 'loopA', mir: true }],
       [55, 'mines', { n: 6, dur: 5 }],
@@ -258,14 +272,14 @@
       [1.5, 'path', { type: 'swoop', n: 7, path: 'swoopA' }], [2.5, 'path', { type: 'swoop', n: 7, path: 'swoopA', mir: true }],
       [6, 'gun', { xs: [50, 190], y: 56 }],
       [9, 'snake', { type: 'pop', n: 12, side: 'L', y: 60 }], [10, 'snake', { type: 'pop', n: 12, side: 'R', y: 90 }],
-      [14, 'carrier', { side: 'L', y: 64, item: 'W' }],
+      [14, 'carrier', { side: 'L', y: 64 }],
       [16, 'heavy', { x: 120, drop: 'P' }],
       [22, 'path', { type: 'zako', n: 8, path: 'zigA' }], [22.5, 'path', { type: 'zako', n: 8, path: 'zigA', mir: true }],
       [27, 'kami', { xs: [40, 120, 200] }], [28.5, 'kami', { xs: [80, 160] }],
       [32, 'vform', { type: 'swoop', n: 9, x: 120, drop: 'P' }],
       [37, 'gun', { xs: [40, 100, 140, 200], y: 60 }],
       [43, 'mid'],
-      [44, 'carrier', { side: 'R', y: 70, item: 'S' }],
+      [44, 'carrier', { side: 'R', y: 70 }],
       [47, 'heavy', { x: 70 }], [48, 'heavy', { x: 170 }],
       [53, 'rain', { type: 'swoop', n: 14, dur: 6 }],
       [60, 'path', { type: 'zako', n: 10, path: 'loopA', drop: 'B' }], [61, 'path', { type: 'zako', n: 10, path: 'loopA', mir: true }],
@@ -276,7 +290,7 @@
     { name: '모선', en: 'MOTHERSHIP', mid: 'stinger', tl: [
       [1.5, 'deck', { x: 120, w: 200, turrets: [-70, -24, 24, 70] }],
       [5, 'snake', { type: 'swoop', n: 10, side: 'L', y: 60 }], [6, 'snake', { type: 'swoop', n: 10, side: 'R', y: 92 }],
-      [10, 'carrier', { side: 'L', y: 60, item: 'W' }],
+      [10, 'carrier', { side: 'L', y: 60 }],
       [12, 'heavy', { x: 70 }], [13, 'heavy', { x: 170, drop: 'P' }],
       [19, 'kami', { xs: [30, 90, 150, 210] }],
       [22, 'deck', { x: 68, w: 120, turrets: [-36, 0, 36] }], [24, 'deck', { x: 172, w: 120, turrets: [-36, 0, 36] }],
@@ -284,7 +298,7 @@
       [33, 'gun', { xs: [40, 100, 140, 200], y: 60 }],
       [38, 'mines', { n: 10, dur: 6 }],
       [43, 'mid'],
-      [44, 'carrier', { side: 'R', y: 66, item: 'D' }],
+      [44, 'carrier', { side: 'R', y: 66 }],
       [46, 'vform', { type: 'swoop', n: 11, x: 120, drop: 'P' }],
       [51, 'heavy', { x: 60 }], [52, 'heavy', { x: 120 }], [53, 'heavy', { x: 180, drop: 'B' }],
       [60, 'rain', { type: 'zako', n: 16, dur: 6 }],
@@ -297,31 +311,35 @@
   /* ───────── 새 판 ───────── */
   function create(seed, opt = {}) {
     const h = Math.round(clamp(opt.H || H, 320, 440));                // 판 세로 길이: 휴대폰처럼 길쭉한 화면은 길게 (가로 240 은 그대로)
+    const diff = opt.diff === 0 || opt.diff === 2 ? opt.diff : 1, stage = Math.max(1, Math.min(STAGES.length, Math.floor(opt.stage) || 1));
     const g = {
-      H: h, seed: seed >>> 0, rnd: rng(seed), t: 0, uid: 0,
-      stage: Math.max(1, Math.min(STAGES.length, opt.stage || 1)), loop: 0,
+      H: h, seed: seed >>> 0, rnd: rng(seed), t: 0, uid: 0, diff, D: DIFF[diff], start: stage,
+      stage, loop: 0,
       phase: 'intro', phaseT: 0, st: 0, wi: 0, hold: false, warn: 0, scroll: 26,
-      p: newPlayer(h), bombT: 0,
-      shots: [], msl: [], en: [], eb: [], items: [], hz: [], decks: [], pend: [], form: {}, boss: null,
-      score: 0, best: 0, credits: 1, chain: 0, maxChain: 0, lastKill: -9, mi: 0, ext: 0,
-      stat: { kills: 0, spawned: 0, miss: 0, bombs: 0, medals: 0 }, sstat: null, clearT: 0, bonus: null, allClear: false,
+      p: newPlayer(h, DIFF[diff]), bombT: 0, stars: {},
+      shots: [], msl: [], en: [], eb: [], items: [], hz: [], decks: [], pend: [], form: {}, boss: null, tg: [],
+      score: 0, best: 0, credits: 1, ext: 0, wq: 1,
+      stat: { kills: 0, spawned: 0, miss: 0, bombs: 0 }, sstat: null, clearT: 0, bonus: null, allClear: false,
       ev: [], step: 0,
     };
     g.sstat = { kills: 0, spawned: 0, miss: 0, t0: 0 };
+    if (stage > 1) g.p.power = START_POWER[stage - 1];                // 연습 (순위에는 안 올라가요)
     tune(g);
     ev(g, 'stage', { n: g.stage, loop: g.loop, name: STAGES[g.stage - 1].name, en: STAGES[g.stage - 1].en });
     return g;
   }
-  function newPlayer(h) {
-    return { x: W / 2, y: (h || H) + 16, alive: true, enter: 0.9, inv: 2.2, dead: 0, lives: 3, bombs: 3, power: 1, weapon: 'V', drones: 0, shield: false,
-      focus: false, bank: 0, ft: 0, mt: 0, dft: 0, vx: 0, vy: 0 };
+  function newPlayer(h, D) {
+    return { x: W / 2, y: (h || H) + 16, alive: true, enter: 0.9, inv: 2.2, dead: 0, lives: (D || DIFF[1]).lives, bombs: 3, power: 1, weapon: 'V',
+      focus: false, bank: 0, ft: 0, mt: 0, vx: 0, vy: 0 };
   }
-  /** 스테이지 · 주차에 따라 적 탄 빠르기 · 쏘는 빈도 · 체력 */
+  /** 스테이지 · 주차에 따라 적 탄 빠르기 · 쏘는 빈도 · 체력 (1스테이지는 살살 → 5스테이지로 갈수록 조금씩) */
+  const T_BSP = [0.9, 1, 1.08, 1.15, 1.22], T_FRATE = [0.8, 0.95, 1.08, 1.2, 1.3];
+  const BOSS_HP = [1.3, 1.45, 1.6, 1.6, 1.5];                          // 보스는 파워가 다 찬 비행기에도 오래 버티게
   function tune(g) {
     const s = g.stage - 1, L = g.loop;
-    g.bsp = (s ? 1 + 0.06 * s : 0.92) * (L ? 1.18 + 0.06 * (L - 1) : 1);       // 1스테이지는 살살 (처음 해 보는 친구도 보스까지 가 보게)
-    g.frate = (s ? 1 + 0.08 * s : 0.85) * (L ? 1.22 + 0.08 * (L - 1) : 1);
-    g.hpm = (1 + 0.14 * s) * (L ? 1.5 + 0.25 * (L - 1) : 1);
+    g.bsp = T_BSP[s] * (L ? 1.15 + 0.05 * (L - 1) : 1) * g.D.bsp;
+    g.frate = T_FRATE[s] * (L ? 1.2 + 0.08 * (L - 1) : 1) * g.D.frate;
+    g.hpm = (1 + 0.12 * s) * (L ? 1.4 + 0.2 * (L - 1) : 1) * g.D.hpm;
   }
   const ev = (g, k, o) => { g.ev.push(Object.assign({ k }, o)); };
 
@@ -339,8 +357,8 @@
   /** 졸개가 한 번 쏠지: 스테이지가 오를수록 자주 */
   function zakoFire(g, type) {
     const s = g.stage - 1, L = g.loop ? 0.2 : 0;
-    const p = type === 'zako' ? 0.32 + 0.1 * s + L : type === 'swoop' ? (s ? 0.2 + 0.08 * s + L : 0.12) : type === 'pop' ? (s >= 3 ? 0.15 + L : L * 0.5) : 0;
-    return g.rnd() < p ? 0.7 + g.rnd() * 1.6 : 99;
+    const p = type === 'zako' ? 0.26 + 0.09 * s + L : type === 'swoop' ? (s ? 0.18 + 0.07 * s + L : 0.1) : type === 'pop' ? (s >= 3 ? 0.12 + L : L * 0.5) : 0;
+    return g.rnd() < p * g.D.zako ? 0.7 + g.rnd() * 1.6 : 99;
   }
   const OPS = {
     snake(g, a) {
@@ -368,9 +386,9 @@
         later(g, at, () => spawn(g, a.type, { mv: 'lin', x, y: -12, vy: sp, vx: (W / 2 - x) * 0.08, ft: zakoFire(g, a.type) }));
       }
     },
-    gun(g, a) { a.xs.forEach((x, i) => later(g, i * 0.3, () => spawn(g, 'gun', { mv: 'hover', x, y: -18, stopY: a.y + (i % 2) * 10, stay: a.stay || 6.5, ft: 1.1 + i * 0.3, drop: g.rnd() < 0.22 ? 'P' : null }))); },
+    gun(g, a) { a.xs.forEach((x, i) => later(g, i * 0.3, () => spawn(g, 'gun', { mv: 'hover', x, y: -18, stopY: a.y + (i % 2) * 10, stay: a.stay || 6.5, ft: 1.1 + i * 0.3 }))); },
     heavy(g, a) { spawn(g, 'heavy', { mv: 'heavy', x: a.x, y: -26, vy: 22, ft: 1.4, ft2: 2.6, drop: a.drop }); },
-    carrier(g, a) { const L = a.side === 'L'; spawn(g, 'carrier', { mv: 'cross', x: L ? -20 : W + 20, y: a.y, y0: a.y, vx: L ? 52 : -52, item: a.item }); },
+    carrier(g, a) { const L = a.side === 'L'; spawn(g, 'carrier', { mv: 'cross', x: L ? -20 : W + 20, y: a.y, y0: a.y, vx: L ? 50 : -50, item: 'W' }); },
     kami(g, a) { a.xs.forEach(x => spawn(g, 'kami', { mv: 'kami', x, y: -12, ky: 36 + g.rnd() * 24 })); },
     mines(g, a) { for (let i = 0; i < a.n; i++) { const x = 24 + g.rnd() * (W - 48), at = (i / a.n) * a.dur; later(g, at, () => spawn(g, 'mine', { mv: 'mine', x, y: -12, vy: 26 + g.rnd() * 10, x0: x, w: 1 + g.rnd() })); } },
     rocks(g, a) { for (let i = 0; i < a.n; i++) { const x = 20 + g.rnd() * (W - 40), at = (i / a.n) * a.dur; later(g, at, () => spawn(g, 'rock', { mv: 'drift', x, y: -18, vx: (g.rnd() - 0.5) * 24, vy: 30 + g.rnd() * 16, spin: (g.rnd() - 0.5) * 2 })); } },
@@ -385,8 +403,8 @@
 
   /* ───────── 보스 ───────── */
   function spawnBoss(g, def, mid) {
-    const mul = g.hpm * (mid ? 1 : 1);
-    const b = { def, mid, x: W / 2, y: -def.h, ty: def.y, t: 0, enter: 2.6, ph: 0, guns: [], dying: 0, gone: false, timer: mid ? 30 : 120, booms: 0, flash: 0 };
+    const mul = g.hpm * (mid ? 1 : BOSS_HP[g.stage - 1]);
+    const b = { def, mid, x: W / 2, y: -def.h, ty: def.y, t: 0, enter: 2.6, ph: 0, guns: [], dying: 0, gone: false, timer: mid ? 30 : g.D.bossT, booms: 0, flash: 0, nb: 0 };
     b.parts = def.parts.map(pd => {
       const hp = Math.round(pd.hp * mul);
       return spawn(g, 'part', { mv: 'part', boss: b, pid: pd.id, pd, dx: pd.dx, dy: pd.dy, r: pd.r, hp, max: hp, core: !!pd.core, x: b.x + pd.dx, y: b.y + pd.dy });
@@ -400,7 +418,7 @@
   function setPhase(g, b, i) {
     b.ph = i;
     b.guns = b.def.phases[i].pats.map(p => ({ p, t: p.delay || 0.3, a: 0, sw: 0 }));
-    if (i > 0) { stars(g); ev(g, 'phase', { x: b.x, y: b.y }); }
+    if (i > 0) { cancel(g); ev(g, 'phase', { x: b.x, y: b.y }); }
   }
   const partOf = (b, id) => b.parts.find(p => p.pid === id);
   const gunsDead = b => b.parts.every(p => p.core || p.dead);
@@ -409,7 +427,7 @@
     b.t += STEP; b.flash = Math.max(0, b.flash - STEP);
     if (b.dying > 0) {                                                     // 터지는 중: 여기저기 폭발
       b.dying -= STEP; b.y += 8 * STEP;
-      if ((b.booms += STEP) > 0.11) { b.booms = 0; ev(g, 'bossBoom', { x: b.x + (g.rnd() - 0.5) * D.w * 0.9, y: b.y + (g.rnd() - 0.5) * D.h * 0.8, mid: b.mid }); }
+      if ((b.booms += STEP) > 0.2) { b.booms = 0; b.nb++; ev(g, 'bossBoom', { x: b.x + (g.rnd() - 0.5) * D.w * 0.8, y: b.y + (g.rnd() - 0.5) * D.h * 0.7, mid: b.mid, n: b.nb }); }
       if (b.dying <= 0) bossGone(g, b, true);
       return;
     }
@@ -447,14 +465,12 @@
   }
   function bossKilled(g, b) {
     const D = b.def;
-    b.dying = b.mid ? 1.1 : 2.4; b.flash = 0.3;
-    stars(g);
-    const pts = D.pts + (b.mid ? 0 : Math.max(0, Math.round((90 - b.t) * 300)));
+    b.dying = b.mid ? 0.9 : 1.8; b.flash = 0.3; b.booms = 0.1;
+    cancel(g);
+    const pts = D.pts + (b.mid ? 0 : Math.max(0, Math.round((90 - b.t) * 200)));
     addScore(g, pts);
     ev(g, 'bossDie', { x: b.x, y: b.y, pts, mid: b.mid });
-    for (let i = 0; i < D.medals; i++) dropItem(g, 'm', b.x + (g.rnd() - 0.5) * D.w * 0.7, b.y + (g.rnd() - 0.5) * D.h * 0.5, { vy: -60 - g.rnd() * 70, vx: (g.rnd() - 0.5) * 80 });
-    if (b.mid) { dropItem(g, 'P', b.x - 12, b.y); dropItem(g, g.stage % 2 ? 'B' : 'S', b.x + 12, b.y); }
-    else { dropItem(g, 'P', b.x, b.y); }
+    if (b.mid) { const d = powerDrop(g); if (d) dropItem(g, d, b.x - 12, b.y); dropItem(g, 'B', b.x + 12, b.y); }
   }
 
   /* ───────── 쏘기 ───────── */
@@ -544,21 +560,16 @@
   }
 
   /* ───────── 내 비행기 ───────── */
-  function dronePos(g) {
-    const p = g.p, out = [];
-    for (let i = 0; i < p.drones; i++) {
-      const s = i ? 1 : -1;
-      out.push(p.focus ? { x: p.x + s * 11, y: p.y + 9 } : { x: p.x + s * 22, y: p.y + 6 + Math.sin(g.t * 4 + i) * 2 });
-    }
-    return out;
-  }
   function addShot(g, x, y, deg, sp, dmg, k, src) {
     const a = (deg * Math.PI) / 180;
     g.shots.push({ x, y, vx: Math.sin(a) * sp, vy: -Math.cos(a) * sp, dmg, r: 3, k, src: src || 0 });
   }
   function playerFire(g) {
     const p = g.p, lv = p.power;
-    p.ft -= STEP; p.mt -= STEP; p.dft -= STEP;
+    // 쏘는 시계: 다른 무기를 쓰는 동안 미사일 시계가 계속 줄어들면, 유도탄으로 바꾸는 순간 밀린 만큼 매 걸음 미사일이 쏟아져요 (v14.0 버그)
+    // → 지금 무기의 시계만 줄이고, 한 걸음보다 더 밀리지 않게 막아요
+    p.ft = Math.max(-STEP, p.ft - STEP);
+    if (p.weapon === 'M') p.mt = Math.max(-STEP, p.mt - STEP);
     let fired = false;
     if (p.weapon === 'V') {
       if (p.ft <= 0) { p.ft += 0.075; for (const [dx, a] of VPAT[lv - 1]) addShot(g, p.x + dx, p.y - 8, a, 430, 1, 'V'); fired = true; }
@@ -566,18 +577,12 @@
       g.shots.push({ x: p.x, y: p.y - 10, vx: 0, vy: -760, dmg: LASER_DPS[lv - 1] * STEP, r: LASER_W[lv - 1], k: 'L', src: 0 });
       if (p.ft <= 0) { p.ft += 0.09; fired = true; }
     } else {
-      if (p.ft <= 0) { p.ft += 0.1; addShot(g, p.x - 3, p.y - 8, 0, 430, 1, 'V'); addShot(g, p.x + 3, p.y - 8, 0, 430, 1, 'V'); fired = true; }
+      if (p.ft <= 0) { p.ft += 0.1; addShot(g, p.x - 3, p.y - 8, 0, 430, 1, 'M'); addShot(g, p.x + 3, p.y - 8, 0, 430, 1, 'M'); fired = true; }
       if (p.mt <= 0) {
         p.mt += MSL_EVERY[lv - 1];
         const n = MSL_N[lv - 1];
         for (let i = 0; i < n; i++) { const s = i % 2 ? 1 : -1, k = Math.floor(i / 2); g.msl.push({ x: p.x + s * 6, y: p.y + 2, a: -Math.PI / 2 + s * (0.9 + k * 0.35), sp: 120, dmg: MSL_DMG, life: 2.6, src: 0 }); }
       }
-    }
-    if (p.drones && p.dft <= 0) {
-      const D = dronePos(g);
-      if (p.weapon === 'L') { for (let i = 0; i < D.length; i++) g.shots.push({ x: D[i].x, y: D[i].y - 6, vx: 0, vy: -760, dmg: 15 * 0.0833, r: 1.6, k: 'L', src: i + 1 }); p.dft = 0.0833; }
-      else if (p.weapon === 'M') { for (const d of D) g.msl.push({ x: d.x, y: d.y, a: -Math.PI / 2, sp: 140, dmg: MSL_DMG, life: 2.2, src: 1 }); p.dft = 0.5; }
-      else { for (let i = 0; i < D.length; i++) addShot(g, D[i].x, D[i].y - 6, 0, 430, 1, 'V', i + 1); p.dft = 0.12; }
     }
     if (fired) ev(g, 'shot', { w: p.weapon });
   }
@@ -601,17 +606,17 @@
   /* ───────── 맞히기 · 점수 ───────── */
   function addScore(g, v) {
     g.score += v;
-    while (g.score >= nextExtend(g.ext)) { g.ext++; if (g.p.lives < 6) { g.p.lives++; ev(g, 'extend', {}); } }
+    while (g.score >= nextExtend(g, g.ext)) { g.ext++; if (g.p.lives < 6) { g.p.lives++; ev(g, 'extend', {}); } }
     if (g.score > g.best) g.best = g.score;
   }
-  /** 목숨 +1 점수: 15만 · 50만 · 100만 · 200만, 그다음은 100만마다 */
-  const nextExtend = i => i < EXTEND.length ? EXTEND[i] : EXTEND[EXTEND.length - 1] + (i - EXTEND.length + 1) * 1000000;
+  /** 목숨 +1 점수 (난이도마다 · 표가 끝나면 일정한 간격으로) */
+  const nextExtend = (g, i) => { const X = g.D.ext; return i < X.length ? X[i] : X[X.length - 1] + (i - X.length + 1) * g.D.extStep; };
   function hurt(g, e, dmg, x, y) {
     if (e.dead || e.gone) return;
-    if (e.armor) { if (g.rnd() < 0.25) ev(g, 'clink', { x, y }); return; }
+    if (e.armor) { if (g.rnd() < 0.15) ev(g, 'clink', { x, y }); return; }
     e.hp -= dmg; e.hit = 3;
     if (e.boss) e.boss.flash = Math.max(e.boss.flash, 0.04);
-    if (g.rnd() < (e.type === 'part' || e.type === 'heavy' ? 0.35 : 0.6)) ev(g, 'hit', { x, y, big: e.type === 'part' || e.type === 'heavy' });
+    if (g.rnd() < (e.type === 'part' || e.type === 'heavy' ? 0.2 : 0.35)) ev(g, 'hit', { x, y, big: e.type === 'part' || e.type === 'heavy' });
     if (e.hp <= 0) kill(g, e);
   }
   function kill(g, e) {
@@ -621,20 +626,17 @@
     if (e.type === 'part') {
       const b = e.boss;
       if (e.core) { bossKilled(g, b); return; }
-      addScore(g, 5000 * (b.mid ? 0.5 : 1));
-      ev(g, 'partKill', { x: e.x, y: e.y, pts: 5000 * (b.mid ? 0.5 : 1) });
-      for (let i = 0; i < 2; i++) dropItem(g, 'm', e.x, e.y, { vy: -50 - g.rnd() * 40, vx: (g.rnd() - 0.5) * 60 });
+      const pts = b.mid ? 1500 : 3000;
+      addScore(g, pts);
+      ev(g, 'partKill', { x: e.x, y: e.y, pts });
       return;
     }
     g.stat.kills++; g.sstat.kills++;
-    g.chain = g.t - g.lastKill < 1.2 ? g.chain + 1 : 1; g.lastKill = g.t;
-    g.maxChain = Math.max(g.maxChain, g.chain);
-    const pts = D.pts + Math.min(2000, (g.chain - 1) * 20);
+    const pts = D.pts;
     addScore(g, pts);
-    ev(g, 'kill', { x: e.x, y: e.y, sz: D.sz, type: e.type, pts, chain: g.chain, ang: e.ang });
-    for (let i = 0; i < (D.medals || 0); i++) dropItem(g, 'm', e.x + (i - (D.medals - 1) / 2) * 8, e.y, { vy: -50 - g.rnd() * 30 });
-    if (e.drop) dropItem(g, e.drop, e.x, e.y);
-    if (e.item) dropItem(g, e.item, e.x, e.y);
+    ev(g, 'kill', { x: e.x, y: e.y, sz: D.sz, type: e.type, pts, ang: e.ang });
+    if (e.drop) { const d = e.drop === 'P' ? powerDrop(g) : e.drop; if (d) dropItem(g, d, e.x, e.y); }
+    if (e.item) dropItem(g, weaponDrop(g), e.x, e.y);
     if (e.type === 'mine') boom(g, e, false);
     if (e.type === 'rock') for (const s of [-1, 1]) spawn(g, 'pebble', { mv: 'drift', x: e.x + s * 6, y: e.y, vx: s * (26 + g.rnd() * 20), vy: 40 + g.rnd() * 20, spin: s * 3, ang: 0 });
     // 2주차: 쓰러지면서 마지막 탄 한 발
@@ -644,83 +646,76 @@
       f.kill++;
       if (!f.done && f.kill === f.n && !f.gone) {
         f.done = true;
-        const bonus = Math.round((500 + 150 * f.n) * (1 + 0.25 * (g.stage - 1)) / 100) * 100;
+        const bonus = Math.round((300 + 100 * f.n) * (1 + 0.25 * (g.stage - 1)) / 100) * 100;
         addScore(g, bonus);
         ev(g, 'formation', { x: e.x, y: e.y, pts: bonus });
-        dropItem(g, f.drop || 'm', e.x, e.y);
+        if (f.drop) { const d = f.drop === 'P' ? powerDrop(g) : f.drop; if (d) dropItem(g, d, e.x, e.y); }
       }
     }
   }
   /** 기뢰: 터지면 둥글게 탄 (스스로 터질 때도) */
   function boom(g, e, self) {
-    if (self) { e.dead = true; e.gone = true; ev(g, 'kill', { x: e.x, y: e.y, sz: 1, type: 'mine', pts: 0, chain: 0, self: true }); }
+    if (self) { e.dead = true; e.gone = true; ev(g, 'kill', { x: e.x, y: e.y, sz: 1, type: 'mine', pts: 0, self: true }); }
     if (g.stage >= 2 || g.loop || self) { const n = self ? 10 : 8; for (let i = 0; i < n; i++) bullet(g, e.x, e.y, (i / n) * TAU + e.age, 58, 'o'); }
   }
   function dropItem(g, k, x, y, o) {
-    g.items.push(Object.assign({ k, x: clamp(x, 8, W - 8), y, vx: (g.rnd() - 0.5) * 30, vy: k === 'star' ? 0 : -46, t: 0, ph: g.rnd() * 6 }, o));
+    g.items.push(Object.assign({ k, x: clamp(x, 10, W - 10), y, vx: (g.rnd() - 0.5) * 24, vy: -40, t: 0, ph: g.rnd() * 6 }, o));
   }
-  /** 화면의 적 탄을 모두 점수 별로 */
-  function stars(g) {
-    const n = g.eb.length;
-    for (const b of g.eb) if (b.y > -4 && b.y < g.H + 4) g.items.push({ k: 'star', x: b.x, y: b.y, vx: 0, vy: 0, t: 0, ph: 0, magnet: true });
+  /** P 파워: 다 찼으면 안 나와요 (폭탄이 모자라면 폭탄으로) */
+  function powerDrop(g) { return g.p.power < PMAX ? 'P' : g.p.bombs < 2 ? 'B' : null; }
+  /** 수송선의 무기 아이템: 지금 쓰는 것과 다른 색을 차례로 (퍼짐탄 → 레이저 → 유도탄) */
+  function weaponDrop(g) {
+    let w = WCYCLE[g.wq % 3];
+    if (w === g.p.weapon) { g.wq++; w = WCYCLE[g.wq % 3]; }
+    g.wq++;
+    return w;
+  }
+  /** 화면의 적 탄을 지워요 (그림은 잠깐 흐려지며 사라져요) */
+  function cancel(g) {
+    if (g.eb.length) {
+      const list = [];
+      for (const b of g.eb) if (b.y > -6 && b.y < g.H + 6 && list.length < 160) list.push([b.x, b.y, b.kind]);
+      ev(g, 'cancel', { list });
+    }
     g.eb = []; g.hz = [];
-    if (n) ev(g, 'stars', { n });
   }
   function pickup(g, it) {
     const p = g.p, k = it.k;
     let txt = '';
-    if (k === 'star') { addScore(g, 20); return; }
-    if (k === 'm') {
-      const v = MEDAL_V[g.mi];
-      addScore(g, v); g.mi = Math.min(MEDAL_V.length - 1, g.mi + 1); g.stat.medals++;
-      ev(g, 'medal', { x: it.x, y: it.y, v, mi: g.mi });
-      return;
-    }
-    if (k === 'P') { if (p.power < 5) { p.power++; txt = `파워 ${p.power}`; } else { addScore(g, 5000); txt = 'MAX +5000'; } }
-    else if (k === 'W') {
-      const w = WCYCLE[weaponAt(g, it)];
-      if (w === p.weapon) { if (p.power < 5) p.power++; else addScore(g, 5000); }
-      p.weapon = w; txt = `${WEAPONS[w].name} ${p.power}`;
-    } else if (k === 'B') { p.bombs = Math.min(6, p.bombs + 1); txt = '폭탄 +1'; }
-    else if (k === 'S') { p.shield = true; txt = '실드'; }
-    else if (k === 'D') { if (p.drones < 2) { p.drones++; txt = `드론 ${p.drones}`; } else { addScore(g, 5000); txt = '+5000'; } }
-    ev(g, 'pick', { k, x: it.x, y: it.y, txt, w: p.weapon });
+    if (k === 'P') { if (p.power < PMAX) { p.power++; txt = p.power === PMAX ? '파워 MAX' : `파워 ${p.power}`; } else { addScore(g, 1000); txt = '+1,000'; } }
+    else if (WEAPONS[k]) { if (p.weapon === k) { addScore(g, 1000); txt = '+1,000'; } else { p.weapon = k; p.ft = 0; p.mt = 0.2; txt = WEAPONS[k].name; } }
+    else if (k === 'B') { if (p.bombs < BMAX) { p.bombs++; txt = '폭탄 +1'; } else { addScore(g, 1000); txt = '+1,000'; } }
+    ev(g, 'pick', { item: k, x: it.x, y: it.y, txt, w: p.weapon, power: p.power });   // (k 는 사건 이름이라 아이템은 item 으로)
   }
-  /** 무기 수정: 색이 1.5초마다 바뀌어요 (발칸 → 레이저 → 미사일) */
-  const weaponAt = (g, it) => Math.floor((it.t + it.ph) / 1.5) % 3;
 
   /* ───────── 내가 맞았을 때 ───────── */
   function die(g, cause) {
     const p = g.p;
     if (p.inv > 0 || !p.alive || g.bombT > 0) return;
-    if (p.shield) { p.shield = false; p.inv = 1.6; ev(g, 'shield', { x: p.x, y: p.y }); clearNear(g, p.x, p.y, 40); return; }
     p.alive = false; p.lives--; p.dead = 1.5; g.stat.miss++; g.sstat.miss++;
-    g.chain = 0;
     ev(g, 'die', { x: p.x, y: p.y, cause });
-    if (p.power > 1) { p.power--; dropItem(g, 'P', p.x, Math.min(p.y - 10, g.H - 60), { vy: -70 }); }
-    p.drones = Math.max(0, p.drones - 1); p.shield = false;
-    g.eb = []; g.hz = [];
+    if (p.power > 1) { p.power = Math.max(1, p.power - 2); dropItem(g, 'P', p.x, Math.min(p.y - 10, g.H - 60), { vy: -60 }); }   // 파워 −2 (떨어진 P 를 주우면 1 되찾아요)
+    cancel(g);
     if (p.lives <= 0) { g.phase = 'over'; g.phaseT = 0; ev(g, 'over', { score: g.score }); }
   }
-  function clearNear(g, x, y, r) { g.eb = g.eb.filter(b => d2(b.x, b.y, x, y) > r * r); }
   function bomb(g) {
     const p = g.p;
     if (!p.alive || p.enter > 0 || p.bombs <= 0 || g.bombT > 0 || g.phase === 'over') return false;
     p.bombs--; g.bombT = 2.1; p.inv = Math.max(p.inv, 2.5); g.stat.bombs++;
     ev(g, 'bomb', { x: p.x, y: p.y });
-    stars(g);
+    cancel(g);
     for (const e of g.en) if (!e.dead && onScreen(g, e)) hurt(g, e, e.type === 'part' ? 24 : 40, e.x, e.y);
     return true;
   }
   const onScreen = (g, e) => e.x > -10 && e.x < W + 10 && e.y > -10 && e.y < g.H + 10;
 
-  /** 이어하기: 점수는 0부터 · 목숨 3 · 폭탄 3 · 그 자리에서 */
+  /** 이어하기: 점수는 0부터 · 목숨 3 · 폭탄 3 · 그 자리에서 (무기는 그대로 · 파워는 2 이상) */
   function cont(g) {
     if (g.phase !== 'over') return false;
     g.credits++;
-    g.score = 0; g.ext = 0; g.chain = 0; g.mi = 0;
+    g.score = 0; g.ext = 0;
     const p = g.p, keep = { weapon: p.weapon, power: Math.max(2, p.power) };
-    g.p = Object.assign(newPlayer(g.H), keep);
+    g.p = Object.assign(newPlayer(g.H, g.D), keep);
     g.phase = g.boss || g.warn > 0 ? 'play' : (g.clearT > 0 ? 'clear' : 'play');
     g.eb = []; g.hz = [];
     ev(g, 'cont', {});
@@ -731,16 +726,20 @@
   function stageClear(g, killed) {
     const s = g.sstat, rate = s.spawned ? Math.min(1, s.kills / s.spawned) : 0;
     const bonus = [
-      ['격추율 ' + Math.round(rate * 100) + '%', Math.round(rate * 20000 / 100) * 100],
-      ['노 미스', s.miss ? 0 : 20000 * g.stage],
-      ['남은 폭탄 ' + g.p.bombs, g.p.bombs * 3000],
+      ['격추율 ' + Math.round(rate * 100) + '%', Math.round(rate * 10000 / 100) * 100],
+      ['노 미스', s.miss ? 0 : 10000 * g.stage],
+      ['남은 폭탄 ' + g.p.bombs, g.p.bombs * 2000],
     ];
-    if (g.stage === STAGES.length && killed) bonus.push(['올 클리어', 100000 * (g.loop + 1)]);
+    if (g.stage === STAGES.length && killed) bonus.push(['올 클리어', 50000 * (g.loop + 1)]);
     const total = bonus.reduce((a, [, v]) => a + v, 0);
     addScore(g, total);
-    g.phase = 'clear'; g.clearT = 4.2; g.bonus = bonus;
+    g.phase = 'clear'; g.clearT = 4.6; g.bonus = bonus;
     g.allClear = g.stage === STAGES.length;
-    ev(g, 'clear', { stage: g.stage, bonus, total, all: g.allClear, killed });
+    // 별 3개: 클리어 · 노 미스 · 격추율 85% (2주차는 1주차 별에 더해요)
+    const stars = [!!killed, killed && !s.miss, killed && rate >= STAR_RATE];
+    const key = g.stage;
+    g.stars[key] = (g.stars[key] || 0) | (stars[0] ? 1 : 0) | (stars[1] ? 2 : 0) | (stars[2] ? 4 : 0);
+    ev(g, 'clear', { stage: g.stage, bonus, total, all: g.allClear, killed, stars, rate });
   }
   function nextStage(g) {
     if (g.stage === STAGES.length) { g.stage = 1; g.loop++; } else g.stage++;
@@ -777,7 +776,7 @@
     }
     if (g.bombT > 0) {
       g.bombT -= STEP;
-      if (g.bombT > 1.1 && g.eb.length) stars(g);
+      if (g.bombT > 1.1 && g.eb.length) cancel(g);
       for (const e of g.en) if (!e.dead && onScreen(g, e)) hurt(g, e, (e.type === 'part' ? 26 : 60) * STEP, e.x, e.y);
     }
     // 적
@@ -816,7 +815,8 @@
     }
     for (const h of g.hz) { if (h.warn > 0) { h.warn -= STEP; if (h.warn <= 0) ev(g, 'laserOn', { x: h.x }); } else h.on -= STEP; }
     // 명중: 내 탄 → 적
-    const tg = g.en.filter(e => !e.dead && !e.gone && e.y > -20);
+    const tg = g.tg; tg.length = 0;
+    for (const e of g.en) if (!e.dead && !e.gone && e.y > -20) tg.push(e);
     for (const s of g.shots) {
       for (const e of tg) {
         if (e.dead) continue;
@@ -843,33 +843,31 @@
       if (!hit) for (const h of g.hz) if (h.warn <= 0 && h.on > 0 && p.y > h.y0 && Math.abs(p.x - h.x) < h.w / 2 - 1) { hit = 'laser'; break; }
       if (hit) die(g, hit);
     }
-    // 아이템
+    // 아이템: 천천히 떨어져요 · 가까이 가면 끌려와요
     for (const it of g.items) {
       it.t += STEP;
       const dx = p.x - it.x, dy = p.y - it.y, d = Math.hypot(dx, dy);
-      if (p.alive && p.enter <= 0 && (it.magnet || d < (it.k === 'm' ? 40 : 30))) {
-        const sp = it.k === 'star' ? 260 + it.t * 300 : 230;
-        it.x += (dx / (d || 1)) * sp * STEP; it.y += (dy / (d || 1)) * sp * STEP;
-        if (d < 10) { it.dead = true; pickup(g, it); }
+      if (p.alive && p.enter <= 0 && d < 24) {
+        it.x += (dx / (d || 1)) * 200 * STEP; it.y += (dy / (d || 1)) * 200 * STEP;
+        if (d < 9) { it.dead = true; pickup(g, it); }
         continue;
       }
-      if (it.k === 'star') { if (!p.alive) it.vy = 40; it.y += it.vy * STEP; if (it.y > g.H + 8) it.dead = true; continue; }
-      it.vy = Math.min(it.k === 'm' ? 52 : 38, it.vy + 120 * STEP);
-      it.x += (it.vx + Math.sin(it.t * 2 + it.ph) * 14) * STEP; it.y += it.vy * STEP;
+      it.vy = Math.min(32, it.vy + 110 * STEP);
+      it.x += (it.vx + Math.sin(it.t * 1.8 + it.ph) * 10) * STEP; it.y += it.vy * STEP;
       if (it.x < 8 || it.x > W - 8) { it.vx = -it.vx; it.x = clamp(it.x, 8, W - 8); }
-      if (it.y > g.H + 10) { it.dead = true; if (it.k === 'm') { if (g.mi > 0) ev(g, 'medalLost', {}); g.mi = 0; } }
+      if (it.y > g.H + 10) it.dead = true;
     }
-    // 정리
+    // 정리 (새 배열을 만들지 않고 그 자리에서)
     for (const e of g.en) if (e.gone && e.form && !e.dead) { const f = g.form[e.form]; if (f) f.gone++; }
-    g.en = g.en.filter(e => !e.dead && !e.gone);
-    g.shots = g.shots.filter(s => !s.hit && s.y > -24 && s.x > -20 && s.x < W + 20);
-    g.msl = g.msl.filter(m => !m.hit && m.life > 0 && m.y > -30 && m.y < g.H + 30 && m.x > -30 && m.x < W + 30);
-    g.eb = g.eb.filter(b => !b.dead && b.y < g.H + 12 && b.y > -50 && b.x > -16 && b.x < W + 16);
-    g.items = g.items.filter(it => !it.dead);
-    g.hz = g.hz.filter(h => h.warn > 0 || h.on > 0);
+    keep(g.en, e => !e.dead && !e.gone);
+    keep(g.shots, s => !s.hit && s.y > -24 && s.x > -20 && s.x < W + 20);
+    keep(g.msl, m => !m.hit && m.life > 0 && m.y > -30 && m.y < g.H + 30 && m.x > -30 && m.x < W + 30);
+    keep(g.eb, b => !b.dead && b.y < g.H + 12 && b.y > -50 && b.x > -16 && b.x < W + 16);
+    keep(g.items, it => !it.dead);
+    keep(g.hz, h => h.warn > 0 || h.on > 0);
     return g;
   }
 
-  return { W, H, STEP, WEAPONS, WCYCLE, ITEMS, EN, BOSSES, MIDS, STAGES, MEDAL_V, EXTEND, BULLET_R, VPAT, PATHS,
-    create, step, bomb, cont, dronePos, weaponAt, pathOf, pathAt, rng };
+  return { W, H, STEP, PMAX, BMAX, WEAPONS, WCYCLE, ITEMS, EN, BOSSES, MIDS, STAGES, EXTEND, DIFF, START_POWER, STAR_RATE, BULLET_R, VPAT, PATHS,
+    create, step, bomb, cont, pathOf, pathAt, rng, powerDrop, weaponDrop, nextExtend };
 });

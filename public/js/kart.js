@@ -702,9 +702,12 @@ const Kart = {
     showResult({
       title: me.fin == null ? '🏁 레이스 종료' : me.pos === 1 ? '🏆 1위로 골인!' : `🏁 ${me.pos}위로 골인!`,
       subtitle: `${T.name} · ${R.mode === 'item' ? '아이템전' : '스피드전'} · ${R.laps}바퀴`,
-      lines: [me.fin != null ? `기록 ${ktFmt(me.fin)}${rec ? (prev ? ' · 최고 기록 갱신!' : ' · 첫 기록!') : ` · 최고 ${ktFmt(prev / 1000)}`}` : '아쉽게 완주하지 못했어요', bestLap && R.laps > 1 ? `가장 빠른 바퀴 ${ktFmt(bestLap)}` : ''].filter(Boolean),
+      lines: [me.fin != null ? `기록 ${ktFmt(me.fin)}${rec ? (prev ? ' · 최고 기록 갱신!' : ' · 첫 기록!') : ` · 최고 ${ktFmt(prev / 1000)}`}` : '아쉽게 완주하지 못했어요', bestLap && R.laps > 1 ? `가장 빠른 바퀴 ${ktFmt(bestLap)}` : '',
+        me.fin != null && R.laps !== 3 ? '🏆 순위표에는 3바퀴 기록만 올라가요' : ''].filter(Boolean),
       ranking: R.order.map(k => ({ name: k === me ? `${k.name} (나)` : k.name, value: k.fin != null ? ktFmt(k.fin) : `${clamp(k.lap, 0, R.laps)}/${R.laps}바퀴` })),
       solo: 'kart', win: me.fin != null && me.pos === 1 && R.order.length > 1,
+      // 순위표: 트랙 · 모드마다, 3바퀴 완주 기록만 (낮을수록 좋아요 · 서버 lib/accounts.js LOW_BETTER)
+      rec: me.fin != null && R.laps === 3 ? { k: `${T.id}-${R.mode === 'item' ? 'item' : 'speed'}`, v: Math.round(me.fin * 100) / 100 } : null,
     });
   },
   flash(text, color) { const R = this.R; if (!R || R.attract) return; R.msgs = R.msgs.filter(m => m.text !== text); R.msgs.push({ text, color, t: 1.7 }); if (R.msgs.length > 3) R.msgs.shift(); },

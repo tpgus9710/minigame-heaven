@@ -20,3 +20,35 @@ body.gaming #scr-shooter #sh-cv{max-width:100%!important}   /* 자리가 남아 
 #scr-shooter .sh-wrap.sh-side .sh-bgm{align-self:center}
 #scr-shooter .sh-wrap.sh-side .sh-bomb{flex-direction:column;gap:2px;padding:14px 14px 10px;line-height:1.15}
 #scr-shooter .sh-wrap.sh-side .sh-bomb b{margin-top:2px}
+/* ═════════ 시작 화면 (v14.1): 난이도 · 출발 스테이지 · 별 ═════════ */
+#scr-shooter{position:relative}
+.sh-menu{position:absolute;left:0;right:0;bottom:0;top:var(--shm-top,0);z-index:6;display:grid;place-items:center;padding:12px;background:rgba(4,6,14,.42);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);overflow:auto;border-radius:16px}
+.sh-menu.hidden{display:none}
+.shm-card{width:min(330px,100%);padding:18px 16px 14px;border-radius:20px;background:rgba(16,20,40,.94);border:1px solid #2c3356;box-shadow:0 18px 50px rgba(0,0,0,.45);color:#eef0ff;text-align:center}
+.shm-title{font-family:'Black Han Sans','Noto Sans KR',sans-serif;font-size:26px;margin-bottom:10px}
+.shm-sec{margin:12px 0}
+.shm-sec > small{display:block;color:#9aa2c9;font-size:12.5px;margin-bottom:6px}
+.shm-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.shm-opt{padding:10px 4px;border-radius:12px;border:1px solid #2c3356;background:#1b2140;color:#d6dcf5;font-weight:800;font-size:15px;cursor:pointer}
+.shm-opt.on{background:linear-gradient(180deg,#7c6cff,#5a48e6);border-color:#a99dff;color:#fff;box-shadow:0 4px 14px rgba(124,108,255,.35)}
+.shm-note{margin:7px 0 0;font-size:12.5px;color:#aab2d6;line-height:1.4}
+.shm-stages{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.shm-st{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 6px;border-radius:12px;border:1px solid #2c3356;background:#1b2140;color:#eef0ff;cursor:pointer}
+.shm-st b{font-size:17px;line-height:1}
+.shm-st.on{border-color:#ffd23f;box-shadow:0 0 0 2px rgba(255,210,63,.35) inset}
+.shm-st.lock{opacity:.4;cursor:default}
+.shm-stars{display:flex;gap:1px;font-size:10px;letter-spacing:-1px}
+.shm-stars i{font-style:normal;color:#4a5275} .shm-stars i.on{color:#ffd23f}
+.shm-go{width:100%;margin-top:6px;padding:13px;font-size:18px;border-radius:14px}
+.shm-total{margin:10px 0 0;font-size:12px;color:#9aa2c9}
+@media (max-height:560px){.shm-card{padding:12px}.shm-title{font-size:21px;margin-bottom:4px}.shm-sec{margin:8px 0}.shm-go{padding:10px}}
+/* 가로 휴대폰처럼 낮은 화면: 두 칸으로 (난이도 · 스테이지 | 시작) */
+@media (max-height:520px) and (min-width:560px){
+  .shm-card{width:min(660px,100%);display:grid;grid-template-columns:1.4fr 1fr;grid-template-areas:"title title" "diff go" "stage total";gap:4px 16px;align-items:center;padding:10px 14px}
+  .shm-title{grid-area:title;font-size:19px;margin:0}
+  .shm-sec{margin:2px 0} .shm-sec.d{grid-area:diff} .shm-sec.s{grid-area:stage}
+  .shm-note{display:none}
+  .shm-go{grid-area:go;margin:0;padding:12px}
+  .shm-total{grid-area:total;margin:0}
+  .shm-opt{padding:8px 4px}
+}
